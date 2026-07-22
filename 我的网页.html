@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Slildisn的动态星河 </title>
+    <style>
+        /* ===== 全局重置 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #0a0e1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, system-ui, sans-serif;
+            overflow: hidden;
+            /* 防止页面滚动 */
+            position: relative;
+        }
+
+        /* ===== 主画布容器 ===== */
+        .canvas-wrapper {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(ellipse at 30% 20%, #13203a, #070b14 80%);
+            overflow: hidden;
+        }
+
+        /* ===== 动态粒子画布 ===== */
+        #particleCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* ===== 中心内容卡片 ===== */
+        .hero {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            color: #f0f4ff;
+            padding: 2rem 3rem;
+            max-width: 780px;
+            width: 90%;
+            background: rgba(10, 16, 30, 0.55);
+            backdrop-filter: blur(14px) saturate(180%);
+            -webkit-backdrop-filter: blur(14px) saturate(180%);
+            border-radius: 56px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation: floatIn 1.2s ease-out forwards;
+        }
+
+        .hero:hover {
+            transform: scale(1.01) translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* ===== 标题 ===== */
+        .hero h1 {
+            font-size: clamp(2.6rem, 8vw, 4.6rem);
+            font-weight: 700;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #a6c9ff, #7aaaff, #4f8ef7, #b47cff);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: gradientShift 6s ease-in-out infinite alternate;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 40px rgba(79, 142, 247, 0.2);
+        }
+
+        .hero .sub {
+            font-size: clamp(1rem, 2.2vw, 1.4rem);
+            font-weight: 300;
+            letter-spacing: 4px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 1.8rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            display: inline-block;
+            padding-bottom: 0.6rem;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 2.2rem;
+            font-weight: 300;
+        }
+
+        .hero p strong {
+            color: #8ab4ff;
+            font-weight: 500;
+        }
+
+        /* ===== 动态按钮 ===== */
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.8rem 2.2rem;
+            border-radius: 60px;
+            font-size: 1rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            background: rgba(255, 255, 255, 0.06);
+            color: #f0f4ff;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            text-decoration: none;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(79, 142, 247, 0.2), rgba(180, 124, 255, 0.2));
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            border-radius: 60px;
+        }
+
+        .btn:hover::before {
+            opacity: 1;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            border-color: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 12px 40px rgba(79, 142, 247, 0.25);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4f8ef7, #7c5cfc);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            box-shadow: 0 6px 24px rgba(79, 142, 247, 0.35);
+        }
+
+        .btn-primary::before {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 12px 48px rgba(79, 142, 247, 0.45);
+            transform: translateY(-3px) scale(1.02);
+        }
+
+        .btn .icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .btn:hover .icon {
+            transform: rotate(10deg) scale(1.1);
+        }
+
+        /* ===== 底部装饰 ===== */
+        .footer-note {
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.2);
+            letter-spacing: 2px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            padding-top: 1.2rem;
+        }
+
+        .footer-note span {
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        .footer-note .heart {
+            color: #ff6b8a;
+            display: inline-block;
+            animation: pulseHeart 1.8s ease-in-out infinite;
+        }
+
+        /* ===== 动画关键帧 ===== */
+        @keyframes floatIn {
+            0% {
+                opacity: 0;
+                transform: translateY(40px) scale(0.96);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes gradientShift {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        @keyframes pulseHeart {
+            0%,
+            100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.2);
+            }
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 640px) {
+            .hero {
+                padding: 1.8rem 1.5rem;
+                border-radius: 32px;
+            }
+            .btn {
+                padding: 0.6rem 1.4rem;
+                font-size: 0.9rem;
+            }
+            .hero h1 {
+                letter-spacing: 0px;
+            }
+        }
+
+        /* ===== 额外流动光晕 ===== */
+        .glow-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.25;
+            animation: orbFloat 12s ease-in-out infinite alternate;
+        }
+
+        .glow-orb--1 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, #4f8ef7, #1a3a7a);
+            top: -15%;
+            left: -10%;
+            animation-duration: 14s;
+        }
+
+        .glow-orb--2 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #b47cff, #3a1a6a);
+            bottom: -20%;
+            right: -10%;
+            animation-duration: 18s;
+            animation-delay: -4s;
+        }
+
+        .glow-orb--3 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, #ff7eb3, #7a1a4a);
+            top: 40%;
+            left: 60%;
+            animation-duration: 16s;
+            animation-delay: -8s;
+            opacity: 0.15;
+        }
+
+        @keyframes orbFloat {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+            33% {
+                transform: translate(40px, -30px) scale(1.1);
+            }
+            66% {
+                transform: translate(-20px, 40px) scale(0.9);
+            }
+            100% {
+                transform: translate(30px, -20px) scale(1.05);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="canvas-wrapper">
+        <!-- 背景光晕 -->
+        <div class="glow-orb glow-orb--1"></div>
+        <div class="glow-orb glow-orb--2"></div>
+        <div class="glow-orb glow-orb--3"></div>
+
+        <!-- 粒子画布 -->
+        <canvas id="particleCanvas"></canvas>
+
+        <!-- 中心内容 -->
+        <div class="hero">
+            <h1>我的 ✦动态星河</h1>
+            <div class="sub"<Sl>Slildisn的动态星河</div>
+            <p>
+                你好 <strong> 背景可动 </strong>，<br>
+                在流动的星河中思考，与你一同探索无限可能。
+            </p>
+            <div class="btn-group">
+                <button class="btn btn-primary" id="exploreBtn">
+                    <span class="icon">✦</span> 探索星系
+                </button>
+                <button class="btn" id="rippleBtn">
+                    <span class="icon">⟳</span> 涟漪光效
+                </button>
+                <button class="btn" id="resetBtn">
+                    <span class="icon">◎</span> 重置星轨
+                </button>
+            </div>
+            <div class="footer-note">
+                <span>✦ 你好呀 ✦</span>
+                <span style="margin:0 8px;">·</span>
+                <span>天天有 <span class="heart">❤</span> 开心</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        //  粒子系统 —— 动态星空
+        // ============================================================
+        (function initParticles() {
+            const canvas = document.getElementById('particleCanvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let particles = [];
+            const PARTICLE_COUNT = 260;
+            const CONNECT_DIST = 120;
+            const MOUSE_RADIUS = 160;
+
+            // 鼠标交互
+            let mouse = { x: -9999, y: -9999, active: false };
+
+            function resize() {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                width = rect.width;
+                height = rect.height;
+                canvas.width = width;
+                canvas.height = height;
+            }
+
+            class Particle {
+                constructor() {
+                    this.reset();
+                }
+
+                reset() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.vx = (Math.random() - 0.5) * 0.5;
+                    this.vy = (Math.random() - 0.5) * 0.5;
+                    this.radius = Math.random() * 1.8 + 0.8;
+                    // 柔和色系
+                    const hue = 200 + Math.random() * 80; // 蓝紫区间
+                    this.color = `hsla(${hue}, 70%, 70%, ${0.3 + Math.random() * 0.5})`;
+                    this.pulse = Math.random() * Math.PI * 2;
+                    this.pulseSpeed = 0.01 + Math.random() * 0.02;
+                }
+
+                update() {
+                    // 边界反弹 + 回绕
+                    if (this.x < 0) { this.x = 0;
+                        this.vx *= -1; }
+                    if (this.x > width) { this.x = width;
+                        this.vx *= -1; }
+                    if (this.y < 0) { this.y = 0;
+                        this.vy *= -1; }
+                    if (this.y > height) { this.y = height;
+                        this.vy *= -1; }
+
+                    // 鼠标斥力
+                    if (mouse.active) {
+                        const dx = this.x - mouse.x;
+                        const dy = this.y - mouse.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < MOUSE_RADIUS && dist > 0) {
+                            const force = (MOUSE_RADIUS - dist) / MOUSE_RADIUS * 0.8;
+                            const angle = Math.atan2(dy, dx);
+                            this.vx += Math.cos(angle) * force * 0.15;
+                            this.vy += Math.sin(angle) * force * 0.15;
+                        }
+                    }
+
+                    // 速度限制
+                    const maxSpeed = 1.2;
+                    const spd = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                    if (spd > maxSpeed) {
+                        this.vx = (this.vx / spd) * maxSpeed;
+                        this.vy = (this.vy / spd) * maxSpeed;
+                    }
+
+                    this.x += this.vx;
+                    this.y += this.vy;
+
+                    // 脉冲
+                    this.pulse += this.pulseSpeed;
+                    const alphaOffset = 0.15 * Math.sin(this.pulse);
+                    this.currentAlpha = 0.35 + alphaOffset;
+                }
+
+                draw() {
+                    const alpha = Math.min(1, Math.max(0.1, this.currentAlpha));
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color.replace(/[\d.]+\)$/, alpha + ')');
+                    ctx.fill();
+                    // 微光
+                    ctx.shadowColor = 'rgba(150, 180, 255, 0.1)';
+                    ctx.shadowBlur = 6;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            }
+
+            // 初始化粒子
+            function initParticlesArray() {
+                particles = [];
+                for (let i = 0; i < PARTICLE_COUNT; i++) {
+                    particles.push(new Particle());
+                }
+            }
+
+            // 绘制连线
+            function drawConnections() {
+                const len = particles.length;
+                for (let i = 0; i < len; i++) {
+                    for (let j = i + 1; j < len; j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < CONNECT_DIST) {
+                            const alpha = (1 - dist / CONNECT_DIST) * 0.25;
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.strokeStyle = `rgba(180, 210, 255, ${alpha})`;
+                            ctx.lineWidth = 0.6;
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            // 动画循环
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+
+                // 更新 & 绘制粒子
+                for (const p of particles) {
+                    p.update();
+                    p.draw();
+                }
+
+                drawConnections();
+
+                // 跟踪鼠标移动
+                requestAnimationFrame(animate);
+            }
+
+            // 事件绑定
+            function bindEvents() {
+                const wrapper = canvas.parentElement;
+
+                wrapper.addEventListener('mousemove', (e) => {
+                    const rect = canvas.getBoundingClientRect();
+                    mouse.x = e.clientX - rect.left;
+                    mouse.y = e.clientY - rect.top;
+                    mouse.active = true;
+                });
+
+                wrapper.addEventListener('mouseleave', () => {
+                    mouse.active = false;
+                    mouse.x = -9999;
+                    mouse.y = -9999;
+                });
+
+                // 触屏支持
+                wrapper.addEventListener('touchmove', (e) => {
+                    const touch = e.touches[0];
+                    if (touch) {
+                        const rect = canvas.getBoundingClientRect();
+                        mouse.x = touch.clientX - rect.left;
+                        mouse.y = touch.clientY - rect.top;
+                        mouse.active = true;
+                    }
+                }, { passive: true });
+
+                wrapper.addEventListener('touchend', () => {
+                    mouse.active = false;
+                    mouse.x = -9999;
+                    mouse.y = -9999;
+                });
+            }
+
+            // 窗口大小变化
+            window.addEventListener('resize', () => {
+                resize();
+                // 粒子重新分布
+                for (const p of particles) {
+                    p.x = Math.random() * width;
+                    p.y = Math.random() * height;
+                }
+            });
+
+            // 启动
+            resize();
+            initParticlesArray();
+            bindEvents();
+            animate();
+
+            // 暴露重置方法
+            window.resetParticles = function() {
+                for (const p of particles) {
+                    p.reset();
+                    p.x = Math.random() * width;
+                    p.y = Math.random() * height;
+                }
+                // 短暂闪烁反馈
+                canvas.style.transition = 'opacity 0.2s';
+                canvas.style.opacity = '0.3';
+                setTimeout(() => { canvas.style.opacity = '1'; }, 200);
+            };
+
+            // 涟漪效果：增加瞬间速度扰动
+            window.rippleEffect = function() {
+                const centerX = width / 2 + (Math.random() - 0.5) * 200;
+                const centerY = height / 2 + (Math.random() - 0.5) * 200;
+                for (const p of particles) {
+                    const dx = p.x - centerX;
+                    const dy = p.y - centerY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 300 && dist > 0) {
+                        const force = (300 - dist) / 300 * 1.2;
+                        const angle = Math.atan2(dy, dx);
+                        p.vx += Math.cos(angle) * force * 0.4;
+                        p.vy += Math.sin(angle) * force * 0.4;
+                    }
+                }
+                // 视觉反馈：画布闪烁
+                canvas.style.transition = 'opacity 0.15s';
+                canvas.style.opacity = '0.6';
+                setTimeout(() => { canvas.style.opacity = '1'; }, 150);
+            };
+
+        })();
+
+
+        // ============================================================
+        //  UI 交互
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const exploreBtn = document.getElementById('exploreBtn');
+            const rippleBtn = document.getElementById('rippleBtn');
+            const resetBtn = document.getElementById('resetBtn');
+
+            // 探索星系 —— 弹出问候
+            exploreBtn.addEventListener('click', () => {
+                const msgs = [
+                    '✦ 欢迎来 ✦',
+                    '🌌 星系探索中 …… 发现智慧新维度',
+                    '🚀 你天天开心',
+                    '✨ 星辰大海， 随行'
+                ];
+                const msg = msgs[Math.floor(Math.random() * msgs.length)];
+                // 创建一个临时提示
+                const tip = document.createElement('div');
+                tip.textContent = msg;
+                tip.style.cssText = `
+                            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                            background: rgba(10, 16, 30, 0.8); backdrop-filter: blur(12px);
+                            padding: 1.6rem 2.8rem; border-radius: 40px;
+                            color: #f0f4ff; font-size: 1.4rem; font-weight: 400;
+                            border: 1px solid rgba(255,255,255,0.1);
+                            box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+                            z-index: 999; pointer-events: none;
+                            animation: floatIn 0.5s ease-out;
+                            letter-spacing: 1px;
+                        `;
+                document.body.appendChild(tip);
+                setTimeout(() => {
+                    tip.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                    tip.style.opacity = '0';
+                    tip.style.transform = 'translate(-50%, -50%) scale(0.9)';
+                    setTimeout(() => tip.remove(), 700);
+                }, 1800);
+            });
+
+            // 涟漪光效
+            rippleBtn.addEventListener('click', () => {
+                if (window.rippleEffect) {
+                    window.rippleEffect();
+                }
+                // 按钮反馈
+                rippleBtn.style.transform = 'scale(0.94)';
+                setTimeout(() => { rippleBtn.style.transform = ''; }, 200);
+            });
+
+            // 重置星轨
+            resetBtn.addEventListener('click', () => {
+                if (window.resetParticles) {
+                    window.resetParticles();
+                }
+                resetBtn.style.transform = 'scale(0.94)';
+                setTimeout(() => { resetBtn.style.transform = ''; }, 200);
+            });
+
+            // 额外：按钮悬停微光
+            document.querySelectorAll('.btn').forEach(btn => {
+                btn.addEventListener('mouseenter', function() {
+                    this.style.transition = 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease';
+                });
+            });
+
+        });
+    </script>
+
+</body>
+</html>
