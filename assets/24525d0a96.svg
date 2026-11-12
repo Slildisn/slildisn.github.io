@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="胖橘">
+  <defs>
+    <radialGradient id="cbg" cx="50%" cy="36%" r="72%">
+      <stop offset="0%" stop-color="#3a2a18"/>
+      <stop offset="62%" stop-color="#241a10"/>
+      <stop offset="100%" stop-color="#120c07"/>
+    </radialGradient>
+    <radialGradient id="fur" cx="46%" cy="34%" r="70%">
+      <stop offset="0%" stop-color="#ffcf8a"/>
+      <stop offset="70%" stop-color="#f0a24a"/>
+      <stop offset="100%" stop-color="#c9762a"/>
+    </radialGradient>
+    <clipPath id="cclip"><circle cx="48" cy="48" r="46"/></clipPath>
+  </defs>
+  <circle cx="48" cy="48" r="46" fill="url(#cbg)"/>
+  <g clip-path="url(#cclip)">
+    <!-- 耳朵 -->
+    <path d="M28 32 l-2 -14 14 8z" fill="#f0a24a"/>
+    <path d="M68 32 l2 -14 -14 8z" fill="#f0a24a"/>
+    <path d="M31 30 l-1 -8 8 5z" fill="#ffb0a0" opacity=".8"/>
+    <path d="M65 30 l1 -8 -8 5z" fill="#ffb0a0" opacity=".8"/>
+    <!-- 身体 -->
+    <ellipse cx="48" cy="60" rx="26" ry="22" fill="url(#fur)"/>
+    <!-- 头 -->
+    <ellipse cx="48" cy="44" rx="23" ry="19" fill="url(#fur)"/>
+    <!-- 虎斑 -->
+    <path d="M40 27 q-2 -6 2 -6 M48 25 q0 -6 2 -6 M56 27 q2 -6 4 -4" stroke="#c9762a" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".7"/>
+    <!-- 半闭眼（困） -->
+    <path d="M36 44 q5 3 10 0" stroke="#3a2210" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M50 44 q5 3 10 0" stroke="#3a2210" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <!-- 鼻子 -->
+    <path d="M46 50 h4 l-2 3z" fill="#ff8fa3"/>
+    <!-- 嘴 -->
+    <path d="M48 53 v3 M48 56 q-3 3 -6 0 M48 56 q3 3 6 0" stroke="#3a2210" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    <!-- 胡须 -->
+    <g stroke="#ffe6c8" stroke-width="1" opacity=".65">
+      <path d="M24 46 l12 2"/><path d="M24 52 l12 -1"/>
+      <path d="M72 46 l-12 2"/><path d="M72 52 l-12 -1"/>
+    </g>
+    <!-- 薯条盒 -->
+    <g transform="translate(56 62) rotate(8)">
+      <path d="M0 0 h16 l-3 14 h-10z" fill="#d8232a"/>
+      <g fill="#ffd447">
+        <rect x="3" y="-8" width="2.4" height="10" rx="1"/>
+        <rect x="7" y="-10" width="2.4" height="12" rx="1"/>
+        <rect x="11" y="-7" width="2.4" height="9" rx="1"/>
+      </g>
+    </g>
+  </g>
+  <circle cx="48" cy="48" r="46" fill="none" stroke="#f0a24a" stroke-opacity=".55" stroke-width="1.5"/>
+</svg>

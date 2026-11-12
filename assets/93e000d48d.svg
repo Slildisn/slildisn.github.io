@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="花火">
+  <defs>
+    <radialGradient id="sbg" cx="50%" cy="40%" r="72%">
+      <stop offset="0%" stop-color="#3a1030"/>
+      <stop offset="62%" stop-color="#220a1c"/>
+      <stop offset="100%" stop-color="#120410"/>
+    </radialGradient>
+    <linearGradient id="mask" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff2fb"/>
+      <stop offset="55%" stop-color="#ffd0ea"/>
+      <stop offset="100%" stop-color="#ff8ec9"/>
+    </linearGradient>
+    <radialGradient id="sglow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff5fb0" stop-opacity=".5"/>
+      <stop offset="100%" stop-color="#ff5fb0" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="sclip"><circle cx="48" cy="48" r="46"/></clipPath>
+  </defs>
+  <circle cx="48" cy="48" r="46" fill="url(#sbg)"/>
+  <circle cx="48" cy="46" r="30" fill="url(#sglow)"/>
+  <g clip-path="url(#sclip)">
+    <!-- 面具 -->
+    <path d="M48 22 C64 22 72 32 72 46 C72 62 60 74 48 74 C36 74 24 62 24 46 C24 32 32 22 48 22 Z"
+          fill="url(#mask)" stroke="#ffb3dc" stroke-width="1.2"/>
+    <!-- 眼洞 -->
+    <path d="M34 44 q7 -8 14 0 q-7 6 -14 0 Z" fill="#2a0a1e"/>
+    <path d="M48 44 q7 -8 14 0 q-7 6 -14 0 Z" fill="#2a0a1e"/>
+    <!-- 笑意 -->
+    <path d="M38 58 q10 8 20 0" fill="none" stroke="#2a0a1e" stroke-width="2" stroke-linecap="round"/>
+    <!-- 花瓣/星火 -->
+    <path d="M74 26 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" fill="#ffd0ea" opacity=".95"/>
+    <path d="M22 30 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5z" fill="#ff8ec9" opacity=".8"/>
+    <circle cx="70" cy="66" r="1.8" fill="#ffd0ea" opacity=".85"/>
+    <circle cx="26" cy="62" r="1.4" fill="#ffd0ea" opacity=".7"/>
+  </g>
+  <circle cx="48" cy="48" r="46" fill="none" stroke="#ff8ec9" stroke-opacity=".55" stroke-width="1.5"/>
+</svg>
