@@ -283,6 +283,15 @@
       </div>
     </div>
 
+    <div class="ov ov-global" id="ov-team" hidden>
+      <div class="item-card">
+        <div class="item-icon">🕯️</div>
+        <h2>记忆祭坛</h2>
+        <p>祭坛上浮着几段还没散去的记忆。挑一个人，让她跟你走。</p>
+        <div class="talents" id="team-list"></div>
+      </div>
+    </div>
+
     <div class="ov ov-global" id="ov-chest" hidden>
       <div class="item-card">
         <div class="item-icon">🎁</div>
@@ -338,7 +347,7 @@
 
     <div class="ov ov-global ov-tapclose" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
+      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>每层起点有<b>记忆祭坛</b>：走上去三选一招募队友（最多 3 人），队友会跟着你、自动打身边的敌人。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
       <p class="tap-hint">点任意位置也能关掉</p>
     </div>
@@ -420,6 +429,7 @@
   var hLv = $('h-lv'), hXp = $('h-xp'), hDir = $('h-dir'), hTalents = $('h-talents'), hGold = $('h-gold')
   var ovTalent = $('ov-talent'), talentList = $('talent-list'), talentTitle = $('talent-title')
   var ovMeta = $('ov-meta')
+  var ovTeam = $('ov-team'), teamList = $('team-list')
   var ovChest = $('ov-chest'), chestList = $('chest-list')
   var ovShop = $('ov-shop'), shopList = $('shop-list'), shopGold = $('shop-gold'), shopClose = $('shop-close')
   var ovItem = $('ov-item'), itemIcon = $('item-icon'), itemName = $('item-name'), itemDesc = $('item-desc'), itemEffect = $('item-effect'), itemTake = $('item-take')
@@ -1017,7 +1027,26 @@
       }
     }
 
-    return { grid: g, rooms: rooms, start: start, stairs: stairs, items: items, enemies: enemies, floor: floor, seed: seed, special: special }
+    // 记忆祭坛：放在起点房间里，尽量离起点远一点
+    var altar = null
+    if (rooms.length) {
+      var hr = rooms[0]
+      var far = [], near = []
+      for (var yy = hr.y; yy < hr.y + hr.h; yy++) {
+        for (var xx = hr.x; xx < hr.x + hr.w; xx++) {
+          if (xx === start.x && yy === start.y) continue
+          if (g[yy][xx] !== FLOOR) continue
+          if (!free(xx, yy)) continue
+          var ad = Math.abs(xx - start.x) + Math.abs(yy - start.y)
+          if (ad >= 2) far.push({ x: xx, y: yy })
+          else near.push({ x: xx, y: yy })
+        }
+      }
+      var cands = far.length ? far : near
+      if (cands.length) altar = cands[rnd(cands.length)]
+    }
+
+    return { grid: g, rooms: rooms, start: start, stairs: stairs, items: items, enemies: enemies, floor: floor, seed: seed, special: special, altar: altar }
   }
 
   /* ---------------- 视野 ---------------- */
@@ -1204,6 +1233,95 @@
     if (S.pending > 0) setTimeout(openTalent, 160)
   }
 
+  /* ---------------- 队友招募 ---------------- */
+  function recruitPool() {
+    var excluded = { }
+    excluded[S.hero.id] = true
+    for (var i = 0; i < S.team.length; i++) excluded[S.team[i].heroId] = true
+    var pool = []
+    for (var h = 0; h < HEROES.length; h++) {
+      var hero = HEROES[h]
+      if (excluded[hero.id]) continue
+      if (hero.hidden && !META.unlocked[hero.id]) continue
+      pool.push(hero)
+    }
+    return pool
+  }
+
+  function openAltar() {
+    if (!ovTeam || !teamList) return
+    S.paused = true
+    var pool = recruitPool()
+    teamList.innerHTML = ''
+    if (!pool.length || S.team.length >= 3) {
+      var msg = document.createElement('p')
+      msg.textContent = S.team.length >= 3 ? '队伍已经满了（最多 3 人）。' : '祭坛上什么也没留下。'
+      teamList.appendChild(msg)
+      var ok = document.createElement('button')
+      ok.type = 'button'
+      ok.className = 'btn'
+      ok.textContent = '知道了'
+      ok.addEventListener('click', function () { closeAltar() })
+      teamList.appendChild(ok)
+      ovTeam.hidden = false
+      return
+    }
+    var picks = []
+    var copy = pool.slice()
+    while (picks.length < 3 && copy.length) picks.push(copy.splice(rnd(copy.length), 1)[0])
+    picks.forEach(function (hero) {
+      var b = document.createElement('button')
+      b.type = 'button'
+      b.className = 'talent'
+      var nb = document.createElement('b')
+      nb.textContent = (hero.emoji || '') + ' ' + hero.name
+      var sp = document.createElement('span')
+      sp.textContent = hero.desc + '（攻 ' + hero.atk + ' / 血 ' + hero.hp + '）'
+      b.appendChild(nb)
+      b.appendChild(sp)
+      b.addEventListener('click', function () { recruit(hero) })
+      teamList.appendChild(b)
+    })
+    ovTeam.hidden = false
+  }
+
+  function closeAltar() {
+    if (ovTeam) ovTeam.hidden = true
+    if (S) S.paused = false
+    render()
+    syncHud()
+  }
+
+  function freeAdjacent(x, y) {
+    var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]
+    for (var i = 0; i < dirs.length; i++) {
+      var nx = x + dirs[i][0], ny = y + dirs[i][1]
+      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue
+      if (S.grid[ny][nx] === WALL) continue
+      if (nx === S.player.x && ny === S.player.y) continue
+      if (enemyAt(nx, ny)) continue
+      var blocked = false
+      for (var j = 0; j < S.team.length; j++) {
+        if (S.team[j].x === nx && S.team[j].y === ny) blocked = true
+      }
+      if (blocked) continue
+      return { x: nx, y: ny }
+    }
+    return { x: x, y: y }
+  }
+
+  function recruit(hero) {
+    var spot = freeAdjacent(S.player.x, S.player.y)
+    S.team.push({ heroId: hero.id, x: spot.x, y: spot.y, hp: hero.hp, atk: Math.max(1, hero.atk - 1) })
+    if (ovTeam) ovTeam.hidden = true
+    S.paused = false
+    log('「' + hero.name + '」加入了队伍。')
+    SND.chime()
+    fx(spot.x, spot.y, hero.name, '#ffd9e6', -0.6)
+    syncHud()
+    render()
+  }
+
   /* ---------------- 宝箱与商店 ---------------- */
   function openChest() {
     if (!ovChest || !chestList) return
@@ -1234,6 +1352,7 @@
     log('宝箱里是「' + p.name + '」。')
     SND.chime()
     if (ovChest) ovChest.hidden = true
+    if (ovTeam) ovTeam.hidden = true
     if (S) S.paused = false
     syncHud()
     render()
@@ -1699,6 +1818,8 @@
       bullets: [],
       turnCount: 0,
       gold: 0,
+      team: [],
+      altar: null,
       relics2: {},
       special: null,
       shopOffers: [],
@@ -1719,6 +1840,8 @@
     S.player.x = m.start.x; S.player.y = m.start.y
     S.stairs = m.stairs
     S.special = m.special
+    S.altar = m.altar
+    S.team = []
     log('你是「' + hero.name + '」。第 1 层，回廊还在往下延伸。')
     SND.ambience('calm')
     SND.music('calm')
@@ -1749,6 +1872,7 @@
     S.player.x = m.start.x; S.player.y = m.start.y
     S.stairs = m.stairs
     S.special = m.special
+    S.altar = m.altar
     S.seen = {}; S.vis = {}
     S.hp = Math.min(S.maxHp, S.hp + 2 + (S.floorHeal || 0))
     if (S.hero.id === 'firefly') { S.hp = Math.min(S.maxHp, S.hp + 1); log('流萤的微光护住了你，回 3 血。') }
@@ -1917,6 +2041,48 @@
     }
   }
 
+  function teamTurn() {
+    for (var i = 0; i < S.team.length; i++) {
+      var m = S.team[i]
+      var target = null
+      var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+      for (var d = 0; d < 4; d++) {
+        var te = enemyAt(m.x + dirs[d][0], m.y + dirs[d][1])
+        if (te) { target = te; break }
+      }
+      if (target) {
+        var dmg = m.atk + rnd(2)
+        target.hp -= dmg
+        var th = heroById(m.heroId)
+        log('「' + (th ? th.name : '队友') + '」打了「' + target.name + '」' + dmg + ' 点。')
+        fx(target.x, target.y, '-' + dmg, '#ffd9e6', -0.4)
+        if (target.hp <= 0) killEnemy(target)
+        continue
+      }
+      var pdx = S.player.x - m.x, pdy = S.player.y - m.y
+      if (Math.abs(pdx) + Math.abs(pdy) <= 1) continue
+      var sx = 0, sy = 0
+      if (Math.abs(pdx) >= Math.abs(pdy)) sx = pdx > 0 ? 1 : -1
+      else sy = pdy > 0 ? 1 : -1
+      var nx = m.x + sx, ny = m.y + sy
+      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue
+      if (S.grid[ny][nx] === WALL) {
+        if (sx) { sx = 0; sy = pdy > 0 ? 1 : -1 } else { sy = 0; sx = pdx > 0 ? 1 : -1 }
+        nx = m.x + sx; ny = m.y + sy
+        if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue
+        if (S.grid[ny][nx] === WALL) continue
+      }
+      if (nx === S.player.x && ny === S.player.y) continue
+      if (enemyAt(nx, ny)) continue
+      var blocked = false
+      for (var j = 0; j < S.team.length; j++) {
+        if (j !== i && S.team[j].x === nx && S.team[j].y === ny) blocked = true
+      }
+      if (blocked) continue
+      m.x = nx; m.y = ny
+    }
+  }
+
   function enemiesTurn() {
     S.turnCount = (S.turnCount || 0) + 1
     for (var i = 0; i < S.enemies.length; i++) {
@@ -2013,6 +2179,13 @@
       } else if (S.grid[ny][nx] === WALL) {
         return false
       } else {
+        for (var sw = 0; sw < S.team.length; sw++) {
+          if (S.team[sw].x === nx && S.team[sw].y === ny) {
+            S.team[sw].x = S.player.x
+            S.team[sw].y = S.player.y
+            break
+          }
+        }
         S.player.x = nx; S.player.y = ny
         var landed = stepOn(nx, ny)
         if (landed === 'floor') return true
@@ -2023,6 +2196,8 @@
       }
     }
     S.turns++
+    teamTurn()
+    if (S.over) return true
     enemiesTurn()
     if (S.over) return true
     computeFov(); render(); syncHud()
@@ -2048,6 +2223,10 @@
         }
         break
       }
+    }
+    if (S.altar && x === S.altar.x && y === S.altar.y) {
+      S.altar = null
+      openAltar()
     }
     if (S.special && x === S.special.x && y === S.special.y) {
       var spKind = S.special.kind
@@ -2150,6 +2329,13 @@
         bt2.textContent = (pobj ? pobj.icon + ' ' + pobj.name : pid) + (S.relics2[pid] > 1 ? ' ×' + S.relics2[pid] : '')
         hRelics.appendChild(bt2)
       }
+      for (var ti2 = 0; ti2 < S.team.length; ti2++) {
+        var tmh = heroById(S.team[ti2].heroId)
+        var tc = document.createElement('span')
+        tc.className = 'relic'
+        tc.textContent = '🕯️ ' + (tmh ? tmh.name : '队友')
+        hRelics.appendChild(tc)
+      }
       for (var tk2 in S.trinkets) {
         if (!S.trinkets[tk2]) continue
         var bt = document.createElement('span')
@@ -2224,6 +2410,22 @@
           ctx.fillRect(px, py, TS, TS)
         }
       }
+    }
+
+    // 记忆祭坛
+    if (S.altar && S.vis[S.altar.x + ',' + S.altar.y]) {
+      var alx = (S.altar.x - camX) * TS + TS / 2
+      var aly = (S.altar.y - camY) * TS + TS / 2
+      var alPulse = 0.5 + 0.5 * Math.sin(Date.now() / 500)
+      ctx.fillStyle = 'rgba(255,158,196,' + (0.10 + 0.12 * alPulse) + ')'
+      ctx.beginPath(); ctx.arc(alx, aly, TS * (0.42 + 0.06 * alPulse), 0, Math.PI * 2); ctx.fill()
+      ctx.strokeStyle = '#ff9ec4'
+      ctx.lineWidth = Math.max(1.5, TS * .06)
+      ctx.beginPath(); ctx.arc(alx, aly, TS * .22, 0, Math.PI * 2); ctx.stroke()
+      ctx.fillStyle = 'rgba(255,214,232,' + (0.5 + 0.4 * alPulse) + ')'
+      ctx.beginPath(); ctx.arc(alx, aly, TS * .07, 0, Math.PI * 2); ctx.fill()
+      ctx.strokeStyle = 'rgba(255,158,196,.55)'
+      ctx.beginPath(); ctx.moveTo(alx - TS * .26, aly + TS * .18); ctx.lineTo(alx + TS * .26, aly + TS * .18); ctx.stroke()
     }
 
     // 宝箱 / 商店
@@ -2437,6 +2639,34 @@
         ctx.fillStyle = '#dfe6ff'
         ctx.beginPath(); ctx.arc(bx0, by0, Math.max(1.5, TS * .06), 0, Math.PI * 2); ctx.fill()
       }
+    }
+
+    // 队友
+    for (var ci = 0; ci < S.team.length; ci++) {
+      var cm = S.team[ci]
+      if (!S.seen[cm.x + ',' + cm.y]) continue
+      var cmHero = heroById(cm.heroId)
+      var cc = (cmHero && cmHero.color) || '#ff9ec4'
+      var cxp = (cm.x - camX) * TS + TS / 2
+      var cyp = (cm.y - camY) * TS + TS / 2
+      ctx.globalAlpha = S.vis[cm.x + ',' + cm.y] ? 1 : 0.45
+      ctx.fillStyle = 'rgba(10,9,16,.55)'
+      ctx.beginPath(); ctx.arc(cxp, cyp, TS * .36, 0, Math.PI * 2); ctx.fill()
+      ctx.strokeStyle = cc
+      ctx.lineWidth = Math.max(1.2, TS * .05)
+      ctx.beginPath(); ctx.arc(cxp, cyp, TS * .36, 0, Math.PI * 2); ctx.stroke()
+      if (cmHero && emojiOk(cmHero.emoji)) {
+        ctx.font = Math.max(12, Math.round(TS * .72)) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillStyle = '#fff'
+        ctx.fillText(cmHero.emoji, cxp, cyp + TS * .03)
+        ctx.font = Math.round(TS * .62) + 'px -apple-system,"PingFang SC",sans-serif'
+      } else {
+        ctx.fillStyle = cc
+        ctx.beginPath(); ctx.arc(cxp, cyp, TS * .18, 0, Math.PI * 2); ctx.fill()
+      }
+      ctx.globalAlpha = 1
     }
 
     // 玩家：按所选角色渲染 Emoji（无 emoji 字体时退回应援色圆盘 + 名字首字）
@@ -2786,6 +3016,9 @@
       return true
     },
     specialPos: function () { return S ? S.special : null },
+    altarPos: function () { return S ? S.altar : null },
+    openAltar: openAltar,
+    team: function () { return S ? S.team.map(function (m) { return { id: m.heroId, x: m.x, y: m.y } }) : [] },
     clearEnemies: function () { if (S) S.enemies.forEach(function (e) { e.hp = 0 }) },
     setHp: function (n) { if (S) { S.hp = Math.max(1, Math.min(S.maxHp, n)) } },
     setCrit: function (x) { if (S) S.crit = x },
@@ -2816,7 +3049,7 @@
         talents: Object.keys(S.talents).length, tricks: S.tricks || 0,
         shakeLeft: Math.max(0, (S.shakeUntil || 0) - Date.now()), shakeMag: S.shakeMag || 0,
         kills: S.kills || 0, steps: S.steps || 0, gold: S.gold || 0,
-        relics2: Object.keys(S.relics2 || {}).length, special: S.special ? S.special.kind : null, thornsNow: S.thorns || 0,
+        relics2: Object.keys(S.relics2 || {}).length, team: (S.team||[]).length, altar: S.altar ? 1 : 0, special: S.special ? S.special.kind : null, thornsNow: S.thorns || 0,
         items: S.items.length, relics: Object.keys(S.relics)
       }
     }
