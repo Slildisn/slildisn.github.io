@@ -1909,13 +1909,19 @@
     var cmd = String(code || '').trim().toUpperCase()
     if (!cmd) return
     if (cmd === 'MAX_FRAGMENTS') {
-      META.shards += 999
-      META.cheatDirty = true          // 只在内存，不写 localStorage
+      META.bonusShards = (META.bonusShards || 0) + 999   // 只在内存，绝不写盘
+      META.cheatDirty = true
       if (S) cheatLog('【警告：神秘力量已介入，记忆碎片 +999！】', true)
       else toast('记忆碎片 +999')
       syncMetaBar()
       renderMeta()
       afterCheat()
+      return
+    }
+    if (cmd === 'CLEAR_SAVE') {
+      try { localStorage.clear() } catch (e) { /* ignore */ }
+      if (S) cheatLog('【警告：记忆已被彻底抹除，正在重启……】', true)
+      setTimeout(function () { try { location.reload() } catch (e) { /* ignore */ } }, 80)
       return
     }
     if (!S) {
@@ -2186,12 +2192,34 @@
       META.kills = Number(m.kills) || 0
       META.hpUp = Number(m.hpUp) || 0
       META.unlocked = m.unlocked || {}
+      META.bonusShards = 0   // 作弊送的碎片永不从存档恢复
     } catch (e) { /* 存档坏了就当新号 */ }
   }
 
+  function shardTotal() {
+    return (META.shards || 0) + (META.bonusShards || 0)
+  }
+
+  function spendShards(cost) {
+    if (shardTotal() < cost) return false
+    var bonus = META.bonusShards || 0
+    var take = Math.min(bonus, cost)
+    META.bonusShards = bonus - take
+    META.shards -= (cost - take)
+    return true
+  }
+
   function saveMeta() {
-    if (META && META.cheatDirty) return   // 作弊改的碎片/解锁只在内存里
-    try { localStorage.setItem(META_KEY, JSON.stringify(META)) } catch (e) { /* ignore */ }
+    if (META && META.cheatDirty) return   // 作弊局不落盘
+    try {
+      // 双保险：即使走到这里，也把只在内存里的字段剥掉再写
+      var clean = {}
+      for (var k in META) {
+        if (k === 'bonusShards' || k === 'cheatDirty') continue
+        clean[k] = META[k]
+      }
+      localStorage.setItem(META_KEY, JSON.stringify(clean))
+    } catch (e) { /* ignore */ }
   }
 
   function heroById(id) {
@@ -2204,7 +2232,7 @@
   function syncMetaBar() {
     var st = $('meta-stats'), sh = $('meta-shards')
     if (st) st.textContent = '最高 ' + META.best + ' 层 · 累计击杀 ' + META.kills
-    if (sh) sh.textContent = String(META.shards)
+    if (sh) sh.textContent = String(shardTotal())
   }
 
   function renderMeta() {
@@ -2212,7 +2240,7 @@
     var best = $('m-best'), kills = $('m-kills'), shards = $('m-shards')
     if (best) best.textContent = String(META.best)
     if (kills) kills.textContent = String(META.kills)
-    if (shards) shards.textContent = String(META.shards)
+    if (shards) shards.textContent = String(shardTotal())
 
     var list = $('meta-list')
     list.innerHTML = ''
@@ -2227,7 +2255,7 @@
     var btn = document.createElement('button')
     btn.type = 'button'
     btn.textContent = maxed ? '已满' : cost + ' 碎片'
-    btn.disabled = maxed || META.shards < cost
+    btn.disabled = maxed || shardTotal() < cost
     btn.addEventListener('click', buyHp)
     row.appendChild(btn)
     list.appendChild(row)
@@ -2244,7 +2272,7 @@
       var b2 = document.createElement('button')
       b2.type = 'button'
       b2.textContent = unlocked ? '已解锁' : h.cost + ' 碎片'
-      b2.disabled = unlocked || META.shards < h.cost
+      b2.disabled = unlocked || shardTotal() < h.cost
       ;(function (id) { b2.addEventListener('click', function () { unlockHero(id) }) })(h.id)
       r2.appendChild(b2)
       list.appendChild(r2)
@@ -2254,8 +2282,7 @@
   function buyHp() {
     if (META.hpUp >= 10) return
     var c = hpUpCost()
-    if (META.shards < c) return
-    META.shards -= c
+    if (!spendShards(c)) return
     META.hpUp++
     saveMeta()
     syncMetaBar()
@@ -2265,8 +2292,7 @@
   function unlockHero(id) {
     var h = heroById(id)
     if (!h || !h.hidden || META.unlocked[id]) return
-    if (META.shards < h.cost) return
-    META.shards -= h.cost
+    if (!spendShards(h.cost)) return
     META.unlocked[id] = true
     saveMeta()
     syncMetaBar()
