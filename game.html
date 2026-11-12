@@ -146,6 +146,15 @@
   .tchip .tem{font-size:.9rem;line-height:1}
   .tchip .tbar{width:34px;height:4px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden}
   .tchip .tbar i{display:block;height:100%;background:linear-gradient(90deg,#ff6fa8,#ff9ec4)}
+  .tchip.me{border-color:rgba(255,217,160,.55);background:rgba(255,217,160,.10)}
+  .tchip.dead{opacity:.38;filter:grayscale(1)}
+  .tchip.hurt{border-color:#ff5a72}
+  .syn-panel{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+  .syn-panel[hidden]{display:none}
+  .syn-chip{font-size:.66rem;padding:3px 9px;border-radius:99px;color:#ffe9f2;border:1px solid rgba(255,158,196,.45);background:rgba(255,158,196,.14)}
+  .toast{position:fixed;left:50%;top:14%;transform:translate(-50%,-8px);z-index:80;padding:10px 18px;border-radius:14px;max-width:86vw;text-align:center;background:rgba(20,14,30,.94);border:1px solid rgba(255,158,196,.5);color:#ffe9f2;font-size:.8rem;line-height:1.5;box-shadow:0 20px 60px -20px rgba(255,90,150,.9);opacity:0;transition:opacity .3s,transform .3s;pointer-events:none}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .toast[hidden]{display:none}
 
   /* 记忆升级 */
   .meta-bar{
@@ -260,6 +269,8 @@
   </div>
 
   <div class="team-strip" id="team-strip" hidden></div>
+  <div class="syn-panel" id="syn-panel" hidden></div>
+  <div class="toast" id="toast" hidden></div>
 
   <div class="stage" id="stage">
     <canvas id="cv" width="480" height="352" aria-label="地牢画面"></canvas>
@@ -361,7 +372,7 @@
 
     <div class="ov ov-global ov-tapclose" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>每层起点有<b>记忆祭坛</b>：走上去三选一招募队友（最多 3 人），队友会跟着你、自动打身边的敌人。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
+      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>走到光门上会先弹出<b>招募面板</b>：三选一招募队友（队伍最多 4 人），队友跟着你、自动打身边的敌人，也会被敌人打；他们凑在一起会触发<b>羁绊</b>（左上角显示）。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
       <p class="tap-hint">点任意位置也能关掉</p>
     </div>
@@ -975,7 +986,8 @@
       enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: bhp, max: bhp, atk: 1 + ((floor / 2) | 0), name: '铁墓' })
     }
 
-    var nEnemy = isBoss ? 3 : 2 + Math.min(3, floor)
+    var mates = S ? S.team.filter(function (m) { return !m.dead }).length : 0
+    var nEnemy = (isBoss ? 3 : 2 + Math.min(3, floor)) + mates * 2
     for (var e = 0; e < nEnemy; e++) {
       for (var t = 0; t < 60; t++) {
         var ex = 1 + rnd(MAP_W - 2), ey = 1 + rnd(MAP_H - 2)
@@ -989,7 +1001,9 @@
         // 游魂血厚、暗箭手中等、自爆虫永远脆
         var bonusHp = kind === 'bomber' ? 0 : Math.floor(floor / 2)
         var ehp = base.hp + bonusHp
-        enemies.push({ type: kind, x: ex, y: ey, hp: ehp, max: ehp, atk: base.atk + Math.floor(floor / 3), name: base.name })
+        var eatk = base.atk + Math.floor(floor / 3)
+        if (mates) eatk = Math.max(1, Math.round(eatk * (1 + 0.1 * mates)))
+        enemies.push({ type: kind, x: ex, y: ey, hp: ehp, max: ehp, atk: eatk, name: base.name })
         break
       }
     }
@@ -1042,26 +1056,7 @@
       }
     }
 
-    // 记忆祭坛：放在起点房间里，尽量离起点远一点
-    var altar = null
-    if (rooms.length) {
-      var hr = rooms[0]
-      var far = [], near = []
-      for (var yy = hr.y; yy < hr.y + hr.h; yy++) {
-        for (var xx = hr.x; xx < hr.x + hr.w; xx++) {
-          if (xx === start.x && yy === start.y) continue
-          if (g[yy][xx] !== FLOOR) continue
-          if (!free(xx, yy)) continue
-          var ad = Math.abs(xx - start.x) + Math.abs(yy - start.y)
-          if (ad >= 2) far.push({ x: xx, y: yy })
-          else near.push({ x: xx, y: yy })
-        }
-      }
-      var cands = far.length ? far : near
-      if (cands.length) altar = cands[rnd(cands.length)]
-    }
-
-    return { grid: g, rooms: rooms, start: start, stairs: stairs, items: items, enemies: enemies, floor: floor, seed: seed, special: special, altar: altar }
+    return { grid: g, rooms: rooms, start: start, stairs: stairs, items: items, enemies: enemies, floor: floor, seed: seed, special: special, altar: null }
   }
 
   /* ---------------- 视野 ---------------- */
@@ -1112,7 +1107,7 @@
   /* ---------------- 奇物（创意道具） ---------------- */
   var TRINKETS = [
     { id: 'watch', name: '泣血的怀表', icon: '🕰️', desc: '表盘里凝着别人的血，走一步，它就滴一下。', effect: '每走 10 步，对身旁 1 格的怨灵造成 1 点伤害', apply: function () { S.watch = true } },
-    { id: 'finger', name: '断掉的小指', icon: '🖐️', desc: '还带着一点体温，握上去却很有劲。', effect: '攻击 +2，最大生命 -3', apply: function () { S.atk += 2; S.maxHp = Math.max(4, S.maxHp - 3); S.hp = Math.min(S.hp, S.maxHp) } },
+    { id: 'finger', name: '断掉的小指', icon: '🖐️', desc: '还带着一点体温，握上去却很有劲。', effect: '攻击 +2，最大生命 -3', apply: function () { S.atk += 2; S.maxHp = Math.max(4, S.maxHp - 3); S.hp = Math.min(S.hp, S.maxHp); teamMaxHp(-3) } },
     { id: 'dice', name: '空心的骰子', icon: '🎲', desc: '摇起来没有声音，点数却总在变。', effect: '暴击 +15%，但每次受伤多 1 点', apply: function () { S.crit += 0.15; S.extraHurt = (S.extraHurt || 0) + 1 } },
     { id: 'mirror', name: '半块镜子', icon: '🪞', desc: '照不出你，照得出你身后那一步。', effect: '闪避 +15%，攻击 -1', apply: function () { S.dodge += 0.15; S.atk = Math.max(1, S.atk - 1) } },
     { id: 'heart', name: '冷藏的心脏', icon: '🫀', desc: '冰袋还没化，是谁把它放进来的？', effect: '每次击杀回 2 血，药水效果 -50%', apply: function () { S.leech += 2; S.potionMul = Math.max(0.4, S.potionMul - 0.5) } },
@@ -1163,6 +1158,14 @@
     return (h && h.color) || '#ff9ec4'
   }
 
+  /* ---------------- 羁绊 ---------------- */
+  var SYNERGY = [
+    { id: 'otaku', name: '二次元之光', members: ['firefly', 'sparkle', 'mika'], tiers: [{ n: 2, desc: '全队暴击 +15%' }, { n: 3, desc: '暴击 +30%，暴击附带溅射' }] },
+    { id: 'chaos', name: '混沌乐子人', members: ['thanos', 'pig', 'nailong', 'taffy'], tiers: [{ n: 2, desc: '全队生命上限 +5，受击 10% 免疫' }, { n: 4, desc: '生命上限 +15，击杀 20% 掉落' }] },
+    { id: 'abyss', name: '深渊守望者', members: ['murasame', 'fatcat', 'mimi'], tiers: [{ n: 2, desc: '全队闪避 +15%' }, { n: 3, desc: '闪避成功后反击周围敌人' }] },
+    { id: 'elder', name: '不可名状之神', members: ['dem', 'mimi'], tiers: [{ n: 2, desc: '全属性 +20%，每走 10 步秒杀一个小怪' }] },
+  ]
+
   /* ---------------- 可叠加被动遗物 ---------------- */
   var PASSIVES = [
     { id: 'bloodsword', name: '嗜血剑', icon: '🗡️', desc: '每次暴击回 1 血。', apply: function () { S.relics2.bloodsword = (S.relics2.bloodsword || 0) + 1 } },
@@ -1180,7 +1183,7 @@
   /* ---------------- 天赋 ---------------- */
   var TALENTS = [
     { id: 'blade', name: '刀比嘴快', desc: '攻击 +2。「先砍，再问为什么。」', apply: function () { S.atk += 2 } },
-    { id: 'iron', name: '一身铁皮', desc: '生命上限 +5，并且立刻回满。「疼是疼，但死不了。」', apply: function () { S.maxHp += 5; S.hp = S.maxHp } },
+    { id: 'iron', name: '一身铁皮', desc: '生命上限 +5，并且立刻回满。「疼是疼，但死不了。」', apply: function () { S.maxHp += 5; S.hp = S.maxHp; teamMaxHp(5) } },
     { id: 'cat', name: '猫的脚步', desc: '闪避 +20%。「你踩不到影子。」', apply: function () { S.dodge += 0.2 } },
     { id: 'crit', name: '专挑软肋', desc: '暴击率 +10%。「哪儿最薄，就往哪儿戳。」', apply: function () { S.crit += 0.1 } },
     { id: 'leech', name: '顺手牵血', desc: '每次击杀回 1 血。「你的也是我的。」', apply: function () { S.leech = (S.leech || 0) + 1 } },
@@ -1263,20 +1266,23 @@
     return pool
   }
 
-  function openAltar() {
+  var recruitThenDescend = false
+
+  function openAltar(thenDescend) {
     if (!ovTeam || !teamList) return
+    recruitThenDescend = !!thenDescend
     S.paused = true
     var pool = recruitPool()
     teamList.innerHTML = ''
-    if (!pool.length || S.team.length >= 3) {
+    if (!pool.length || S.team.filter(function (m) { return !m.dead }).length >= 3) {
       var msg = document.createElement('p')
-      msg.textContent = S.team.length >= 3 ? '队伍已经满了（最多 3 人）。' : '祭坛上什么也没留下。'
+      msg.textContent = '队伍已经满了（最多 4 人）。'
       teamList.appendChild(msg)
       var ok = document.createElement('button')
       ok.type = 'button'
       ok.className = 'btn'
-      ok.textContent = '知道了'
-      ok.addEventListener('click', function () { closeAltar() })
+      ok.textContent = '继续往下'
+      ok.addEventListener('click', function () { closeAltar(true) })
       teamList.appendChild(ok)
       ovTeam.hidden = false
       return
@@ -1300,11 +1306,15 @@
     ovTeam.hidden = false
   }
 
-  function closeAltar() {
+  function closeAltar(goDown) {
     if (ovTeam) ovTeam.hidden = true
     if (S) S.paused = false
     render()
     syncHud()
+    if (goDown || recruitThenDescend) {
+      recruitThenDescend = false
+      nextFloor()
+    }
   }
 
   function freeAdjacent(x, y) {
@@ -1327,14 +1337,132 @@
 
   function recruit(hero) {
     var spot = freeAdjacent(S.player.x, S.player.y)
-    S.team.push({ heroId: hero.id, x: spot.x, y: spot.y, hp: hero.hp, maxHp: hero.hp, atk: hero.atk })
+    var bonus = (S.synHp || 0) + (S.teamHpBonus || 0)
+    S.team.push({ heroId: hero.id, x: spot.x, y: spot.y, hp: hero.hp + bonus, maxHp: hero.hp + bonus, atk: hero.atk, dead: false })
+    computeSynergy()
     if (ovTeam) ovTeam.hidden = true
     S.paused = false
     log('「' + hero.name + '」加入了队伍。')
     SND.chime()
+    SND.chime()
     fx(spot.x, spot.y, hero.name, '#ffd9e6', -0.6)
+    var go = recruitThenDescend
+    recruitThenDescend = false
     syncHud()
     render()
+    if (go) nextFloor()
+  }
+
+  /* ---------------- 羁绊 ---------------- */
+  function toast(text) {
+    var t = $('toast')
+    if (!t) return
+    t.textContent = text
+    t.hidden = false
+    t.classList.add('show')
+    clearTimeout(toast._t)
+    toast._t = setTimeout(function () {
+      t.classList.remove('show')
+      setTimeout(function () { t.hidden = true }, 400)
+    }, 2600)
+  }
+
+  function computeSynergy() {
+    if (!S) return
+    var ids = [S.hero.id]
+    var alive = aliveTeam()
+    for (var i = 0; i < alive.length; i++) ids.push(alive[i].heroId)
+    var counts = {}
+    for (var k = 0; k < ids.length; k++) counts[ids[k]] = (counts[ids[k]] || 0) + 1
+
+    var prev = S.syn || {}
+    var next = {}
+    for (var si = 0; si < SYNERGY.length; si++) {
+      var sy = SYNERGY[si]
+      var n = 0
+      for (var mi = 0; mi < sy.members.length; mi++) if (counts[sy.members[mi]]) n++
+      var tier = 0
+      for (var ti = 0; ti < sy.tiers.length; ti++) if (n >= sy.tiers[ti].n) tier = sy.tiers[ti].n
+      next[sy.id] = tier
+    }
+
+    var wantHp = 0
+    if (next.chaos >= 2) wantHp += 5
+    if (next.chaos >= 4) wantHp += 10
+    var dHp = wantHp - (S.synHp || 0)
+    if (dHp) {
+      S.synHp = wantHp
+      S.maxHp += dHp
+      S.hp = Math.max(1, S.hp + dHp)
+      for (var ai = 0; ai < S.team.length; ai++) {
+        var am = S.team[ai]
+        if (am.dead) continue
+        am.maxHp += dHp
+        am.hp = Math.max(1, am.hp + dHp)
+      }
+    }
+
+    var wantCrit = next.otaku >= 3 ? 0.30 : next.otaku >= 2 ? 0.15 : 0
+    if (wantCrit !== (S.synCrit || 0)) {
+      S.crit += wantCrit - (S.synCrit || 0)
+      S.synCrit = wantCrit
+    }
+
+    var wantDodge = next.abyss >= 2 ? 0.15 : 0
+    if (wantDodge !== (S.synDodge || 0)) {
+      S.dodge = Math.max(0, S.dodge + wantDodge - (S.synDodge || 0))
+      S.synDodge = wantDodge
+    }
+
+    if (next.elder >= 2 && !S.elderDone) {
+      S.elderDone = true
+      S.atk = Math.max(1, Math.round(S.atk * 1.2))
+      S.maxHp = Math.round(S.maxHp * 1.2)
+      S.hp = Math.round(S.hp * 1.2)
+      S.dodge = Math.min(0.75, S.dodge + 0.1)
+      for (var ei = 0; ei < S.team.length; ei++) {
+        var em = S.team[ei]
+        if (em.dead) continue
+        em.atk = Math.max(1, Math.round(em.atk * 1.2))
+        em.maxHp = Math.round(em.maxHp * 1.2)
+        em.hp = Math.round(em.hp * 1.2)
+      }
+    }
+
+    for (var sj = 0; sj < SYNERGY.length; sj++) {
+      var s2 = SYNERGY[sj]
+      var oldT = prev[s2.id] || 0
+      var newT = next[s2.id] || 0
+      if (newT > oldT) {
+        var desc = ''
+        for (var tk = 0; tk < s2.tiers.length; tk++) if (s2.tiers[tk].n === newT) desc = s2.tiers[tk].desc
+        toast('【' + s2.name + '】羁绊已激活！' + desc)
+        SND.level()
+      } else if (newT < oldT && oldT > 0) {
+        toast('【' + s2.name + '】羁绊失效')
+      }
+    }
+
+    S.syn = next
+    syncSynergy()
+  }
+
+  function syncSynergy() {
+    var box = $('syn-panel')
+    if (!box) return
+    box.innerHTML = ''
+    var any = false
+    for (var i = 0; i < SYNERGY.length; i++) {
+      var sy = SYNERGY[i]
+      var tier = (S.syn && S.syn[sy.id]) || 0
+      if (!tier) continue
+      any = true
+      var chip = document.createElement('span')
+      chip.className = 'syn-chip'
+      chip.textContent = sy.name + ' ' + tier + '/' + sy.members.length
+      box.appendChild(chip)
+    }
+    box.hidden = !any
   }
 
   /* ---------------- 宝箱与商店 ---------------- */
@@ -1619,7 +1747,7 @@
     }
     S.relics[id] = true
     if (id === 'fang') S.atk += 2
-    if (id === 'iron') { S.maxHp += 4; S.hp += 4 }
+    if (id === 'iron') { S.maxHp += 4; S.hp += 4; teamMaxHp(4) }
     if (id === 'star') S.vision += 2
     log('遗物「' + r.name + '」：' + r.desc + '。')
     SND.chime()
@@ -1834,6 +1962,7 @@
       turnCount: 0,
       gold: 0,
       team: [],
+      syn: {}, synHp: 0, synCrit: 0, synDodge: 0, teamHpBonus: 0, elderDone: false, synStep: 0,
       altar: null,
       relics2: {},
       special: null,
@@ -1857,6 +1986,7 @@
     S.special = m.special
     S.altar = m.altar
     S.team = []
+    computeSynergy()
     log('你是「' + hero.name + '」。第 1 层，回廊还在往下延伸。')
     SND.ambience('calm')
     SND.music('calm')
@@ -1930,6 +2060,10 @@
     }
 
     // 掉落：药水多，遗物少
+    if ((S.syn && S.syn.chaos) >= 4 && rnd(100) < 20) {
+      S.gold = (S.gold || 0) + 3
+      log('混沌的余兴：额外掉出 3 金币。')
+    }
     if (rnd(100) < 45) {
       var rollD = rnd(100)
       var drop = { x: e.x, y: e.y, kind: 'potion' }
@@ -1976,6 +2110,17 @@
         fx(S.player.x, S.player.y, '+' + sword, '#ff9ec4', -0.6)
       }
     }
+    if (crit && (S.syn && S.syn.otaku) >= 3) {
+      var spl = Math.max(1, Math.floor(S.atk / 2))
+      for (var ei2 = 0; ei2 < S.enemies.length; ei2++) {
+        var se = S.enemies[ei2]
+        if (se !== e && se.hp > 0 && Math.abs(se.x - e.x) + Math.abs(se.y - e.y) <= 1) {
+          se.hp -= spl
+          fx(se.x, se.y, '-' + spl, '#ffd9a0', -0.35)
+          if (se.hp <= 0) killEnemy(se)
+        }
+      }
+    }
     e.hp -= dmg
     log((crit ? '暴击！' : '') + '你击中「' + e.name + '」' + dmg + ' 点。')
     fx(e.x, e.y, (crit ? '暴击 -' : '-') + dmg, crit ? '#ffb347' : '#ff4d5e', -0.45, (rnd(3) - 1) * 0.22)
@@ -1987,7 +2132,21 @@
   }
 
   function hurtPlayer(dmg, attacker) {
-    if (Math.random() < Math.min(0.75, S.dodge)) { log('你侧身躲开了。'); return }
+    if ((S.syn && S.syn.chaos) >= 2 && Math.random() < 0.1) { log('你免疫了这次伤害。'); return }
+    if (Math.random() < Math.min(0.75, S.dodge)) {
+      log('你侧身躲开了。')
+      if ((S.syn && S.syn.abyss) >= 3) {
+        for (var di = 0; di < S.enemies.length; di++) {
+          var de = S.enemies[di]
+          if (de.hp > 0 && Math.abs(de.x - S.player.x) + Math.abs(de.y - S.player.y) === 1) {
+            de.hp -= S.atk
+            fx(de.x, de.y, '-' + S.atk, '#ffd9e6', -0.4)
+            if (de.hp <= 0) killEnemy(de)
+          }
+        }
+      }
+      return
+    }
     dmg += (S.extraHurt || 0)
     var reduce = (S.hero.id === 'pig' ? 1 : 0) + (S.dmgReduce || 0)
     dmg = Math.max(1, dmg - reduce)
@@ -2016,18 +2175,62 @@
     return list
   }
 
+  function aliveTeam() {
+    var out = []
+    for (var i = 0; i < S.team.length; i++) if (S.team[i].hp > 0 && !S.team[i].dead) out.push(S.team[i])
+    return out
+  }
+
+  function teamMaxHp(delta) {
+    if (!delta) return
+    S.teamHpBonus = (S.teamHpBonus || 0) + delta
+    for (var i = 0; i < S.team.length; i++) {
+      var m = S.team[i]
+      if (m.dead) continue
+      m.maxHp = Math.max(1, m.maxHp + delta)
+      m.hp = Math.max(1, Math.min(m.maxHp, m.hp + delta))
+    }
+    syncHud()
+  }
+
+  function healLowest(amount) {
+    var best = { kind: 'player', hp: S.hp, max: S.maxHp }
+    for (var i = 0; i < S.team.length; i++) {
+      var m = S.team[i]
+      if (m.dead || m.hp <= 0) continue
+      if (m.hp / m.maxHp < best.hp / best.max) best = { kind: 'member', m: m, hp: m.hp, max: m.maxHp }
+    }
+    if (best.kind === 'player') {
+      var h = Math.min(best.max - S.hp, amount)
+      S.hp = Math.min(S.maxHp, S.hp + amount)
+      fx(S.player.x, S.player.y, '+' + h, '#ff9ec4', -0.5)
+      log('药水回给主角 ' + h + ' 血。')
+      return h
+    }
+    var m2 = best.m
+    var h2 = Math.min(m2.maxHp - m2.hp, amount)
+    m2.hp = Math.min(m2.maxHp, m2.hp + amount)
+    fx(m2.x, m2.y, '+' + h2, '#ffd9e6', -0.5)
+    var hh = heroById(m2.heroId)
+    log('药水回给「' + (hh ? hh.name : '队友') + '」' + h2 + ' 血。')
+    syncHud()
+    return h2
+  }
+
   function damageCompanion(m, dmg) {
     if (!m || m.hp <= 0) return
+    if ((S.syn && S.syn.chaos) >= 2 && Math.random() < 0.1) { log('队友免疫了这次伤害。'); return }
     m.hp -= dmg
+    m.hitAt = Date.now()
     fx(m.x, m.y, '-' + dmg, '#ff8fb0', -0.4)
     log('「' + (heroById(m.heroId) ? heroById(m.heroId).name : '队友') + '」受到 ' + dmg + ' 点伤害。')
     shake(3.2, 200)
     if (m.hp <= 0) {
       m.hp = 0
+      m.dead = true
       spawnDust(m.x, m.y, 18, { hot: '#ffd9e6', cool: '#7a3a55' })
       log('「' + (heroById(m.heroId) ? heroById(m.heroId).name : '队友') + '」的记忆散了。')
-      var idx = S.team.indexOf(m)
-      if (idx >= 0) S.team.splice(idx, 1)
+      computeSynergy()
       syncHud()
     }
     render()
@@ -2138,6 +2341,21 @@
     for (var i = 0; i < S.enemies.length; i++) {
       var e = S.enemies[i]
       if (e.hp <= 0) continue
+
+      // 铁墓：每 3 个行动回合震地一次，全队受伤
+      if (e.type === 'tomb') {
+        e.aoeTick = (e.aoeTick || 0) + 1
+        if (e.aoeTick % 3 === 0) {
+          log('铁墓震地！全队受创。')
+          shake(7, 380)
+          SND.hit(true)
+          if (S.hp > 0) hurtPlayer(e.atk, e)
+          var aliveM = aliveTeam()
+          for (var am2 = 0; am2 < aliveM.length; am2++) damageCompanion(aliveM[am2], e.atk)
+          if (S.over) return
+          continue
+        }
+      }
 
       // 敌人随机挑一名队伍成员当目标
       var targets = teamTargets()
@@ -2255,6 +2473,19 @@
         if (S.over) return true
         S.steps++
         SND.step()
+        if ((S.syn && S.syn.elder) >= 2 && S.steps % 10 === 0) {
+          var pool2 = []
+          for (var qi = 0; qi < S.enemies.length; qi++) {
+            if (S.enemies[qi].hp > 0 && S.enemies[qi].type !== 'tomb') pool2.push(S.enemies[qi])
+          }
+          if (pool2.length) {
+            var victim = pool2[rnd(pool2.length)]
+            log('深渊深处有什么被抹掉了。')
+            fx(victim.x, victim.y, '抹除', '#c9b6ff', -0.5)
+            victim.hp = 0
+            S.kills = (S.kills || 0) + 1
+          }
+        }
         if (S.watch && S.steps % 10 === 0) watchPulse()
       }
     }
@@ -2275,9 +2506,7 @@
         S.items.splice(i, 1)
         if (it.kind === 'potion') {
           var heal = Math.round(7 * S.potionMul)
-          S.hp = Math.min(S.maxHp, S.hp + heal)
-          log('捡到一瓶药水，回 ' + heal + ' 血。')
-          fx(S.player.x, S.player.y, '+' + heal, '#ff9ec4', -0.5)
+          healLowest(heal)
           SND.coin()
         } else if (it.kind === 'trinket') {
           pickTrinket(it.trinket)
@@ -2287,10 +2516,7 @@
         break
       }
     }
-    if (S.altar && x === S.altar.x && y === S.altar.y) {
-      S.altar = null
-      openAltar()
-    }
+
     if (S.special && x === S.special.x && y === S.special.y) {
       var spKind = S.special.kind
       S.special = null
@@ -2300,6 +2526,10 @@
     if (x === S.stairs.x && y === S.stairs.y) {
       if (S.enemies.some(function (e) { return e.hp > 0 && e.type === 'tomb' })) {
         log('铁墓还挡在洞口。')
+        return
+      }
+      if (S.team.filter(function (m) { return !m.dead }).length + 1 < 4) {
+        openAltar(true)
         return
       }
       return nextFloor(), 'floor'
@@ -2376,14 +2606,28 @@
       teamStrip.innerHTML = ''
       if (S.team && S.team.length) {
         teamStrip.hidden = false
+        var meChip = document.createElement('span')
+        meChip.className = 'tchip me'
+        var meEm = document.createElement('span')
+        meEm.className = 'tem'
+        meEm.textContent = S.hero.emoji || '👤'
+        var meNm = document.createElement('span')
+        meNm.textContent = S.hero.name + ' ' + Math.max(0, S.hp) + '/' + S.maxHp
+        var meBar = document.createElement('span')
+        meBar.className = 'tbar'
+        var meFill = document.createElement('i')
+        meFill.style.width = Math.max(0, Math.min(100, (S.hp / S.maxHp) * 100)) + '%'
+        meBar.appendChild(meFill)
+        meChip.appendChild(meEm); meChip.appendChild(meNm); meChip.appendChild(meBar)
+        teamStrip.appendChild(meChip)
         S.team.forEach(function (m) {
           var hh = heroById(m.heroId)
           var maxH = m.maxHp || (hh ? hh.hp : 10)
           var chip = document.createElement('span')
-          chip.className = 'tchip'
+          chip.className = 'tchip' + (m.dead ? ' dead' : '') + (m.hitAt && Date.now() - m.hitAt < 260 ? ' hurt' : '')
           var em = document.createElement('span')
           em.className = 'tem'
-          em.textContent = hh ? (hh.emoji || '👤') : '👤'
+          em.textContent = m.dead ? '✗' : (hh ? (hh.emoji || '👤') : '👤')
           var nm = document.createElement('span')
           nm.textContent = (hh ? hh.name : '队友') + ' ' + Math.max(0, m.hp) + '/' + maxH
           var bar = document.createElement('span')
@@ -2501,22 +2745,6 @@
           ctx.fillRect(px, py, TS, TS)
         }
       }
-    }
-
-    // 记忆祭坛
-    if (S.altar && S.vis[S.altar.x + ',' + S.altar.y]) {
-      var alx = (S.altar.x - camX) * TS + TS / 2
-      var aly = (S.altar.y - camY) * TS + TS / 2
-      var alPulse = 0.5 + 0.5 * Math.sin(Date.now() / 500)
-      ctx.fillStyle = 'rgba(255,158,196,' + (0.10 + 0.12 * alPulse) + ')'
-      ctx.beginPath(); ctx.arc(alx, aly, TS * (0.42 + 0.06 * alPulse), 0, Math.PI * 2); ctx.fill()
-      ctx.strokeStyle = '#ff9ec4'
-      ctx.lineWidth = Math.max(1.5, TS * .06)
-      ctx.beginPath(); ctx.arc(alx, aly, TS * .22, 0, Math.PI * 2); ctx.stroke()
-      ctx.fillStyle = 'rgba(255,214,232,' + (0.5 + 0.4 * alPulse) + ')'
-      ctx.beginPath(); ctx.arc(alx, aly, TS * .07, 0, Math.PI * 2); ctx.fill()
-      ctx.strokeStyle = 'rgba(255,158,196,.55)'
-      ctx.beginPath(); ctx.moveTo(alx - TS * .26, aly + TS * .18); ctx.lineTo(alx + TS * .26, aly + TS * .18); ctx.stroke()
     }
 
     // 宝箱 / 商店
@@ -3109,6 +3337,11 @@
     specialPos: function () { return S ? S.special : null },
     altarPos: function () { return S ? S.altar : null },
     openAltar: openAltar,
+    drink: function (n) { return healLowest(n) },
+    hurt: function (n) { if (S) { S.hp = Math.max(1, S.hp - n) } },
+    forceRecruit: function (id) { var h = heroById(id); if (h) recruit(h) },
+    synergy: function () { return S ? S.syn : null },
+    teamHp: function () { return S ? S.team.map(function (m) { return { id: m.heroId, hp: m.hp, max: m.maxHp, dead: !!m.dead } }) : [] },
     hurtTeam: function (n) { if (S && S.team[0]) damageCompanion(S.team[0], n) },
     team: function () { return S ? S.team.map(function (m) { return { id: m.heroId, x: m.x, y: m.y, hp: m.hp, maxHp: m.maxHp, atk: m.atk } }) : [] },
     clearEnemies: function () { if (S) S.enemies.forEach(function (e) { e.hp = 0 }) },
@@ -3141,7 +3374,7 @@
         talents: Object.keys(S.talents).length, tricks: S.tricks || 0,
         shakeLeft: Math.max(0, (S.shakeUntil || 0) - Date.now()), shakeMag: S.shakeMag || 0,
         kills: S.kills || 0, steps: S.steps || 0, gold: S.gold || 0,
-        relics2: Object.keys(S.relics2 || {}).length, team: (S.team||[]).length, altar: S.altar ? 1 : 0, special: S.special ? S.special.kind : null, thornsNow: S.thorns || 0,
+        relics2: Object.keys(S.relics2 || {}).length, syn: S.syn || {}, team: (S.team||[]).length, altar: S.altar ? 1 : 0, special: S.special ? S.special.kind : null, thornsNow: S.thorns || 0,
         items: S.items.length, relics: Object.keys(S.relics)
       }
     }
