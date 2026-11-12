@@ -77,6 +77,11 @@
   }
   .log p{margin:0;opacity:.9}
   .log p:last-child{color:#fff;opacity:1}
+  .log p.cheat{
+    color:#d7b3ff;font-weight:600;letter-spacing:.02em;
+    text-shadow:0 0 12px rgba(180,120,255,.8),0 0 26px rgba(255,200,120,.35)
+  }
+  .log p.cheat-warn{color:#ffd9a0;text-shadow:0 0 12px rgba(255,180,80,.7)}
 
   /* controls */
   .ctrl{display:flex;gap:14px;align-items:center;justify-content:center;margin-top:12px}
@@ -281,7 +286,7 @@
     <span class="mark">CYRENE</span>
   </header>
 
-  <h1>铁墓大乱斗</h1>
+  <h1 id="game-title">铁墓大乱斗</h1>
   <p class="sub">从灭霸开始 —— 回合制地牢，一层一层往下砸，直到铁墓先倒下。</p>
 
   <div class="hud">
@@ -1122,14 +1127,20 @@
   }
 
   /* ---------------- 日志 ---------------- */
-  function log(msg) {
-    S.logs.push(msg)
+  function log(msg, cls) {
+    S.logs.push({ text: msg, cls: cls || '' })
     if (S.logs.length > 4) S.logs.shift()
     if (logEl) {
       logEl.innerHTML = ''
       for (var i = 0; i < S.logs.length; i++) {
+        var e = S.logs[i]
         var p = document.createElement('p')
-        p.textContent = S.logs[i]
+        if (typeof e === 'string') {
+          p.textContent = e
+        } else {
+          p.textContent = e.text
+          if (e.cls) p.className = e.cls
+        }
         logEl.appendChild(p)
       }
     }
@@ -1546,6 +1557,14 @@
       for (var ti = 0; ti < sy.tiers.length; ti++) if (n >= sy.tiers[ti].n) tier = sy.tiers[ti].n
       next[sy.id] = tier
     }
+    if (S.forceSyn) {
+      for (var fsi = 0; fsi < SYNERGY.length; fsi++) {
+        var fsy = SYNERGY[fsi]
+        var top = 0
+        for (var fti = 0; fti < fsy.tiers.length; fti++) top = Math.max(top, fsy.tiers[fti].n)
+        next[fsy.id] = top
+      }
+    }
 
     var wantHp = 0
     if (next.chaos >= 2) wantHp += 5
@@ -1745,6 +1764,100 @@
     if (S) S.paused = false
     render()
     syncHud()
+  }
+
+  /* ---------------- 隐藏作弊码 ---------------- */
+  var cheatClicks = 0
+  var cheatLast = 0
+  var CHEAT_TIMEOUT = 3000
+
+  function cheatLog(msg, warn) {
+    if (!S) return
+    log(msg, warn ? 'cheat cheat-warn' : 'cheat')
+    SND.level && SND.level()
+  }
+
+  function runCheat(code) {
+    var cmd = String(code || '').trim().toUpperCase()
+    if (!cmd) return
+    if (!S && cmd !== 'MAX_FRAGMENTS') {
+      return
+    }
+    switch (cmd) {
+      case 'GOD_MODE':
+        S.god = true
+        cheatLog('【警告：神秘力量已介入，GOD_MODE 已激活！】', true)
+        break
+      case 'MAX_FRAGMENTS':
+        META.shards += 999
+        saveMeta()
+        syncMetaBar()
+        renderMeta()
+        cheatLog('【警告：神秘力量已介入，记忆碎片 +999！】', true)
+        break
+      case 'GIVE_ME_GOLD':
+        S.gold = (S.gold || 0) + 999
+        syncHud()
+        cheatLog('【警告：神秘力量已介入，金币 +999！】', true)
+        break
+      case 'SYNERGY_ALL':
+        S.forceSyn = true
+        computeSynergy()
+        cheatLog('【警告：神秘力量已介入，全体羁绊已被强行拉满！】', true)
+        break
+      case 'ONE_PUNCH':
+        S.atk += 9999
+        syncHud()
+        cheatLog('【警告：神秘力量已介入，攻击力 +9999！】', true)
+        break
+      case 'GOTO_5':
+        if (S.floor >= 5) {
+          cheatLog('【警告：已经在第 5 层或更深处了。】', true)
+          break
+        }
+        var guard = 0
+        while (S.floor < 5 && guard++ < 12) nextFloor()
+        computeFov(); render(); syncHud(); saveRun()
+        cheatLog('【警告：神秘力量已介入，已抵达第 5 层！】', true)
+        break
+      default:
+        cheatLog('【未知的神谕，什么也没有发生。】')
+    }
+  }
+
+  function askCheat() {
+    var code = null
+    try {
+      if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
+        code = window.prompt('请输入作弊指令：')
+      }
+    } catch (e) { code = null }
+    if (code == null) return
+    runCheat(code)
+  }
+
+  function bindCheatTitle() {
+    var title = document.getElementById('game-title')
+    if (!title) return
+    title.addEventListener('click', function () {
+      var now = Date.now()
+      if (now - cheatLast > CHEAT_TIMEOUT) cheatClicks = 0
+      cheatClicks++
+      cheatLast = now
+      if (cheatClicks >= 10) {
+        cheatClicks = 0
+        cheatLast = 0
+        askCheat()
+      }
+    })
+    document.addEventListener('click', function (e) {
+      try {
+        if (!e.target || !e.target.closest || !e.target.closest('#game-title')) {
+          cheatClicks = 0
+          cheatLast = 0
+        }
+      } catch (err) { /* ignore */ }
+    })
   }
 
   /* ---------------- 记忆存档 ---------------- */
@@ -2296,6 +2409,7 @@
   }
 
   function hurtPlayer(dmg, attacker) {
+    if (S.god) { fx(S.player.x, S.player.y, '0', '#d7b3ff', -0.4); return }
     if ((S.syn && S.syn.chaos) >= 2 && Math.random() < 0.1) { log('你免疫了这次伤害。'); return }
     if (Math.random() < Math.min(0.75, S.dodge)) {
       log('你侧身躲开了。')
@@ -2383,6 +2497,7 @@
 
   function damageCompanion(m, dmg) {
     if (!m || m.hp <= 0) return
+    if (S.god) { fx(m.x, m.y, '0', '#d7b3ff', -0.4); return }
     if ((S.syn && S.syn.chaos) >= 2 && Math.random() < 0.1) { log('队友免疫了这次伤害。'); return }
     m.hp -= dmg
     m.hitAt = Date.now()
@@ -3477,6 +3592,7 @@
 
   /* ---------------- 生命周期 ---------------- */
   function boot() {
+    bindCheatTitle()
     refreshContinue()
     var sb0 = document.getElementById('btn-sound')
     if (sb0) sb0.textContent = SND.isMuted() ? '🔇' : '🔊'
