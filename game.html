@@ -295,6 +295,12 @@
   .syn-tags i{font-style:normal;font-size:.62rem;padding:1px 7px;border-radius:99px;color:#ffe9f2;border:1px solid rgba(255,158,196,.4);background:rgba(255,158,196,.12)}
   .card-syn{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-top:3px}
   .card-syn i{font-style:normal;font-size:.56rem;padding:1px 6px;border-radius:99px;color:#ffd9ec;border:1px solid rgba(255,158,196,.35);background:rgba(255,158,196,.10);white-space:nowrap}
+  #cheat-input{
+    width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(255,158,196,.45);
+    background:rgba(10,9,16,.7);color:#fff;font-size:1rem;font-family:ui-monospace,Menlo,monospace;
+    text-align:center;letter-spacing:.12em;outline:none
+  }
+  #cheat-input::placeholder{color:#6e6880;letter-spacing:0}
   .stats-card{position:relative;max-height:84vh;overflow:hidden}
   .stats-x{
     position:absolute;top:10px;right:12px;width:30px;height:30px;border-radius:50%;
@@ -413,6 +419,19 @@
         <p class="shop-gold">金币 <b id="shop-gold">0</b></p>
         <div class="meta-list" id="shop-list" style="width:100%;max-width:400px"></div>
         <button class="btn ghost" id="shop-close" type="button">走了</button>
+      </div>
+    </div>
+
+    <div class="ov ov-global" id="ov-cheat" hidden>
+      <div class="item-card" style="max-width:380px;align-items:stretch">
+        <div class="item-icon">🔮</div>
+        <h2>请输入作弊指令</h2>
+        <p>神秘力量在等一个名字。</p>
+        <input id="cheat-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="例如 GOD_MODE" />
+        <div class="sum-btns">
+          <button class="btn" id="cheat-ok" type="button">确定</button>
+          <button class="btn ghost" id="cheat-cancel" type="button">取消</button>
+        </div>
       </div>
     </div>
 
@@ -1822,6 +1841,7 @@
   function closeShop() {
     if (ovShop) ovShop.hidden = true
     if ($('ov-stats')) $('ov-stats').hidden = true
+    if ($('ov-cheat')) $('ov-cheat').hidden = true
     if (S) S.paused = false
     render()
     syncHud()
@@ -1893,14 +1913,34 @@
   }
 
   function askCheat() {
-    var code = null
-    try {
-      if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
-        code = window.prompt('请输入作弊指令：')
-      }
-    } catch (e) { code = null }
-    if (code == null) return
-    runCheat(code)
+    var ov = $('ov-cheat')
+    var inp = $('cheat-input')
+    if (!ov || !inp) {
+      // 极端兜底：没有自绘界面时才用原生 prompt
+      var code = null
+      try {
+        if (typeof window !== 'undefined' && typeof window.prompt === 'function') code = window.prompt('请输入作弊指令：')
+      } catch (e) { code = null }
+      if (code != null) runCheat(code)
+      return
+    }
+    inp.value = ''
+    ov.hidden = false
+    setTimeout(function () { try { inp.focus(); inp.setSelectionRange(0, 0) } catch (e) { /* ignore */ } }, 30)
+  }
+
+  function closeCheat() {
+    var ov = $('ov-cheat')
+    if (ov) ov.hidden = true
+    var inp = $('cheat-input')
+    if (inp) inp.blur()
+  }
+
+  function submitCheat() {
+    var inp = $('cheat-input')
+    var val = inp ? inp.value : ''
+    closeCheat()
+    if (val && val.trim()) runCheat(val)
   }
 
   function bindCheatTitle() {
@@ -3790,6 +3830,12 @@
   }
   if (btnNew) btnNew.addEventListener('click', function () { restart() })
   if (itemTake) itemTake.addEventListener('click', closeItemCard)
+  if ($('cheat-ok')) $('cheat-ok').addEventListener('click', submitCheat)
+  if ($('cheat-cancel')) $('cheat-cancel').addEventListener('click', closeCheat)
+  if ($('cheat-input')) $('cheat-input').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); submitCheat() }
+    else if (e.key === 'Escape') { e.preventDefault(); closeCheat() }
+  })
   if ($('btn-stats')) $('btn-stats').addEventListener('click', openStats)
   if ($('stats-close')) $('stats-close').addEventListener('click', closeStats)
   if ($('stats-x')) $('stats-x').addEventListener('click', closeStats)
