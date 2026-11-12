@@ -236,6 +236,19 @@
     color:#fff;padding:4px 12px;font-size:.7rem;font-family:inherit
   }
   .meta-list{display:flex;flex-direction:column;gap:8px}
+  .up-row{gap:6px;align-items:center}
+  .up-row .m-info{flex:1 1 auto;min-width:0}
+  .up-btn{
+    width:34px;height:34px;flex:0 0 34px;border-radius:50%;
+    border:1px solid rgba(255,158,196,.45);background:rgba(255,158,196,.14);
+    color:#ffe9f2;font-size:17px;line-height:1;display:grid;place-items:center;
+    transition:background .15s,transform .1s
+  }
+  .up-btn:active{transform:scale(.92)}
+  .up-btn.plus:not(:disabled){border-color:rgba(120,255,190,.5);background:rgba(120,255,190,.16);color:#d9ffe9}
+  .up-btn.minus:not(:disabled){border-color:rgba(255,150,150,.45);background:rgba(255,120,120,.14);color:#ffd9d9}
+  .up-btn:disabled{opacity:.35}
+  .up-lv{flex:0 0 auto;font-size:.68rem;color:#ffd9a0;font-variant-numeric:tabular-nums;min-width:38px;text-align:center}
   .meta-row{
     display:flex;align-items:center;gap:10px;
     border:1px solid rgba(255,255,255,.09);border-radius:14px;
@@ -2180,7 +2193,14 @@
 
   /* ---------------- 记忆存档 ---------------- */
   var META_KEY = 'cyrene.rogue.meta'
-  var META = { shards: 0, best: 0, kills: 0, hpUp: 0, unlocked: {} }
+  var UPGRADES = {
+    hp: { icon: '❤️', name: '初始生命', unit: '+1', cost: 20, cap: 20 },
+    atk: { icon: '⚔️', name: '初始攻击', unit: '+1', cost: 30, cap: 20 },
+    crit: { icon: '🎯', name: '初始暴击', unit: '+1%', cost: 25, cap: 20 },
+    dodge: { icon: '💨', name: '初始闪避', unit: '+1%', cost: 25, cap: 20 },
+  }
+
+  var META = { shards: 0, best: 0, kills: 0, up: { hp: 0, atk: 0, crit: 0, dodge: 0 }, unlocked: {} }
 
   function loadMeta() {
     try {
@@ -2190,7 +2210,13 @@
       META.shards = Number(m.shards) || 0
       META.best = Number(m.best) || 0
       META.kills = Number(m.kills) || 0
-      META.hpUp = Number(m.hpUp) || 0
+      var legacyHp = Number(m.hpUp) || 0
+      var upIn = m.up || {}
+      for (var uk in UPGRADES) {
+        var lv = Number(upIn[uk])
+        if (isNaN(lv)) lv = (uk === 'hp' ? legacyHp : 0)
+        META.up[uk] = Math.max(0, Math.min(UPGRADES[uk].cap, Math.floor(lv)))
+      }
       META.unlocked = m.unlocked || {}
       META.bonusShards = 0   // 作弊送的碎片永不从存档恢复
     } catch (e) { /* 存档坏了就当新号 */ }
@@ -2227,12 +2253,32 @@
     return null
   }
 
-  function hpUpCost() { return 4 + META.hpUp * 3 }
+  function upLv(key) {
+    return (META.up && META.up[key]) || 0
+  }
 
-  function syncMetaBar() {
-    var st = $('meta-stats'), sh = $('meta-shards')
-    if (st) st.textContent = '最高 ' + META.best + ' 层 · 累计击杀 ' + META.kills
-    if (sh) sh.textContent = String(shardTotal())
+  function syncUp() {
+    saveMeta()
+    syncMetaBar()
+    renderMeta()
+  }
+
+  function buyUp(key) {
+    var u = UPGRADES[key]
+    if (!u) return
+    if (upLv(key) >= u.cap) return
+    if (!spendShards(u.cost)) return
+    META.up[key] = upLv(key) + 1
+    syncUp()
+  }
+
+  function sellUp(key) {
+    var u = UPGRADES[key]
+    if (!u) return
+    if (upLv(key) <= 0) return
+    META.up[key] = upLv(key) - 1
+    META.shards = (META.shards || 0) + u.cost
+    syncUp()
   }
 
   function renderMeta() {
@@ -2245,22 +2291,50 @@
     var list = $('meta-list')
     list.innerHTML = ''
 
-    // 初始生命
-    var maxed = META.hpUp >= 10
-    var cost = hpUpCost()
-    var row = document.createElement('div')
-    row.className = 'meta-row'
-    row.innerHTML = '<div class="m-info"><b>初始生命 +1 · Lv.' + META.hpUp + '</b><span>' +
-      (maxed ? '已经加满了。' : '花费 ' + cost + ' 碎片，永久提高起始血量。') + '</span></div>'
-    var btn = document.createElement('button')
-    btn.type = 'button'
-    btn.textContent = maxed ? '已满' : cost + ' 碎片'
-    btn.disabled = maxed || shardTotal() < cost
-    btn.addEventListener('click', buyHp)
-    row.appendChild(btn)
-    list.appendChild(row)
+    // 四项可加点属性
+    for (var key in UPGRADES) {
+      var u = UPGRADES[key]
+      var lv = upLv(key)
+      var maxed = lv >= u.cap
+      var row = document.createElement('div')
+      row.className = 'meta-row up-row'
 
-    // 隐藏角色
+      var info = document.createElement('div')
+      info.className = 'm-info'
+      info.innerHTML = '<b>' + u.icon + ' ' + u.name + ' ' + u.unit + '</b><span>Lv.' + lv + '/' + u.cap +
+        ' · 每级 ' + u.cost + ' 碎片' + (maxed ? '（已满）' : '') + '</span>'
+      row.appendChild(info)
+
+      var minus = document.createElement('button')
+      minus.type = 'button'
+      minus.className = 'up-btn minus'
+      minus.textContent = '−'
+      minus.disabled = lv <= 0
+      minus.setAttribute('aria-label', '退回一级')
+
+      var lvEl = document.createElement('span')
+      lvEl.className = 'up-lv'
+      lvEl.textContent = 'Lv.' + lv
+
+      var plus = document.createElement('button')
+      plus.type = 'button'
+      plus.className = 'up-btn plus'
+      plus.textContent = '+'
+      plus.disabled = maxed || shardTotal() < u.cost
+      plus.setAttribute('aria-label', '加一级')
+
+      ;(function (k) {
+        minus.addEventListener('click', function () { sellUp(k) })
+        plus.addEventListener('click', function () { buyUp(k) })
+      })(key)
+
+      row.appendChild(minus)
+      row.appendChild(lvEl)
+      row.appendChild(plus)
+      list.appendChild(row)
+    }
+
+    // 隐藏角色解锁
     for (var i = 0; i < HEROES.length; i++) {
       var h = HEROES[i]
       if (!h.hidden) continue
@@ -2279,14 +2353,10 @@
     }
   }
 
-  function buyHp() {
-    if (META.hpUp >= 10) return
-    var c = hpUpCost()
-    if (!spendShards(c)) return
-    META.hpUp++
-    saveMeta()
-    syncMetaBar()
-    renderMeta()
+  function syncMetaBar() {
+    var st = $('meta-stats'), sh = $('meta-shards')
+    if (st) st.textContent = '最高 ' + META.best + ' 层 · 累计击杀 ' + META.kills
+    if (sh) sh.textContent = String(shardTotal())
   }
 
   function unlockHero(id) {
@@ -2542,12 +2612,12 @@
       seed: seed,
       hero: hero,
       floor: 1,
-      hp: hero.hp + (META.hpUp || 0),
-      maxHp: hero.hp + (META.hpUp || 0),
-      atk: hero.atk,
+      hp: hero.hp + upLv('hp'),
+      maxHp: hero.hp + upLv('hp'),
+      atk: hero.atk + upLv('atk'),
       vision: hero.vision,
-      crit: hero.crit,
-      dodge: hero.dodge,
+      crit: Math.min(0.9, hero.crit + upLv('crit') / 100),
+      dodge: Math.min(0.75, hero.dodge + upLv('dodge') / 100),
       potionMul: hero.potion,
       potions: hero.id === 'fatcat' ? 2 : 1,
       relics: {},
