@@ -2982,15 +2982,30 @@
       } else if (S.grid[ny][nx] === WALL) {
         return false
       } else {
-        // 队友挡路：不允许踩到队友身上（保证队列严丝合缝）
-        for (var blk = 0; blk < S.team.length; blk++) {
-          var bm = S.team[blk]
-          if (!bm.dead && bm.hp > 0 && bm.x === nx && bm.y === ny) return false
+        // 踩到队友不阻挡：交换位置（队友退到玩家刚才那格），再把历史队列修正
+        for (var sw2 = 0; sw2 < S.team.length; sw2++) {
+          var sm = S.team[sw2]
+          if (!sm.dead && sm.hp > 0 && sm.x === nx && sm.y === ny) {
+            sm.x = S.player.x
+            sm.y = S.player.y
+            break
+          }
         }
         // 记录玩家移动前的坐标（历史路径队列，头部最新）
         if (!S.pathHistory) S.pathHistory = []
         S.pathHistory.unshift({ x: S.player.x, y: S.player.y })
         var capTrail = S.team.filter(function (m) { return !m.dead && m.hp > 0 }).length
+        // 去掉与玩家新位置重复/冲突的节点，避免队友被塞到玩家脚下
+        var clean = []
+        for (var hi = 0; hi < S.pathHistory.length; hi++) {
+          var hp2 = S.pathHistory[hi]
+          if (hp2.x === nx && hp2.y === ny) continue
+          var dup = false
+          for (var hj = 0; hj < clean.length; hj++) if (clean[hj].x === hp2.x && clean[hj].y === hp2.y) dup = true
+          if (dup) continue
+          clean.push(hp2)
+        }
+        S.pathHistory = clean
         if (S.pathHistory.length > capTrail) S.pathHistory.length = capTrail
         S.player.x = nx; S.player.y = ny
         var landed = stepOn(nx, ny)
