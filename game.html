@@ -179,15 +179,21 @@
   .ov-tapclose .btn,.ov-tapclose h2,.ov-tapclose p{cursor:pointer}
 
   /* 队伍条 */
-  .team-strip{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+  .team-strip{
+    display:flex;gap:5px;flex-wrap:wrap;margin:0 0 6px;
+    overflow-x:auto;overflow-y:hidden;max-width:100%;
+    -webkit-overflow-scrolling:touch;scrollbar-width:thin
+  }
+  .team-strip::-webkit-scrollbar{height:4px}
+  .team-strip::-webkit-scrollbar-thumb{background:rgba(255,158,196,.3);border-radius:99px}
   .team-strip[hidden]{display:none}
   .tchip{
-    display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:12px;
+    display:flex;align-items:center;gap:4px;padding:3px 7px;border-radius:11px;
     border:1px solid rgba(255,158,196,.3);background:rgba(255,158,196,.08);
-    font-size:.68rem;color:#f0e6f7
+    font-size:.62rem;color:#f0e6f7;flex:0 0 auto;white-space:nowrap
   }
-  .tchip .tem{font-size:.9rem;line-height:1}
-  .tchip .tbar{width:34px;height:4px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden}
+  .tchip .tem{font-size:.82rem;line-height:1}
+  .tchip .tbar{width:26px;height:4px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden}
   .tchip .tbar i{display:block;height:100%;background:linear-gradient(90deg,#ff6fa8,#ff9ec4)}
   .tchip.me{border-color:rgba(255,217,160,.55);background:rgba(255,217,160,.10)}
   .tchip.dead{opacity:.38;filter:grayscale(1)}
@@ -426,7 +432,7 @@
 
     <div class="ov ov-global ov-tapclose" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>在画面上滑动走一步（电脑用方向键/WASD），撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>走到光门上会先弹出<b>招募面板</b>：三选一招募队友（最多 4 人，满员会替换最早那位）；卡片上有羁绊标签和「招募后激活哪些羁绊」的预判。队友踩着你的历史路径跟随，不会穿墙；他们凑齐会触发<b>羁绊</b>（左上角显示）。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
+      <p>在画面上滑动走一步（电脑用方向键/WASD），撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>走到光门上会先弹出<b>招募面板</b>：三选一招募队友（最多 5 人，满员会替换最早那位）；卡片上有羁绊标签和「招募后激活哪些羁绊」的预判。队友踩着你的历史路径跟随，不会穿墙；他们凑齐会触发<b>羁绊</b>（左上角显示）。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
       <p class="tap-hint">点任意位置也能关掉</p>
     </div>
@@ -1340,7 +1346,7 @@
     for (var i = 0; i < alive.length; i++) baseIds.push(alive[i].heroId)
     var base = synCounts(baseIds)
 
-    var replaced = alive.length >= 3 ? alive[0] : null
+    var replaced = alive.length >= 4 ? alive[0] : null
     var nextIds = baseIds.slice()
     if (replaced) {
       var idx = nextIds.indexOf(replaced.heroId)
@@ -1496,7 +1502,7 @@
     var bonus = (S.synHp || 0) + (S.teamHpBonus || 0)
     var alive = S.team.filter(function (m) { return !m.dead })
     var replaced = null
-    if (alive.length >= 3) {
+    if (alive.length >= 4) {
       // 满编：替换最早加入的那位
       replaced = alive[0]
       var idx = S.team.indexOf(replaced)
