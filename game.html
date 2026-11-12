@@ -1550,11 +1550,8 @@
       var idx = S.team.indexOf(replaced)
       if (idx >= 0) S.team.splice(idx, 1)
     }
-    var spot = replaced ? { x: replaced.x, y: replaced.y } : (S.trail && S.trail[0] ? S.trail[0] : null)
-    if (!spot || S.grid[spot.y][spot.x] === WALL || (spot.x === S.player.x && spot.y === S.player.y) || enemyAt(spot.x, spot.y)) {
-      spot = freeAdjacent(S.player.x, S.player.y)
-    }
-    S.team.push({ heroId: hero.id, x: spot.x, y: spot.y, hp: hero.hp + bonus, maxHp: hero.hp + bonus, atk: hero.atk, dead: false })
+    S.team.push({ heroId: hero.id, x: -99, y: -99, hp: hero.hp + bonus, maxHp: hero.hp + bonus, atk: hero.atk, dead: false })
+    seedTrail(S.team.filter(function (m) { return !m.dead && m.hp > 0 }).length)
     if (replaced) {
       var rh = heroById(replaced.heroId)
       log('「' + (rh ? rh.name : '队友') + '」退出了队伍，「' + hero.name + '」补了上来。')
@@ -1564,8 +1561,8 @@
     S.paused = false
     log('「' + hero.name + '」加入了队伍。')
     SND.chime()
-    SND.chime()
-    fx(spot.x, spot.y, hero.name, '#ffd9e6', -0.6)
+    var newM = S.team[S.team.length - 1]
+    if (newM) fx(newM.x, newM.y, hero.name, '#ffd9e6', -0.6)
     var go = recruitThenDescend
     recruitThenDescend = false
     computeFov()
@@ -2432,7 +2429,7 @@
       turnCount: 0,
       gold: 0,
       team: [],
-      trail: [],
+      pathHistory: [],
       syn: {}, synHp: 0, synCrit: 0, synDodge: 0, teamHpBonus: 0, elderDone: false, synStep: 0,
       altar: null,
       relics2: {},
@@ -2458,7 +2455,7 @@
     S.special = m.special
     S.altar = m.altar
     S.team = []
-    S.trail = [{ x: m.start.x, y: m.start.y }]
+    S.pathHistory = []
     computeSynergy()
     refreshLog()
     SND.ambience('calm')
@@ -2491,19 +2488,9 @@
     S.stairs = m.stairs
     S.special = m.special
     S.altar = m.altar
-    S.trail = [{ x: m.start.x, y: m.start.y }]
+    S.pathHistory = []
     S.seen = {}; S.vis = {}
-    // 队友跟着一起下楼：先挪开旧坐标，再依次安排到玩家身边
-    for (var ti = 0; ti < S.team.length; ti++) {
-      if (!S.team[ti].dead && S.team[ti].hp > 0) { S.team[ti].x = -99; S.team[ti].y = -99 }
-    }
-    for (var tj = 0; tj < S.team.length; tj++) {
-      var tmj = S.team[tj]
-      if (tmj.dead || tmj.hp <= 0) continue
-      var spj = freeAdjacent(m.start.x, m.start.y)
-      tmj.x = spj.x
-      tmj.y = spj.y
-    }
+    seedTrail(S.team.filter(function (m) { return !m.dead && m.hp > 0 }).length)
     S.hp = Math.min(S.maxHp, S.hp + 2 + (S.floorHeal || 0))
     if (S.hero.id === 'firefly') { S.hp = Math.min(S.maxHp, S.hp + 1); log('流萤的微光护住了你，回 3 血。') }
     META.best = Math.max(META.best, S.floor)
@@ -2661,6 +2648,64 @@
     return list
   }
 
+  function seedTrail(n) {
+    if (!S) return
+    n = Math.max(0, Math.min(n, 4))
+    S.pathHistory = []
+    if (!n) return
+    var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+    var alive = aliveTeam()
+    for (var z = 0; z < alive.length; z++) { alive[z].x = -99; alive[z].y = -99 }
+
+    var freeAt = function (x, y) {
+      if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return false
+      if (S.grid[y][x] === WALL) return false
+      if (x === S.player.x && y === S.player.y) return false
+      if (enemyAt(x, y)) return false
+      for (var j = 0; j < S.team.length; j++) {
+        var m = S.team[j]
+        if (!m.dead && m.hp > 0 && m.x === x && m.y === y) return false
+      }
+      return true
+    }
+
+    var best = null
+    for (var i = 0; i < dirs.length; i++) {
+      var d = dirs[i], chain = [], ok = true
+      for (var k = 1; k <= n; k++) {
+        var x = S.player.x + d[0] * k, y = S.player.y + d[1] * k
+        if (!freeAt(x, y)) { ok = false; break }
+        if (chain.length && Math.abs(chain[chain.length - 1].x - x) + Math.abs(chain[chain.length - 1].y - y) !== 1) { ok = false; break }
+        chain.push({ x: x, y: y })
+      }
+      if (ok) { best = chain; break }
+    }
+    if (!best) {
+      best = []
+      var cur = { x: S.player.x, y: S.player.y }
+      var used = {}
+      for (var k2 = 0; k2 < n; k2++) {
+        var nx2 = null
+        for (var j2 = 0; j2 < dirs.length; j2++) {
+          var cx = cur.x + dirs[j2][0], cy = cur.y + dirs[j2][1]
+          if (used[cx + ',' + cy]) continue
+          if (!freeAt(cx, cy)) continue
+          nx2 = { x: cx, y: cy }
+          break
+        }
+        if (!nx2) break
+        best.push(nx2)
+        used[nx2.x + ',' + nx2.y] = true
+        cur = nx2
+      }
+    }
+    S.pathHistory = best
+    for (var m2 = 0; m2 < alive.length; m2++) {
+      var t = best[m2] || best[best.length - 1]
+      if (t) { alive[m2].x = t.x; alive[m2].y = t.y }
+    }
+  }
+
   function aliveTeam() {
     var out = []
     for (var i = 0; i < S.team.length; i++) if (S.team[i].hp > 0 && !S.team[i].dead) out.push(S.team[i])
@@ -2781,66 +2826,34 @@
   }
 
   function teamTurn() {
-    var alive = []
-    for (var i = 0; i < S.team.length; i++) if (!S.team[i].dead && S.team[i].hp > 0) alive.push(S.team[i])
-    var trail = S.trail || []
+    var alive = aliveTeam()
+    if (!alive.length) return
 
-    for (var k = 0; k < alive.length; k++) {
-      var m = alive[k]
-
-      // 先打相邻的敌人
-      var target = null
+    // 仍然会对身边的敌人出手（打完后立刻归位）
+    for (var i = 0; i < alive.length; i++) {
+      var m = alive[i]
       var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]]
       for (var d = 0; d < 4; d++) {
         var te = enemyAt(m.x + dirs[d][0], m.y + dirs[d][1])
-        if (te) { target = te; break }
+        if (te) {
+          var dmg = m.atk
+          te.hp -= dmg
+          var th = heroById(m.heroId)
+          log('「' + (th ? th.name : '队友') + '」打了「' + te.name + '」' + dmg + ' 点。')
+          fx(te.x, te.y, '-' + dmg, '#ffd9e6', -0.4)
+          if (te.hp <= 0) killEnemy(te)
+          break
+        }
       }
-      if (target) {
-        var dmg = m.atk
-        target.hp -= dmg
-        var th = heroById(m.heroId)
-        log('「' + (th ? th.name : '队友') + '」打了「' + target.name + '」' + dmg + ' 点。')
-        fx(target.x, target.y, '-' + dmg, '#ffd9e6', -0.4)
-        if (target.hp <= 0) killEnemy(target)
-        continue
-      }
+    }
 
-      // 队列跟随：第 k 个队友站在玩家 k+1 步之前的位置
-      var tgt = trail[k]
+    // 严格贴队列：队友 i 的坐标必须等于 pathHistory[i]（没路可走就不动）
+    for (var k = 0; k < alive.length; k++) {
+      var tgt = (S.pathHistory || [])[k]
       if (!tgt) continue
-      if (tgt.x === m.x && tgt.y === m.y) continue
-
-      // 目标格必须是空的：不站人、不撞墙
       if (S.grid[tgt.y] && S.grid[tgt.y][tgt.x] === WALL) continue
-      if (tgt.x === S.player.x && tgt.y === S.player.y) continue
-      var occupied = false
-      for (var j = 0; j < S.team.length; j++) {
-        if (S.team[j] !== m && !S.team[j].dead && S.team[j].x === tgt.x && S.team[j].y === tgt.y) occupied = true
-      }
-      if (occupied) continue
-
-      // 与目标相邻就直接迈过去；否则沿路径逐步靠近（不会穿墙）
-      var dx = tgt.x - m.x, dy = tgt.y - m.y
-      if (Math.abs(dx) + Math.abs(dy) === 1) {
-        m.x = tgt.x
-        m.y = tgt.y
-        continue
-      }
-      // 找出这一步该往哪走：优先走 trail 上前一格
-      var nx = m.x, ny = m.y
-      if (Math.abs(dx) >= Math.abs(dy)) nx += dx > 0 ? 1 : -1
-      else ny += dy > 0 ? 1 : -1
-      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue
-      if (S.grid[ny][nx] === WALL) continue
-      if (nx === S.player.x && ny === S.player.y) continue
-      if (enemyAt(nx, ny)) continue
-      var blocked2 = false
-      for (var q = 0; q < S.team.length; q++) {
-        if (S.team[q] !== m && !S.team[q].dead && S.team[q].x === nx && S.team[q].y === ny) blocked2 = true
-      }
-      if (blocked2) continue
-      m.x = nx
-      m.y = ny
+      alive[k].x = tgt.x
+      alive[k].y = tgt.y
     }
   }
 
@@ -2969,17 +2982,16 @@
       } else if (S.grid[ny][nx] === WALL) {
         return false
       } else {
-        // 记录玩家移动前的坐标（历史路径队列）
-        if (!S.trail) S.trail = []
-        S.trail.unshift({ x: S.player.x, y: S.player.y })
-        if (S.trail.length > 40) S.trail.length = 40
-        for (var sw = 0; sw < S.team.length; sw++) {
-          if (S.team[sw].x === nx && S.team[sw].y === ny) {
-            S.team[sw].x = S.player.x
-            S.team[sw].y = S.player.y
-            break
-          }
+        // 队友挡路：不允许踩到队友身上（保证队列严丝合缝）
+        for (var blk = 0; blk < S.team.length; blk++) {
+          var bm = S.team[blk]
+          if (!bm.dead && bm.hp > 0 && bm.x === nx && bm.y === ny) return false
         }
+        // 记录玩家移动前的坐标（历史路径队列，头部最新）
+        if (!S.pathHistory) S.pathHistory = []
+        S.pathHistory.unshift({ x: S.player.x, y: S.player.y })
+        var capTrail = S.team.filter(function (m) { return !m.dead && m.hp > 0 }).length
+        if (S.pathHistory.length > capTrail) S.pathHistory.length = capTrail
         S.player.x = nx; S.player.y = ny
         var landed = stepOn(nx, ny)
         if (landed === 'floor') return true
@@ -3822,6 +3834,8 @@
     specialPos: function () { return S ? S.special : null },
     altarPos: function () { return S ? S.altar : null },
     openAltar: openAltar,
+    pathHistory: function () { return (S && S.pathHistory ? S.pathHistory : []).slice() },
+    wallAt: function (x, y) { return !!(S && S.grid[y] && S.grid[y][x] === 1) },
     seenAt: function (x, y) { return !!(S && S.seen && S.seen[x + ',' + y]) },
     visAt: function (x, y) { return !!(S && S.vis && S.vis[x + ',' + y]) },
     drink: function (n) { return healLowest(n) },
