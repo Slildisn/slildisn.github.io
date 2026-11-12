@@ -131,6 +131,33 @@
     background:radial-gradient(700px 500px at 50% 0%, rgba(255,158,196,.14), transparent 70%), rgba(8,7,13,.94);
     backdrop-filter:blur(4px)
   }
+  /* 记忆升级 */
+  .meta-bar{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+    margin-top:10px;padding:7px 12px;border-radius:999px;
+    border:1px solid rgba(255,158,196,.25);background:rgba(255,158,196,.07);
+    font-size:.7rem;color:#d6cde8
+  }
+  .meta-bar .shards{color:#ffd9a0;letter-spacing:.04em}
+  .meta-bar button{
+    border:1px solid rgba(255,158,196,.4);border-radius:999px;background:rgba(255,158,196,.12);
+    color:#fff;padding:4px 12px;font-size:.7rem;font-family:inherit
+  }
+  .meta-list{display:flex;flex-direction:column;gap:8px}
+  .meta-row{
+    display:flex;align-items:center;gap:10px;
+    border:1px solid rgba(255,255,255,.09);border-radius:14px;
+    background:rgba(255,255,255,.035);padding:9px 12px
+  }
+  .meta-row .m-info{flex:1;min-width:0}
+  .meta-row b{display:block;font-size:.84rem;color:#fff;font-weight:600}
+  .meta-row span{display:block;font-size:.68rem;color:var(--dim);line-height:1.5}
+  .meta-row button{
+    border:1px solid rgba(255,217,160,.45);border-radius:999px;background:rgba(255,217,160,.12);
+    color:#ffe9c9;padding:6px 12px;font-size:.7rem;white-space:nowrap;font-family:inherit
+  }
+  .meta-row button:disabled{opacity:.45;border-color:rgba(255,255,255,.18);color:#b9b1cd;background:rgba(255,255,255,.04)}
+
   /* 奇物拾取卡 */
   .item-card{
     width:100%;max-width:380px;text-align:center;
@@ -216,12 +243,33 @@
       <h2>选一个同行的人</h2>
       <p>每个人带的记忆不一样：血、攻、视野、暴击都不同。</p>
       <div class="pick" id="pick"></div>
+      <div class="meta-bar">
+        <span id="meta-stats">最高 0 层 · 累计击杀 0</span>
+        <span class="shards">◈ <b id="meta-shards">0</b> 碎片</span>
+        <button type="button" id="meta-open">记忆升级</button>
+      </div>
       <p class="seed" id="seed-line">种子 —</p>
     </div>
     <div class="ov ov-global" id="ov-talent" hidden>
       <h2 id="talent-title">挑一个天赋</h2>
       <p>记忆里多出一条路。选哪条，你就变成哪样的人。</p>
       <div class="talents" id="talent-list"></div>
+    </div>
+
+    <div class="ov ov-global" id="ov-meta" hidden>
+      <div class="sum-card">
+        <p class="sum-kicker">MEMORY · 记忆升级</p>
+        <h2>用碎片把记忆钉住</h2>
+        <div class="sum-grid">
+          <div><b id="m-best">0</b><span>最高层</span></div>
+          <div><b id="m-kills">0</b><span>累计击杀</span></div>
+          <div><b id="m-shards">0</b><span>碎片</span></div>
+        </div>
+        <div class="meta-list" id="meta-list"></div>
+        <div class="sum-btns">
+          <button class="btn" id="meta-close" type="button">回去了</button>
+        </div>
+      </div>
     </div>
 
     <div class="ov ov-global" id="ov-item" hidden>
@@ -309,7 +357,9 @@
     { id: 'pig', name: '猪猪侠', hp: 15, atk: 3, vision: 6, crit: .10, dodge: 0, potion: 1.0, desc: '猪皮：每次受伤 -1', icon: '侠', emoji: '🐷', color: '#ff8fa3' },
     { id: 'nailong', name: '奶龙', hp: 18, atk: 2, vision: 5, crit: .05, dodge: 0, potion: 1.0, desc: '奶龙：血厚，攻低', icon: '龙', emoji: '🦖', color: '#7ee0c0' },
     { id: 'fatcat', name: '胖橘', hp: 13, atk: 3, vision: 6, crit: .10, dodge: .15, potion: 1.0, desc: '滑溜：闪避 15%，开局 2 瓶药', icon: '橘', emoji: '🐱', color: '#ffb347' },
-    { id: 'taffy', name: '塔菲', hp: 12, atk: 3, vision: 6, crit: .18, dodge: .08, potion: 1.0, desc: '主播：暴击 +8%、闪避 +8%', icon: '菲', emoji: '🐶', color: '#b8a1ff' }
+    { id: 'taffy', name: '塔菲', hp: 12, atk: 3, vision: 6, crit: .18, dodge: .08, potion: 1.0, desc: '主播：暴击 +8%、闪避 +8%', icon: '菲', emoji: '🐶', color: '#b8a1ff' },
+    { id: 'mimi', name: '迷迷', hp: 8, atk: 3, vision: 8, crit: .15, dodge: .3, potion: 1.0, desc: '影子：闪避 30%，血很薄', icon: '迷', emoji: '🐇', color: '#e8f0ff', hidden: true, cost: 20 },
+    { id: 'dem', name: '德谬歌', hp: 16, atk: 5, vision: 4, crit: .2, dodge: 0, potion: .8, desc: '重量：攻高血厚，但看不远', icon: '德', emoji: '🌑', color: '#b9a0ff', hidden: true, cost: 35 }
   ]
 
   var RELICS = {
@@ -334,6 +384,7 @@
   var hName = $('h-name'), hHp = $('h-hp'), hFill = $('h-fill'), hAtk = $('h-atk'), hFloor = $('h-floor'), hRelics = $('h-relics')
   var hLv = $('h-lv'), hXp = $('h-xp'), hDir = $('h-dir'), hTalents = $('h-talents')
   var ovTalent = $('ov-talent'), talentList = $('talent-list'), talentTitle = $('talent-title')
+  var ovMeta = $('ov-meta')
   var ovItem = $('ov-item'), itemIcon = $('item-icon'), itemName = $('item-name'), itemDesc = $('item-desc'), itemEffect = $('item-effect'), itemTake = $('item-take')
   var ovSummary = $('ov-summary'), sumKicker = $('sum-kicker'), sumTitle = $('sum-title')
   var sumFloor = $('sum-floor'), sumKills = $('sum-kills'), sumTime = $('sum-time')
@@ -796,6 +847,119 @@
     if (S.pending > 0) setTimeout(openTalent, 160)
   }
 
+  /* ---------------- 记忆存档 ---------------- */
+  var META_KEY = 'cyrene.rogue.meta'
+  var META = { shards: 0, best: 0, kills: 0, hpUp: 0, unlocked: {} }
+
+  function loadMeta() {
+    try {
+      var raw = localStorage.getItem(META_KEY)
+      if (!raw) return
+      var m = JSON.parse(raw) || {}
+      META.shards = Number(m.shards) || 0
+      META.best = Number(m.best) || 0
+      META.kills = Number(m.kills) || 0
+      META.hpUp = Number(m.hpUp) || 0
+      META.unlocked = m.unlocked || {}
+    } catch (e) { /* 存档坏了就当新号 */ }
+  }
+
+  function saveMeta() {
+    try { localStorage.setItem(META_KEY, JSON.stringify(META)) } catch (e) { /* ignore */ }
+  }
+
+  function heroById(id) {
+    for (var i = 0; i < HEROES.length; i++) if (HEROES[i].id === id) return HEROES[i]
+    return null
+  }
+
+  function hpUpCost() { return 4 + META.hpUp * 3 }
+
+  function syncMetaBar() {
+    var st = $('meta-stats'), sh = $('meta-shards')
+    if (st) st.textContent = '最高 ' + META.best + ' 层 · 累计击杀 ' + META.kills
+    if (sh) sh.textContent = String(META.shards)
+  }
+
+  function renderMeta() {
+    if (!$('meta-list')) return
+    var best = $('m-best'), kills = $('m-kills'), shards = $('m-shards')
+    if (best) best.textContent = String(META.best)
+    if (kills) kills.textContent = String(META.kills)
+    if (shards) shards.textContent = String(META.shards)
+
+    var list = $('meta-list')
+    list.innerHTML = ''
+
+    // 初始生命
+    var maxed = META.hpUp >= 10
+    var cost = hpUpCost()
+    var row = document.createElement('div')
+    row.className = 'meta-row'
+    row.innerHTML = '<div class="m-info"><b>初始生命 +1 · Lv.' + META.hpUp + '</b><span>' +
+      (maxed ? '已经加满了。' : '花费 ' + cost + ' 碎片，永久提高起始血量。') + '</span></div>'
+    var btn = document.createElement('button')
+    btn.type = 'button'
+    btn.textContent = maxed ? '已满' : cost + ' 碎片'
+    btn.disabled = maxed || META.shards < cost
+    btn.addEventListener('click', buyHp)
+    row.appendChild(btn)
+    list.appendChild(row)
+
+    // 隐藏角色
+    for (var i = 0; i < HEROES.length; i++) {
+      var h = HEROES[i]
+      if (!h.hidden) continue
+      var unlocked = !!META.unlocked[h.id]
+      var r2 = document.createElement('div')
+      r2.className = 'meta-row'
+      r2.innerHTML = '<div class="m-info"><b>' + (unlocked ? h.emoji + ' ' + h.name : '🔒 隐藏角色') + '</b><span>' +
+        (unlocked ? h.desc : '花费 ' + h.cost + ' 碎片解锁。') + '</span></div>'
+      var b2 = document.createElement('button')
+      b2.type = 'button'
+      b2.textContent = unlocked ? '已解锁' : h.cost + ' 碎片'
+      b2.disabled = unlocked || META.shards < h.cost
+      ;(function (id) { b2.addEventListener('click', function () { unlockHero(id) }) })(h.id)
+      r2.appendChild(b2)
+      list.appendChild(r2)
+    }
+  }
+
+  function buyHp() {
+    if (META.hpUp >= 10) return
+    var c = hpUpCost()
+    if (META.shards < c) return
+    META.shards -= c
+    META.hpUp++
+    saveMeta()
+    syncMetaBar()
+    renderMeta()
+  }
+
+  function unlockHero(id) {
+    var h = heroById(id)
+    if (!h || !h.hidden || META.unlocked[id]) return
+    if (META.shards < h.cost) return
+    META.shards -= h.cost
+    META.unlocked[id] = true
+    saveMeta()
+    syncMetaBar()
+    buildPicker()
+    renderMeta()
+  }
+
+  function openMeta() {
+    if (!ovMeta) return
+    renderMeta()
+    ovMeta.hidden = false
+    S && (S.paused = true)
+  }
+
+  function closeMeta() {
+    if (ovMeta) ovMeta.hidden = true
+    if (S) S.paused = false
+  }
+
   /* ---------------- 拾取与结算 ---------------- */
   var itemOpen = false
 
@@ -875,7 +1039,11 @@
   function showSummary(isWin) {
     if (!S || !ovSummary) return
     S.paused = true
-    if (sumKicker) sumKicker.textContent = isWin ? '第 5 层 · 铁墓倒下' : '记忆回廊 · 结算'
+    if (sumKicker) {
+      sumKicker.textContent = isWin
+        ? '第 5 层 · 铁墓倒下'
+        : '记忆回廊 · 结算　◈ 碎片 +' + (S.lastShards || 0) + '（共 ' + (S.lastShardTotal || META.shards) + '）'
+    }
     if (sumTitle) sumTitle.textContent = isWin ? '你带着这段记忆回来了' : '这一梦结束了'
     if (sumFloor) sumFloor.textContent = String(Math.max(S.floor, S.maxFloor || 1))
     if (sumKills) sumKills.textContent = String(S.kills || 0)
@@ -942,8 +1110,8 @@
       seed: seed,
       hero: hero,
       floor: 1,
-      hp: hero.hp,
-      maxHp: hero.hp,
+      hp: hero.hp + (META.hpUp || 0),
+      maxHp: hero.hp + (META.hpUp || 0),
       atk: hero.atk,
       vision: hero.vision,
       crit: hero.crit,
@@ -1008,6 +1176,9 @@
     S.seen = {}; S.vis = {}
     S.hp = Math.min(S.maxHp, S.hp + 2 + (S.floorHeal || 0))
     if (S.hero.id === 'firefly') { S.hp = Math.min(S.maxHp, S.hp + 1); log('流萤的微光护住了你，回 3 血。') }
+    META.best = Math.max(META.best, S.floor)
+    saveMeta()
+    syncMetaBar()
     log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + (S.floor % 5 === 0 ? '铁墓守着门。' : ''))
     computeFov(); render(); syncHud()
   }
@@ -1213,6 +1384,14 @@
   function lose() {
     S.over = true
     running = false
+    var gain = Math.max(2, S.floor * 2)
+    META.shards += gain
+    META.kills += (S.kills || 0)
+    META.best = Math.max(META.best, S.floor)
+    S.lastShards = gain
+    S.lastShardTotal = META.shards
+    saveMeta()
+    syncMetaBar()
     if (S.hero.id === 'nailong') {
       S.echo = Date.now()
       log('奶龙……')
@@ -1654,15 +1833,23 @@
     if (!pickEl) return
     pickEl.innerHTML = ''
     HEROES.forEach(function (h) {
+      var locked = h.hidden && !META.unlocked[h.id]
       var b = document.createElement('button')
       b.type = 'button'
-      b.innerHTML = '<b>' + (h.emoji || '') + ' ' + h.name + '</b><i>' + h.desc + '</i>'
-      b.addEventListener('click', function () { start(h.id) })
+      if (locked) {
+        b.innerHTML = '<b>🔒 ？？？</b><i>' + h.cost + ' 碎片解锁</i>'
+        b.addEventListener('click', openMeta)
+      } else {
+        b.innerHTML = '<b>' + (h.emoji || '') + ' ' + h.name + '</b><i>' + h.desc + '</i>'
+        b.addEventListener('click', function () { start(h.id) })
+      }
       pickEl.appendChild(b)
     })
   }
 
   function start(heroId, seed) {
+    var hh = heroById(heroId)
+    if (hh && hh.hidden && !META.unlocked[heroId]) return
     if (ovSelect) ovSelect.hidden = true
     if (ovEnd) ovEnd.hidden = true
     if (ovSummary) ovSummary.hidden = true
@@ -1684,6 +1871,8 @@
   }
   if (btnNew) btnNew.addEventListener('click', function () { restart() })
   if (itemTake) itemTake.addEventListener('click', closeItemCard)
+  if ($('meta-open')) $('meta-open').addEventListener('click', openMeta)
+  if ($('meta-close')) $('meta-close').addEventListener('click', closeMeta)
   if (sumAgain) sumAgain.addEventListener('click', restartRun)
   if (sumContinue) sumContinue.addEventListener('click', continueRun)
   if (btnHelp && helpOv) btnHelp.addEventListener('click', function () { helpOv.hidden = false })
@@ -1691,6 +1880,8 @@
 
   /* ---------------- 生命周期 ---------------- */
   function boot() {
+    loadMeta()
+    syncMetaBar()
     buildPicker()
     fit()
     var seed = Date.now() % 1000000
@@ -1713,6 +1904,7 @@
     dir: doDir,
     fxCount: function () { return FX.length },
     dustCount: function () { return DUST.length },
+    die: function () { if (S && !S.over) { S.hp = 0; lose() } },
     trinketIds: function () { return TRINKETS.map(function (t) { return t.id }) },
     pickTrinket: pickTrinket,
     grant: function (id) {
@@ -1734,6 +1926,7 @@
         leech: S.leech, thorns: S.thorns, reduce: S.dmgReduce, bonusXp: S.bonusXp, floorHeal: S.floorHeal,
         talents: Object.keys(S.talents).length, tricks: S.tricks || 0,
         shakeLeft: Math.max(0, (S.shakeUntil || 0) - Date.now()), shakeMag: S.shakeMag || 0,
+        kills: S.kills || 0, steps: S.steps || 0,
         items: S.items.length, relics: Object.keys(S.relics)
       }
     }
