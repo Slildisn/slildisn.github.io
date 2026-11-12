@@ -184,7 +184,7 @@
 
     <div class="ov" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」，撞上就互相扣。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。</p>
+      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
     </div>
 
@@ -698,10 +698,17 @@
       if (e.hp <= 0) continue
       var dx = S.player.x - e.x, dy = S.player.y - e.y
       var dist = Math.abs(dx) + Math.abs(dy)
+
+      // 贴身：它打你，你回手 —— 互相掉血
       if (dist === 1) {
         if (e.type === 'tomb' && Math.random() < .3) { log('铁墓这一锤落空。'); continue }
-        hurtPlayer(e.atk, e); if (S.over) return; continue
+        hurtPlayer(e.atk, e)
+        if (S.over) return
+        counterAttack(e)
+        if (S.over) return
+        continue
       }
+
       var base = ENEMIES[e.type]
       var chase = base ? base.chase : 5
       var stepX = 0, stepY = 0
@@ -715,13 +722,29 @@
       var nx = e.x + stepX, ny = e.y + stepY
       if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue
       if (S.grid[ny][nx] === WALL) continue
+
+      // 撞到你身上：同样互相掉血
       if (nx === S.player.x && ny === S.player.y) {
         if (e.type === 'tomb' && Math.random() < .3) { log('铁墓这一锤落空。'); continue }
-        hurtPlayer(e.atk, e); if (S.over) return; continue
+        hurtPlayer(e.atk, e)
+        if (S.over) return
+        counterAttack(e)
+        if (S.over) return
+        continue
       }
       if (enemyAt(nx, ny)) continue
       e.x = nx; e.y = ny
     }
+  }
+
+  // 被敌人先手时，你也回手一刀（按面板「攻」算）
+  function counterAttack(e) {
+    if (!e || e.hp <= 0) return
+    var dmg = S.atk
+    e.hp -= dmg
+    log('你回手砍了「' + e.name + '」' + dmg + ' 点。')
+    fx(e.x, e.y, '-' + dmg, '#ffe6ee')
+    if (e.hp <= 0) killEnemy(e)
   }
 
   /* ---------------- 行动 ---------------- */
