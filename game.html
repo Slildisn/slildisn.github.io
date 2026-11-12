@@ -184,7 +184,7 @@
 
     <div class="ov" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>听说灭霸打 BOSS 的时候，会有点不一样的动静。</p>
+      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
     </div>
 
@@ -301,7 +301,8 @@
   }
 
   var DUST = []
-  function spawnDust(x, y, n) {
+  function spawnDust(x, y, n, style) {
+    style = style || {}
     for (var i = 0; i < n; i++) {
       DUST.push({
         x: x + (Math.random() - 0.5) * 0.7,
@@ -311,10 +312,32 @@
         size: 1.5 + Math.random() * 2.5,
         t: Date.now() + Math.random() * 120,
         life: 700 + Math.random() * 500,
+        hot: style.hot || '#ffe9d6',
+        cool: style.cool || '#8d7f8c',
       })
     }
     if (DUST.length > 400) DUST.splice(0, DUST.length - 400)
     kickAnim(1600)
+  }
+
+  function playShing() {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext
+      if (!AC) return
+      if (!playShing.ctx) playShing.ctx = new AC()
+      var ac = playShing.ctx
+      if (ac.state === 'suspended') ac.resume()
+      var t0 = ac.currentTime
+      var osc = ac.createOscillator()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(1900, t0)
+      osc.frequency.exponentialRampToValueAtTime(380, t0 + 0.45)
+      var g = ac.createGain()
+      g.gain.setValueAtTime(0.2, t0)
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.5)
+      osc.connect(g); g.connect(ac.destination)
+      osc.start(t0); osc.stop(t0 + 0.52)
+    } catch (e) { /* ignore */ }
   }
 
   function playSnap() {
@@ -364,6 +387,31 @@
       spawnDust(t.x, t.y, 18)
       log('「' + t.name + '」也化成了灰。')
     }
+  }
+
+  // 丛雨专属：刀归鞘（慢镜 + 刀光 + 粉色花瓣）
+  function murasameCut(boss) {
+    S.slowmo = Date.now()
+    S.slash = { x: boss.x, y: boss.y, t: Date.now() }
+    spawnDust(boss.x, boss.y, 26, { hot: '#ffe0ea', cool: '#ff9ec4' })
+    playShing()
+    log('刀归鞘。')
+    log('铁墓在刀光里散了。')
+    kickAnim(1700)
+  }
+
+  // 花火专属：有概率把 BOSS 变成小怪
+  function sparkleTrick(boss) {
+    S.tricks = (S.tricks || 0) + 1
+    boss.type = 'shard'
+    boss.name = '变小了的铁墓'
+    boss.hp = 3
+    boss.max = 3
+    boss.atk = 1
+    log('花火笑了一声：「大怪物，变小啦。」')
+    fx(boss.x, boss.y, '变小', '#ffd166')
+    spawnDust(boss.x, boss.y, 12, { hot: '#fff3c9', cool: '#d9c07a' })
+    kickAnim(900)
   }
 
   function rnd(n) { return Math.floor(Math.random() * n) }
@@ -690,6 +738,10 @@
       xpNext: 6,
       pending: 0,
       snapFlash: 0,
+      slowmo: 0,
+      slash: null,
+      echo: 0,
+      tricks: 0,
       talents: {},
       leech: 0,
       thorns: 0,
@@ -730,6 +782,7 @@
 
   // 击杀结算：经验、升级蓄力、吸血、铁墓开门
   function killEnemy(e) {
+    if (e.type === 'tomb' && S.hero.id === 'sparkle' && Math.random() < 0.35) return sparkleTrick(e)
     log('「' + e.name + '」散成了光。')
     var gain = (e.type === 'tomb' ? 10 : e.type === 'shade' ? 3 : 2) + (S.bonusXp || 0)
     S.xp += gain
@@ -761,6 +814,7 @@
 
     if (e.type === 'tomb') {
       if (S.hero.id === 'thanos') thanosSnap(e)
+      if (S.hero.id === 'murasame') murasameCut(e)
       S.hp = Math.min(S.maxHp, S.hp + 4)
       log('铁墓倒下，光门开了。')
       fx(e.x, e.y, '开门', '#ffd9a0')
@@ -917,15 +971,22 @@
   function lose() {
     S.over = true
     running = false
+    if (S.hero.id === 'nailong') {
+      S.echo = Date.now()
+      log('奶龙……')
+      kickAnim(1800)
+    }
     if (S.floor > bestFloor) {
       bestFloor = S.floor
       try { localStorage.setItem('cyrene.rogue.best', String(bestFloor)) } catch (e) { /* ignore */ }
     }
     if (ovEnd) {
       ovEnd.hidden = false
-      endBig.textContent = '✧'
-      endTitle.textContent = '记忆散了'
-      endDesc.textContent = '你在第 ' + S.floor + ' 层倒下。最远到过第 ' + bestFloor + ' 层。'
+      endBig.textContent = S.hero.id === 'nailong' ? '🦖' : '✧'
+      endTitle.textContent = S.hero.id === 'nailong' ? '奶龙……' : '记忆散了'
+      endDesc.textContent = S.hero.id === 'nailong'
+        ? '奶龙在第 ' + S.floor + ' 层安静下来，只剩一个影子。最远到过第 ' + bestFloor + ' 层。'
+        : '你在第 ' + S.floor + ' 层倒下。最远到过第 ' + bestFloor + ' 层。'
       endAgain.textContent = '再来一次'
     }
     render()
@@ -1176,7 +1237,7 @@
         var pxD = (dp.x - camX + dp.vx * kd * 1.6) * TS + TS / 2
         var pyD = (dp.y - camY + dp.vy * kd * 1.6 + 0.9 * kd * kd) * TS + TS / 2
         ctx.globalAlpha = (1 - kd) * 0.9
-        ctx.fillStyle = kd < 0.4 ? '#ffe9d6' : '#8d7f8c'
+        ctx.fillStyle = kd < 0.4 ? dp.hot : dp.cool
         ctx.fillRect(pxD, pyD, dp.size, dp.size)
         ctx.globalAlpha = 1
       }
@@ -1188,6 +1249,77 @@
       if (ageS < 420) {
         ctx.fillStyle = 'rgba(255,246,233,' + (0.55 * (1 - ageS / 420)) + ')'
         ctx.fillRect(0, 0, cv.width, cv.height)
+      }
+    }
+
+    // 丛雨：刀光
+    if (S.slash) {
+      var ageL = Date.now() - S.slash.t
+      if (ageL > 700) {
+        S.slash = null
+      } else {
+        var kL = ageL / 700
+        var lx = (S.slash.x - camX) * TS + TS / 2
+        var ly = (S.slash.y - camY) * TS + TS / 2
+        ctx.globalAlpha = 1 - kL
+        ctx.strokeStyle = '#ffffff'
+        ctx.lineWidth = Math.max(2, TS * .12)
+        ctx.beginPath()
+        ctx.moveTo(lx - TS * 1.0 + kL * TS * 1.6, ly - TS * .6)
+        ctx.quadraticCurveTo(lx + TS * .1, ly + TS * .25, lx + TS * .95 - kL * TS * .5, ly - TS * .5)
+        ctx.stroke()
+        ctx.strokeStyle = 'rgba(255,214,232,.7)'
+        ctx.lineWidth = Math.max(1, TS * .05)
+        ctx.stroke()
+        ctx.globalAlpha = 1
+      }
+    }
+
+    // 丛雨：慢镜压暗 + 字幕
+    if (S.slowmo) {
+      var ageS3 = Date.now() - S.slowmo
+      if (ageS3 > 950) {
+        S.slowmo = 0
+      } else {
+        var kS = ageS3 / 950
+        ctx.fillStyle = 'rgba(6,4,10,' + (0.4 * (1 - kS)) + ')'
+        ctx.fillRect(0, 0, cv.width, cv.height)
+        ctx.globalAlpha = Math.max(0, 1 - kS * 1.25)
+        ctx.fillStyle = '#ffe6f0'
+        ctx.font = '600 ' + Math.round(TS * 1.05) + 'px -apple-system,"PingFang SC",sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText('刀 归 鞘', cv.width / 2, cv.height * 0.24)
+        ctx.globalAlpha = 1
+      }
+    }
+
+    // 奶龙：倒下后留一个影子
+    if (S.echo) {
+      var ageE = Date.now() - S.echo
+      if (ageE > 1800) {
+        S.echo = 0
+      } else {
+        var kE = ageE / 1800
+        if (emojiOk(S.hero.emoji)) {
+          var eSize = Math.max(16, Math.round(TS * .95))
+          ctx.font = eSize + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","EmojiOne Color",sans-serif'
+        } else {
+          ctx.font = 'bold ' + Math.round(TS * .42) + 'px -apple-system,"PingFang SC",sans-serif'
+        }
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        for (var gi = 0; gi < 3; gi++) {
+          var ga = (1 - kE) * (0.5 - gi * 0.13)
+          if (ga <= 0) continue
+          ctx.globalAlpha = ga
+          ctx.fillStyle = '#ffffff'
+          var gx0 = pxx + (gi + 1) * 6
+          var gy0 = pyy - gi * 4 - kE * 10
+          ctx.fillText(emojiOk(S.hero.emoji) ? S.hero.emoji : String(S.hero.name).charAt(0), gx0, gy0)
+        }
+        ctx.globalAlpha = 1
+        ctx.font = Math.round(TS * .62) + 'px -apple-system,"PingFang SC",sans-serif'
       }
     }
 
@@ -1325,7 +1457,7 @@
         xp: S.xp, level: S.level, xpNext: S.xpNext, pending: S.pending,
         v: S.vision, dodge: +S.dodge.toFixed(2), crit: +S.crit.toFixed(2), potion: S.potionMul,
         leech: S.leech, thorns: S.thorns, reduce: S.dmgReduce, bonusXp: S.bonusXp, floorHeal: S.floorHeal,
-        talents: Object.keys(S.talents).length,
+        talents: Object.keys(S.talents).length, tricks: S.tricks || 0,
         items: S.items.length, relics: Object.keys(S.relics)
       }
     }
