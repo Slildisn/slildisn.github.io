@@ -2208,6 +2208,8 @@
 
   /* ---------------- 生命周期 ---------------- */
   function boot() {
+    var sb0 = document.getElementById('btn-sound')
+    if (sb0) sb0.textContent = SND.isMuted() ? '🔇' : '🔊'
     loadMeta()
     syncMetaBar()
     buildPicker()
