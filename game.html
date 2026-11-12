@@ -184,7 +184,7 @@
 
     <div class="ov" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。</p>
+      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
     </div>
 
@@ -225,15 +225,15 @@
 
   /* ---------------- 数据 ---------------- */
   var HEROES = [
-    { id: 'murasame', name: '丛雨', hp: 12, atk: 4, vision: 6, crit: .12, dodge: 0, potion: 1.0, desc: '刀灵：攻击 +1', icon: '刀' },
-    { id: 'mika', name: '未花', hp: 16, atk: 3, vision: 6, crit: .10, dodge: 0, potion: 1.6, desc: '温柔：药水效果 ×1.6', icon: '花' },
-    { id: 'firefly', name: '流萤', hp: 12, atk: 3, vision: 7, crit: .10, dodge: .05, potion: 1.0, desc: '微光：视野 +1，下层回 1 血', icon: '萤' },
-    { id: 'sparkle', name: '花火', hp: 11, atk: 3, vision: 6, crit: .25, dodge: .05, potion: 1.0, desc: '乐子人：暴击率 +15%', icon: '戏' },
-    { id: 'thanos', name: '灭霸', hp: 14, atk: 4, vision: 6, crit: .10, dodge: 0, potion: 1.0, desc: '天命：击杀回 1 血', icon: '命' },
-    { id: 'pig', name: '猪猪侠', hp: 15, atk: 3, vision: 6, crit: .10, dodge: 0, potion: 1.0, desc: '猪皮：每次受伤 -1', icon: '侠' },
-    { id: 'nailong', name: '奶龙', hp: 18, atk: 2, vision: 5, crit: .05, dodge: 0, potion: 1.0, desc: '奶龙：血厚，攻低', icon: '龙' },
-    { id: 'fatcat', name: '胖橘', hp: 13, atk: 3, vision: 6, crit: .10, dodge: .15, potion: 1.0, desc: '滑溜：闪避 15%，开局 2 瓶药', icon: '橘' },
-    { id: 'taffy', name: '塔菲', hp: 12, atk: 3, vision: 6, crit: .18, dodge: .08, potion: 1.0, desc: '主播：暴击 +8%、闪避 +8%', icon: '菲' }
+    { id: 'murasame', name: '丛雨', hp: 12, atk: 4, vision: 6, crit: .12, dodge: 0, potion: 1.0, desc: '刀灵：攻击 +1', icon: '刀', emoji: '🗡️', color: '#ff9ec4' },
+    { id: 'mika', name: '未花', hp: 16, atk: 3, vision: 6, crit: .10, dodge: 0, potion: 1.6, desc: '温柔：药水效果 ×1.6', icon: '花', emoji: '🌸', color: '#ffb6d5' },
+    { id: 'firefly', name: '流萤', hp: 12, atk: 3, vision: 7, crit: .10, dodge: .05, potion: 1.0, desc: '微光：视野 +1，下层回 1 血', icon: '萤', emoji: '✨', color: '#9fd8ff' },
+    { id: 'sparkle', name: '花火', hp: 11, atk: 3, vision: 6, crit: .25, dodge: .05, potion: 1.0, desc: '乐子人：暴击率 +15%', icon: '戏', emoji: '🎭', color: '#ffd166' },
+    { id: 'thanos', name: '灭霸', hp: 14, atk: 4, vision: 6, crit: .10, dodge: 0, potion: 1.0, desc: '天命：击杀回 1 血', icon: '命', emoji: '🧤', color: '#c39bff' },
+    { id: 'pig', name: '猪猪侠', hp: 15, atk: 3, vision: 6, crit: .10, dodge: 0, potion: 1.0, desc: '猪皮：每次受伤 -1', icon: '侠', emoji: '🐷', color: '#ff8fa3' },
+    { id: 'nailong', name: '奶龙', hp: 18, atk: 2, vision: 5, crit: .05, dodge: 0, potion: 1.0, desc: '奶龙：血厚，攻低', icon: '龙', emoji: '🦖', color: '#7ee0c0' },
+    { id: 'fatcat', name: '胖橘', hp: 13, atk: 3, vision: 6, crit: .10, dodge: .15, potion: 1.0, desc: '滑溜：闪避 15%，开局 2 瓶药', icon: '橘', emoji: '🐱', color: '#ffb347' },
+    { id: 'taffy', name: '塔菲', hp: 12, atk: 3, vision: 6, crit: .18, dodge: .08, potion: 1.0, desc: '主播：暴击 +8%、闪避 +8%', icon: '菲', emoji: '🐶', color: '#b8a1ff' }
   ]
 
   var RELICS = {
@@ -468,6 +468,43 @@
         logEl.appendChild(p)
       }
     }
+  }
+
+  /* ---------------- 角色外观 ---------------- */
+  var emojiCache = {}
+  var probeCv = null
+  try {
+    probeCv = document.createElement('canvas')
+    probeCv.width = 40
+    probeCv.height = 40
+  } catch (e) { probeCv = null }
+
+  function emojiOk(ch) {
+    if (!ch) return false
+    if (ch in emojiCache) return emojiCache[ch]
+    var ok = true
+    try {
+      var pc = probeCv && probeCv.getContext ? probeCv.getContext('2d') : null
+      if (pc) {
+        pc.clearRect(0, 0, 40, 40)
+        pc.font = '28px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","EmojiOne Color",sans-serif'
+        pc.textAlign = 'center'
+        pc.textBaseline = 'middle'
+        pc.fillStyle = '#fff'
+        pc.fillText(ch, 20, 20)
+        var d = pc.getImageData(0, 0, 40, 40).data
+        ok = false
+        for (var i = 3; i < d.length; i += 4) {
+          if (d[i] > 8) { ok = true; break }
+        }
+      }
+    } catch (e) { ok = true }
+    emojiCache[ch] = ok
+    return ok
+  }
+
+  function heroColor(h) {
+    return (h && h.color) || '#ff9ec4'
   }
 
   /* ---------------- 天赋 ---------------- */
@@ -843,7 +880,7 @@
 
   function syncHud() {
     if (!S) return
-    if (hName) hName.textContent = S.hero.name
+    if (hName) hName.textContent = (S.hero.emoji && emojiOk(S.hero.emoji) ? S.hero.emoji + ' ' : '') + S.hero.name
     if (hHp) hHp.textContent = S.hp + ' / ' + S.maxHp
     if (hFill) hFill.style.width = Math.max(0, Math.min(100, (S.hp / S.maxHp) * 100)) + '%'
     if (hAtk) hAtk.textContent = String(S.atk)
@@ -1025,15 +1062,39 @@
       }
     }
 
-    // 玩家：白色圆点 + 玫瑰描边（不依赖字体，任何设备都能显示）
+    // 玩家：按所选角色渲染 Emoji（无 emoji 字体时退回应援色圆盘 + 名字首字）
     var pxx = (S.player.x - camX) * TS + TS / 2, pyy = (S.player.y - camY) * TS + TS / 2
-    ctx.fillStyle = 'rgba(255,158,196,.2)'
-    ctx.beginPath(); ctx.arc(pxx, pyy, TS * .46, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = '#fff'
-    ctx.beginPath(); ctx.arc(pxx, pyy, TS * .27, 0, Math.PI * 2); ctx.fill()
-    ctx.strokeStyle = '#ff9ec4'
-    ctx.lineWidth = Math.max(1.5, TS * .07)
-    ctx.beginPath(); ctx.arc(pxx, pyy, TS * .27, 0, Math.PI * 2); ctx.stroke()
+    var pcolor = heroColor(S.hero)
+    var breath = 0.5 + 0.5 * Math.sin(Date.now() / 420)
+
+    // 光晕 + 底色，保证暗背景上够醒目
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.06 + 0.05 * breath) + ')'
+    ctx.beginPath(); ctx.arc(pxx, pyy, TS * .5, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = 'rgba(10,9,16,.55)'
+    ctx.beginPath(); ctx.arc(pxx, pyy, TS * .4, 0, Math.PI * 2); ctx.fill()
+    ctx.strokeStyle = pcolor
+    ctx.lineWidth = Math.max(1.5, TS * .06)
+    ctx.beginPath(); ctx.arc(pxx, pyy, TS * .4, 0, Math.PI * 2); ctx.stroke()
+
+    if (emojiOk(S.hero.emoji)) {
+      var emojiSize = Math.max(16, Math.round(TS * 0.95))
+      ctx.font = emojiSize + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","EmojiOne Color",sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillStyle = '#fff'
+      ctx.fillText(S.hero.emoji, pxx, pyy + TS * .02)
+      ctx.font = Math.round(TS * .62) + 'px -apple-system,"PingFang SC",sans-serif'
+    } else {
+      // 退回：应援色圆盘 + 名字首字
+      ctx.fillStyle = pcolor
+      ctx.beginPath(); ctx.arc(pxx, pyy, TS * .3, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = '#120a18'
+      ctx.font = 'bold ' + Math.round(TS * .42) + 'px -apple-system,"PingFang SC",sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(String(S.hero.name).charAt(0), pxx, pyy + TS * .02)
+      ctx.font = Math.round(TS * .62) + 'px -apple-system,"PingFang SC",sans-serif'
+    }
 
     // 飘字（伤害 / 经验 / 升级）
     if (FX.length) {
@@ -1103,7 +1164,7 @@
     HEROES.forEach(function (h) {
       var b = document.createElement('button')
       b.type = 'button'
-      b.innerHTML = '<b>' + h.name + '</b><i>' + h.desc + '</i>'
+      b.innerHTML = '<b>' + (h.emoji || '') + ' ' + h.name + '</b><i>' + h.desc + '</i>'
       b.addEventListener('click', function () { start(h.id) })
       pickEl.appendChild(b)
     })
