@@ -342,6 +342,7 @@
     <div class="side">
       <button type="button" id="btn-new">重开</button>
       <button type="button" id="btn-help">说明</button>
+      <button type="button" id="btn-sound" aria-label="声音开关">🔊</button>
     </div>
   </div>
 
@@ -465,7 +466,8 @@
     kickAnim(1600)
   }
 
-  function playShing() {
+  function playShing() { SND.shing() }
+  function playShingOld() {
     try {
       var AC = window.AudioContext || window.webkitAudioContext
       if (!AC) return
@@ -485,7 +487,8 @@
     } catch (e) { /* ignore */ }
   }
 
-  function playSnap() {
+  function playSnap() { SND.snap() }
+  function playSnapOld() {
     try {
       var AC = window.AudioContext || window.webkitAudioContext
       if (!AC) return
@@ -562,6 +565,190 @@
   function rnd(n) { return Math.floor(Math.random() * n) }
   function pick(a) { return a[rnd(a.length)] }
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v }
+
+  /* ---------------- 音效（Web Audio 合成，无外部素材） ---------------- */
+  var SND = (function () {
+    var ac = null, master = null, ambGain = null, ambNodes = null, muted = false, lastHover = 0
+
+    try { muted = localStorage.getItem('cyrene.rogue.mute') === '1' } catch (e) { muted = false }
+
+    function unlock() {
+      if (!ac) {
+        try {
+          var AC = window.AudioContext || window.webkitAudioContext
+          if (!AC) return false
+          ac = new AC()
+          master = ac.createGain()
+          master.gain.value = muted ? 0 : 0.55
+          master.connect(ac.destination)
+        } catch (e) { ac = null; return false }
+      }
+      if (ac.state === 'suspended') { try { ac.resume() } catch (e) { /* ignore */ } }
+      return true
+    }
+
+    function at(delay) { return ac.currentTime + (delay || 0) }
+
+    function blip(freq, dur, type, vol, slideTo, delay) {
+      if (!ac) return
+      try {
+        var t0 = at(delay)
+        var o = ac.createOscillator()
+        var g = ac.createGain()
+        o.type = type || 'sine'
+        o.frequency.setValueAtTime(freq, t0)
+        if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t0 + dur)
+        g.gain.setValueAtTime(0.0001, t0)
+        g.gain.exponentialRampToValueAtTime(vol || 0.12, t0 + Math.min(0.012, dur / 3))
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
+        o.connect(g); g.connect(master)
+        o.start(t0); o.stop(t0 + dur + 0.03)
+      } catch (e) { /* ignore */ }
+    }
+
+    function noise(dur, vol, freq, q, delay) {
+      if (!ac) return
+      try {
+        var t0 = at(delay)
+        var len = Math.max(1, Math.floor(ac.sampleRate * dur))
+        var buf = ac.createBuffer(1, len, ac.sampleRate)
+        var d = buf.getChannelData(0)
+        for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3)
+        var src = ac.createBufferSource(); src.buffer = buf
+        var bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq || 900; bp.Q.value = q || 1
+        var g = ac.createGain(); g.gain.value = vol || 0.2
+        src.connect(bp); bp.connect(g); g.connect(master)
+        src.start(t0)
+      } catch (e) { /* ignore */ }
+    }
+
+    function ambienceStart() {
+      if (!ac || ambNodes) return
+      try {
+        ambGain = ac.createGain(); ambGain.gain.value = 0.0001
+        var filt = ac.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 260
+        var o1 = ac.createOscillator(); o1.type = 'sine'; o1.frequency.value = 55
+        var o2 = ac.createOscillator(); o2.type = 'sine'; o2.frequency.value = 82.5
+        var o3 = ac.createOscillator(); o3.type = 'triangle'; o3.frequency.value = 110
+        var lfo = ac.createOscillator(); lfo.frequency.value = 0.08
+        var lfoGain = ac.createGain(); lfoGain.gain.value = 70
+        lfo.connect(lfoGain); lfoGain.connect(filt.frequency)
+        o1.connect(filt); o2.connect(filt); o3.connect(filt)
+        filt.connect(ambGain); ambGain.connect(master)
+        o1.start(); o2.start(); o3.start(); lfo.start()
+        ambNodes = [o1, o2, o3, lfo]
+      } catch (e) { ambNodes = null }
+    }
+
+    return {
+      unlock: unlock,
+      isMuted: function () { return muted },
+      toggleMute: function () {
+        muted = !muted
+        try { localStorage.setItem('cyrene.rogue.mute', muted ? '1' : '0') } catch (e) { /* ignore */ }
+        if (master && ac) master.gain.setTargetAtTime(muted ? 0 : 0.55, ac.currentTime, 0.05)
+        return muted
+      },
+      hover: function () {
+        if (!ac || muted) return
+        var now = Date.now()
+        if (now - lastHover < 70) return
+        lastHover = now
+        blip(1500, 0.05, 'sine', 0.025)
+      },
+      click: function () {
+        if (!ac || muted) return
+        noise(0.035, 0.1, 2000, 2)
+        blip(880, 0.05, 'square', 0.05, 640)
+      },
+      step: function () {
+        if (!ac || muted) return
+        noise(0.028, 0.045, 520, 1.1)
+        blip(150, 0.035, 'sine', 0.03, 120)
+      },
+      hit: function (crit) {
+        if (!ac || muted) return
+        noise(0.07, crit ? 0.26 : 0.18, crit ? 1500 : 1100, 0.9)
+        blip(crit ? 300 : 220, 0.11, 'square', 0.07, 90)
+      },
+      hurt: function () {
+        if (!ac || muted) return
+        blip(95, 0.32, 'sine', 0.2, 42)
+        noise(0.12, 0.1, 300, 0.7)
+      },
+      coin: function (delay) {
+        if (!ac || muted) return
+        blip(1180, 0.09, 'triangle', 0.1, 1180, delay || 0)
+        blip(1760, 0.14, 'triangle', 0.09, 1760, (delay || 0) + 0.07)
+      },
+      chime: function () {
+        if (!ac || muted) return
+        blip(784, 0.11, 'sine', 0.08)
+        blip(988, 0.12, 'sine', 0.075, 988, 0.09)
+        blip(1319, 0.2, 'sine', 0.075, 1319, 0.18)
+      },
+      level: function () {
+        if (!ac || muted) return
+        blip(523, 0.1, 'triangle', 0.09)
+        blip(659, 0.1, 'triangle', 0.09, 659, 0.08)
+        blip(880, 0.22, 'triangle', 0.1, 880, 0.16)
+      },
+      boss: function () {
+        if (!ac || muted) return
+        blip(70, 0.55, 'sine', 0.24, 34)
+        noise(0.25, 0.1, 200, 0.6)
+        blip(140, 0.3, 'square', 0.05, 90, 0.08)
+      },
+      death: function () {
+        if (!ac || muted) return
+        blip(300, 0.5, 'sine', 0.16, 60)
+        noise(0.3, 0.08, 260, 0.5)
+      },
+      snap: function () {
+        if (!ac || muted) return
+        noise(0.045, 0.3, 1700, 1.6)
+        noise(0.045, 0.28, 1700, 1.6, 0.085)
+      },
+      shing: function () {
+        if (!ac || muted) return
+        blip(1900, 0.45, 'triangle', 0.2, 380)
+        noise(0.08, 0.08, 2600, 1.4)
+      },
+      ambience: function (kind) {
+        if (!ac || muted) return
+        ambienceStart()
+        if (!ambGain) return
+        try {
+          var target = kind === 'boss' ? 0.12 : kind === 'none' ? 0.0001 : 0.045
+          ambGain.gain.cancelScheduledValues(ac.currentTime)
+          ambGain.gain.setTargetAtTime(target, ac.currentTime, 0.6)
+        } catch (e) { /* ignore */ }
+      },
+    }
+  })()
+
+  // 任何一次点按/按键后才允许出声（绕开自动播放限制）
+  ;(function () {
+    function first() {
+      SND.unlock()
+      var btn = document.getElementById('btn-sound')
+      if (btn) btn.textContent = SND.isMuted() ? '🔇' : '🔊'
+    }
+    ;['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
+      window.addEventListener(ev, first, { once: true })
+    })
+    // 全局 UI 反馈
+    document.addEventListener('click', function (e) {
+      try {
+        if (e.target && e.target.closest && e.target.closest('button,a')) SND.click()
+      } catch (err) { /* ignore */ }
+    })
+    document.addEventListener('mouseover', function (e) {
+      try {
+        if (e.target && e.target.closest && e.target.closest('button,a')) SND.hover()
+      } catch (err) { /* ignore */ }
+    })
+  })()
 
   /* ---------------- 地图生成 ---------------- */
   function blankMap() {
@@ -998,6 +1185,7 @@
     S.trinkets[id] = true
     t.apply()
     log('拾得奇物「' + t.name + '」。')
+    SND.chime()
     fx(S.player.x, S.player.y, t.name, '#ffd9a0', -0.7)
     openItemCard({ icon: t.icon, name: t.name, desc: t.desc, effect: t.effect })
   }
@@ -1015,6 +1203,7 @@
     if (id === 'iron') { S.maxHp += 4; S.hp += 4 }
     if (id === 'star') S.vision += 2
     log('遗物「' + r.name + '」：' + r.desc + '。')
+    SND.chime()
     openItemCard({ icon: '◇', name: r.name + ' · 遗物', desc: r.desc, effect: r.desc })
   }
 
@@ -1049,7 +1238,7 @@
         ? '第 5 层 · 铁墓倒下'
         : '铁墓大乱斗 · 结算　◈ 碎片 +' + (S.lastShards || 0) + '（共 ' + (S.lastShardTotal || META.shards) + '）'
     }
-    if (sumTitle) sumTitle.textContent = isWin ? '你带着这段记忆回来了' : '这一梦结束了'
+    if (sumTitle) sumTitle.textContent = isWin ? '你带着这段记忆回来了' : (S.hero.id === 'nailong' ? '奶龙……' : '这一梦结束了')
     if (sumFloor) sumFloor.textContent = String(Math.max(S.floor, S.maxFloor || 1))
     if (sumKills) sumKills.textContent = String(S.kills || 0)
     if (sumTime) sumTime.textContent = fmtTime(Date.now() - (S.startedAt || Date.now()))
@@ -1166,6 +1355,7 @@
     S.player.x = m.start.x; S.player.y = m.start.y
     S.stairs = m.stairs
     log('你是「' + hero.name + '」。第 1 层，回廊还在往下延伸。')
+    SND.ambience('calm')
     computeFov()
     render()
     syncHud()
@@ -1173,7 +1363,14 @@
 
   function nextFloor() {
     S.floor++
-    if (S.floor % 5 === 0) { S.hp = S.maxHp; log('铁墓的气息……先回满血。') }
+    if (S.floor % 5 === 0) {
+      S.hp = S.maxHp
+      log('铁墓的气息……先回满血。')
+      SND.boss()
+      SND.ambience('boss')
+    } else {
+      SND.ambience('calm')
+    }
     var m = genMap(S.floor, S.seed + S.floor * 7919)
     S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
     S.player.x = m.start.x; S.player.y = m.start.y
@@ -1212,6 +1409,7 @@
       S.xpNext = 6 + S.level * 3
       S.pending++
       fx(S.player.x, S.player.y, 'LV UP', '#ff9ec4', -0.6)
+      SND.level()
       log('升到 Lv.' + S.level + '，记忆里多出一条路。')
     }
 
@@ -1253,6 +1451,7 @@
     e.hp -= dmg
     log((crit ? '暴击！' : '') + '你击中「' + e.name + '」' + dmg + ' 点。')
     fx(e.x, e.y, (crit ? '暴击 -' : '-') + dmg, crit ? '#ffb347' : '#ff4d5e', -0.45, (rnd(3) - 1) * 0.22)
+    SND.hit(crit)
     shake(crit ? 3.2 : 2.2, crit ? 220 : 150)
     if (e.hp <= 0) return killEnemy(e)
   }
@@ -1265,6 +1464,7 @@
     S.hp -= dmg
     log('你受到 ' + dmg + ' 点伤害。')
     fx(S.player.x, S.player.y, '-' + dmg, '#ff4d5e', -0.4)
+    SND.hurt()
     shake(4.5, 260)
     if (attacker && S.thorns) {
       attacker.hp -= S.thorns
@@ -1348,6 +1548,7 @@
         if (landed === 'floor') return true
         if (S.over) return true
         S.steps++
+        SND.step()
         if (S.watch && S.steps % 10 === 0) watchPulse()
       }
     }
@@ -1368,6 +1569,7 @@
           S.hp = Math.min(S.maxHp, S.hp + heal)
           log('捡到一瓶药水，回 ' + heal + ' 血。')
           fx(S.player.x, S.player.y, '+' + heal, '#ff9ec4', -0.5)
+          SND.coin()
         } else if (it.kind === 'trinket') {
           pickTrinket(it.trinket)
         } else {
@@ -1389,6 +1591,8 @@
   function lose() {
     S.over = true
     running = false
+    SND.death()
+    SND.ambience('none')
     var gain = Math.max(2, S.floor * 2)
     META.shards += gain
     META.kills += (S.kills || 0)
@@ -1882,6 +2086,11 @@
   }
   if (btnNew) btnNew.addEventListener('click', function () { restart() })
   if (itemTake) itemTake.addEventListener('click', closeItemCard)
+  if ($('btn-sound')) $('btn-sound').addEventListener('click', function () {
+    var m = SND.toggleMute()
+    this.textContent = m ? '🔇' : '🔊'
+    if (!m) SND.click()
+  })
   if ($('meta-open')) $('meta-open').addEventListener('click', openMeta)
   if ($('meta-close')) $('meta-close').addEventListener('click', closeMeta)
   if (sumAgain) sumAgain.addEventListener('click', restartRun)
