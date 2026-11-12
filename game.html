@@ -67,6 +67,8 @@
     background:#0a0910;box-shadow:0 20px 50px -30px rgba(255,120,170,.55);
   }
   canvas{display:block;width:100%;height:auto;touch-action:none}
+  body.ov-open, body.ov-open .stage{touch-action:auto}
+  body{overscroll-behavior-y:contain}
 
   .log{
     margin:8px 0 0;padding:8px 11px;border:1px solid var(--line);border-radius:12px;
@@ -132,6 +134,29 @@
     backdrop-filter:blur(4px)
   }
   .ov-tapclose{cursor:pointer}
+
+  /* 选人界面：整屏可滚动，顶部避开状态栏 */
+  .ov-scroll{
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    gap:10px;overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;
+    padding-top:calc(env(safe-area-inset-top, 0px) + 50px);
+    padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 28px)
+  }
+  .ov-scroll > h2, .ov-scroll > p{flex:0 0 auto}
+  .ov-scroll::-webkit-scrollbar{width:6px}
+  .ov-scroll::-webkit-scrollbar-thumb{background:rgba(255,158,196,.35);border-radius:99px}
+
+  /* 角色列表：单独限高并允许惯性滚动 */
+  #ov-select .pick{
+    max-height:calc(100vh - 260px);
+    min-height:120px;
+    overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;
+    padding:2px 2px 6px;border-radius:12px
+  }
+  #ov-select .pick::-webkit-scrollbar{width:5px}
+  #ov-select .pick::-webkit-scrollbar-thumb{background:rgba(255,158,196,.3);border-radius:99px}
   .tap-hint{margin:2px 0 0;font-size:.66rem;color:#8f87a6;letter-spacing:.06em}
   .ov-tapclose .btn,.ov-tapclose h2,.ov-tapclose p{cursor:pointer}
 
@@ -280,7 +305,7 @@
 
   <div class="stage" id="stage">
     <canvas id="cv" width="480" height="352" aria-label="地牢画面"></canvas>
-    <div class="ov" id="ov-select">
+    <div class="ov ov-global ov-scroll" id="ov-select">
       <h2>选一个同行的人</h2>
       <p>每个人带的记忆不一样：血、攻、视野、暴击都不同。</p>
       <div class="pick" id="pick"></div>
