@@ -62,6 +62,7 @@
     background:rgba(255,255,255,.03);margin-bottom:6px;
   }
   .hud .team-strip{flex-basis:100%;margin:2px 0 0}
+  .hud .syn-panel{flex-basis:100%;margin:2px 0 0}
   .hpwrap{flex:1 1 130px;min-width:120px}
   .hpline{display:flex;justify-content:space-between;font-size:.7rem;color:var(--dim);margin-bottom:4px;font-variant-numeric:tabular-nums}
   .hpbar{height:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
@@ -294,6 +295,17 @@
   .syn-tags i{font-style:normal;font-size:.62rem;padding:1px 7px;border-radius:99px;color:#ffe9f2;border:1px solid rgba(255,158,196,.4);background:rgba(255,158,196,.12)}
   .card-syn{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-top:3px}
   .card-syn i{font-style:normal;font-size:.56rem;padding:1px 6px;border-radius:99px;color:#ffd9ec;border:1px solid rgba(255,158,196,.35);background:rgba(255,158,196,.10);white-space:nowrap}
+  .stats-card{position:relative;max-height:84vh;overflow:hidden}
+  .stats-x{
+    position:absolute;top:10px;right:12px;width:30px;height:30px;border-radius:50%;
+    border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);
+    color:#fff;font-size:14px;line-height:1;z-index:2
+  }
+  .stats-scroll{max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px;width:100%}
+  .stats-sec{margin:10px 0 6px;font-size:.72rem;letter-spacing:.14em;color:#ff9ec4;text-align:left}
+  .stats-tags{display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-start}
+  .stats-tags span{font-size:.66rem;padding:2px 8px;border-radius:99px;color:#f0e6f7;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05)}
+  .stats-tags span.syn{border-color:rgba(255,158,196,.45);background:rgba(255,158,196,.12);color:#ffe9f2}
   .stat-card{border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.04);padding:10px 12px;margin-bottom:8px;text-align:left}
   .stat-card h3{margin:0 0 6px;font-size:.82rem;color:#fff;display:flex;align-items:center;gap:6px}
   .stat-card h3 em{font-style:normal;font-size:.62rem;color:#ff9ec4}
@@ -336,8 +348,8 @@
     <span class="relics" id="h-relics"></span>
     <span class="relics" id="h-talents"></span>
     <div class="team-strip" id="team-strip" hidden></div>
+    <div class="syn-panel" id="syn-panel" hidden></div>
   </div>
-  <div class="syn-panel" id="syn-panel" hidden></div>
   <div class="toast" id="toast" hidden></div>
 
   <div class="stage" id="stage">
@@ -405,11 +417,19 @@
     </div>
 
     <div class="ov ov-global" id="ov-stats" hidden>
-      <div class="item-card" style="max-width:430px;align-items:stretch">
+      <div class="item-card stats-card" style="max-width:440px;align-items:stretch">
+        <button class="stats-x" id="stats-x" type="button" aria-label="关闭">✕</button>
         <div class="item-icon">📊</div>
         <h2>队伍终极面板</h2>
         <p>已计入天赋、奇物、被动与所有激活羁绊。</p>
-        <div id="stats-list"></div>
+        <div class="stats-scroll" id="stats-scroll">
+          <h3 class="stats-sec">角色面板</h3>
+          <div id="stats-list"></div>
+          <h3 class="stats-sec">奇物与天赋</h3>
+          <div id="stats-items" class="stats-tags"></div>
+          <h3 class="stats-sec">羁绊</h3>
+          <div id="stats-syn" class="stats-tags"></div>
+        </div>
         <button class="btn" id="stats-close" type="button">关闭</button>
       </div>
     </div>
@@ -1957,6 +1977,65 @@
       var hh = heroById(m.heroId)
       card(hh ? hh.emoji : '👤', hh ? hh.name : '队友', m.dead ? '已阵亡' : '队友', m.atk, m.hp, m.maxHp)
     }
+
+    // 奇物与天赋
+    var itemsBox = $('stats-items')
+    if (itemsBox) {
+      itemsBox.innerHTML = ''
+      var pushed = false
+      for (var rk in S.relics) {
+        if (!S.relics[rk]) continue
+        var sp1 = document.createElement('span')
+        sp1.textContent = '◇ ' + (RELICS[rk] ? RELICS[rk].name : rk)
+        itemsBox.appendChild(sp1); pushed = true
+      }
+      for (var tk in S.trinkets) {
+        if (!S.trinkets[tk]) continue
+        var sp2 = document.createElement('span')
+        var to = trinketById(tk)
+        sp2.textContent = (to ? to.icon + ' ' + to.name : tk) + ' · 奇物'
+        itemsBox.appendChild(sp2); pushed = true
+      }
+      for (var pk in S.relics2) {
+        if (!S.relics2[pk]) continue
+        var sp3 = document.createElement('span')
+        var po = passiveById(pk)
+        sp3.textContent = (po ? po.icon + ' ' + po.name : pk) + (S.relics2[pk] > 1 ? ' ×' + S.relics2[pk] : '')
+        itemsBox.appendChild(sp3); pushed = true
+      }
+      for (var td in S.talents) {
+        if (!S.talents[td]) continue
+        var sp4 = document.createElement('span')
+        sp4.textContent = talentName(td) + (S.talents[td] > 1 ? ' ×' + S.talents[td] : '')
+        itemsBox.appendChild(sp4); pushed = true
+      }
+      if (!pushed) {
+        var none = document.createElement('span')
+        none.textContent = '还没有奇物或天赋'
+        itemsBox.appendChild(none)
+      }
+    }
+
+    // 羁绊
+    var synBox = $('stats-syn')
+    if (synBox) {
+      synBox.innerHTML = ''
+      var anySyn = false
+      for (var si2 = 0; si2 < SYNERGY.length; si2++) {
+        var sy = SYNERGY[si2]
+        var tier = (S.syn && S.syn[sy.id]) || 0
+        if (!tier) continue
+        var chip = document.createElement('span')
+        chip.className = 'syn'
+        chip.textContent = '【' + sy.name + '】' + tier + '/' + sy.members.length
+        synBox.appendChild(chip); anySyn = true
+      }
+      if (!anySyn) {
+        var n2 = document.createElement('span')
+        n2.textContent = '暂无激活羁绊'
+        synBox.appendChild(n2)
+      }
+    }
   }
 
   function openStats() {
@@ -3022,16 +3101,7 @@
     if (hHp) hHp.textContent = S.hp + ' / ' + S.maxHp
     if (hFill) hFill.style.width = Math.max(0, Math.min(100, (S.hp / S.maxHp) * 100)) + '%'
     if (hAtk) hAtk.textContent = String(S.atk)
-    if (hTalents) {
-      hTalents.innerHTML = ''
-      for (var tid in S.talents) {
-        if (!S.talents[tid]) continue
-        var chip = document.createElement('span')
-        chip.className = 'relic'
-        chip.textContent = talentName(tid) + (S.talents[tid] > 1 ? ' ×' + S.talents[tid] : '')
-        hTalents.appendChild(chip)
-      }
-    }
+    if (hTalents) { hTalents.innerHTML = ''; hTalents.hidden = true }
     if (hFloor) hFloor.textContent = String(S.floor)
     if (hDir) hDir.textContent = dirArrow()
     if (teamStrip) {
@@ -3065,39 +3135,7 @@
     if (hGold) hGold.textContent = String(S.gold || 0)
     if (hLv) hLv.textContent = String(S.level)
     if (hXp) hXp.textContent = S.xp + '/' + S.xpNext
-    if (hRelics) {
-      hRelics.innerHTML = ''
-      for (var k in S.relics) {
-        if (!S.relics[k]) continue
-        var b = document.createElement('span')
-        b.className = 'relic'
-        b.textContent = RELICS[k] ? RELICS[k].name : k
-        hRelics.appendChild(b)
-      }
-      for (var pid in S.relics2) {
-        if (!S.relics2[pid]) continue
-        var bt2 = document.createElement('span')
-        bt2.className = 'relic'
-        var pobj = passiveById(pid)
-        bt2.textContent = (pobj ? pobj.icon + ' ' + pobj.name : pid) + (S.relics2[pid] > 1 ? ' ×' + S.relics2[pid] : '')
-        hRelics.appendChild(bt2)
-      }
-      for (var ti2 = 0; ti2 < S.team.length; ti2++) {
-        var tmh = heroById(S.team[ti2].heroId)
-        var tc = document.createElement('span')
-        tc.className = 'relic'
-        tc.textContent = '🕯️ ' + (tmh ? tmh.name : '队友')
-        hRelics.appendChild(tc)
-      }
-      for (var tk2 in S.trinkets) {
-        if (!S.trinkets[tk2]) continue
-        var bt = document.createElement('span')
-        bt.className = 'relic'
-        var tobj = trinketById(tk2)
-        bt.textContent = (tobj ? tobj.icon + ' ' + tobj.name : tk2)
-        hRelics.appendChild(bt)
-      }
-    }
+    if (hRelics) { hRelics.innerHTML = ''; hRelics.hidden = true }
   }
 
   /* ---------------- 渲染 ---------------- */
@@ -3716,6 +3754,7 @@
   if (itemTake) itemTake.addEventListener('click', closeItemCard)
   if ($('btn-stats')) $('btn-stats').addEventListener('click', openStats)
   if ($('stats-close')) $('stats-close').addEventListener('click', closeStats)
+  if ($('stats-x')) $('stats-x').addEventListener('click', closeStats)
   if ($('btn-sound')) $('btn-sound').addEventListener('click', function () {
     var m = SND.toggleMute()
     this.textContent = m ? '🔇' : '🔊'
