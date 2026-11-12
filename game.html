@@ -259,6 +259,7 @@
         <button type="button" id="meta-open">记忆升级</button>
       </div>
       <p class="seed" id="seed-line">种子 —</p>
+      <button class="btn ghost" id="cont-run" type="button" hidden>继续上次</button>
     </div>
     <div class="ov ov-global" id="ov-talent" hidden>
       <h2 id="talent-title">挑一个天赋</h2>
@@ -337,7 +338,7 @@
 
     <div class="ov ov-global ov-tapclose" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
+      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
       <p class="tap-hint">点任意位置也能关掉</p>
     </div>
@@ -1565,6 +1566,79 @@
     start(id)
   }
 
+  /* ---------------- 局内存档 ---------------- */
+  var RUN_KEY = 'cyrene.rogue.run'
+
+  function saveRun() {
+    if (!S || S.over) { clearRun(); return }
+    try {
+      var snap = {}
+      for (var k in S) {
+        if (k === 'bullets' || k === 'hero') continue
+        snap[k] = S[k]
+      }
+      snap.heroId = S.hero.id
+      snap.v = 3
+      localStorage.setItem(RUN_KEY, JSON.stringify(snap))
+    } catch (e) { /* ignore */ }
+  }
+
+  function loadSavedRun() {
+    try {
+      var raw = localStorage.getItem(RUN_KEY)
+      if (!raw) return null
+      var d = JSON.parse(raw)
+      if (!d || d.v !== 3 || !d.heroId) return null
+      var h = heroById(d.heroId)
+      if (!h) return null
+      d.hero = h
+      d.bullets = []
+      d.paused = false
+      d.over = false
+      return d
+    } catch (e) { return null }
+  }
+
+  function clearRun() {
+    try { localStorage.removeItem(RUN_KEY) } catch (e) { /* ignore */ }
+  }
+
+  function refreshContinue() {
+    var btn = $('cont-run')
+    if (!btn) return
+    var d = loadSavedRun()
+    if (d) {
+      btn.hidden = false
+      btn.textContent = '继续上次 · 第 ' + (d.floor || 1) + ' 层'
+    } else {
+      btn.hidden = true
+    }
+  }
+
+  function continueSaved() {
+    var d = loadSavedRun()
+    if (!d) { refreshContinue(); return }
+    S = d
+    running = true
+    if (ovSelect) ovSelect.hidden = true
+    if (ovEnd) ovEnd.hidden = true
+    if (ovSummary) ovSummary.hidden = true
+    if (ovItem) ovItem.hidden = true
+    if (ovTalent) ovTalent.hidden = true
+    if (ovChest) ovChest.hidden = true
+    if (ovSummary) ovSummary.hidden = true
+    if (ovItem) ovItem.hidden = true
+    if (ovTalent) ovTalent.hidden = true
+    clearRun()
+    itemOpen = false
+    choosing = false
+    computeFov()
+    render()
+    syncHud()
+    log('接着上一次的记忆继续。')
+    saveRun()
+  }
+
   /* ---------------- 开局 ---------------- */
   function newRun(heroId, seed) {
     var hero = null
@@ -1683,6 +1757,7 @@
     syncMetaBar()
     log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + (S.floor % 5 === 0 ? '铁墓守着门。' : ''))
     computeFov(); render(); syncHud()
+    saveRun()
   }
 
   /* ---------------- 战斗 ---------------- */
@@ -1698,8 +1773,9 @@
     S.gold = (S.gold || 0) + 1 + rnd(2)
     log('「' + e.name + '」散成了光。')
     var ebase = ENEMIES[e.type] || ENEMIES.shard
-    spawnDust(e.x, e.y, 16, { hot: ebase.color, cool: '#5d2333' })
-    shake(5, 300)
+    spawnDust(e.x, e.y, 22, { hot: ebase.color, cool: '#5d2333' })
+    S.impact = { x: e.x, y: e.y, t: Date.now(), color: ebase.color }
+    shake(6, 320)
     var gain = (e.type === 'tomb' ? 10 : e.type === 'shade' ? 3 : 2) + (S.bonusXp || 0)
     S.xp += gain
     fx(e.x, e.y, '+' + gain + ' EXP', '#ffd9a0', 0.5)
@@ -1765,7 +1841,9 @@
     log((crit ? '暴击！' : '') + '你击中「' + e.name + '」' + dmg + ' 点。')
     fx(e.x, e.y, (crit ? '暴击 -' : '-') + dmg, crit ? '#ffb347' : '#ff4d5e', -0.45, (rnd(3) - 1) * 0.22)
     SND.hit(crit)
-    shake(crit ? 3.2 : 2.2, crit ? 220 : 150)
+    e.hitAt = Date.now()
+    S.impact = { x: e.x, y: e.y, t: Date.now(), color: crit ? '#ffd9a0' : '#ffe6ee' }
+    shake(crit ? 4.2 : 3.0, crit ? 240 : 170)
     if (e.hp <= 0) return killEnemy(e)
   }
 
@@ -1778,7 +1856,9 @@
     log('你受到 ' + dmg + ' 点伤害。')
     fx(S.player.x, S.player.y, '-' + dmg, '#ff4d5e', -0.4)
     SND.hurt()
-    shake(4.5, 260)
+    S.hurtAt = Date.now()
+    S.impact = { x: S.player.x, y: S.player.y, t: Date.now(), color: '#ff4d5e' }
+    shake(5.6, 300)
     if (attacker && S.thorns) {
       attacker.hp -= S.thorns
       log('刺回「' + attacker.name + '」' + S.thorns + ' 点。')
@@ -1946,6 +2026,7 @@
     enemiesTurn()
     if (S.over) return true
     computeFov(); render(); syncHud()
+    saveRun()
     return true
   }
 
@@ -1987,6 +2068,7 @@
   function lose() {
     S.over = true
     running = false
+    clearRun()
     SND.death()
     SND.ambience('none')
     SND.music('none')
@@ -2304,6 +2386,21 @@
         }
       }
 
+      // 受击瞬间泛白
+      if (e.hitAt) {
+        var hAge = Date.now() - e.hitAt
+        if (hAge < 150) {
+          ctx.globalAlpha = 0.85 * (1 - hAge / 150)
+          ctx.fillStyle = '#ffffff'
+          ctx.beginPath()
+          ctx.arc(ex, ey, TS * 0.3, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.globalAlpha = 1
+        } else {
+          e.hitAt = 0
+        }
+      }
+
       // 相邻时显示它的攻击力（伤害就是按这个算的）
       if (Math.abs(e.x - S.player.x) + Math.abs(e.y - S.player.y) === 1) {
         ctx.fillStyle = 'rgba(255,120,130,.95)'
@@ -2374,6 +2471,43 @@
       ctx.textBaseline = 'middle'
       ctx.fillText(String(S.hero.name).charAt(0), pxx, pyy + TS * .02)
       ctx.font = Math.round(TS * .62) + 'px -apple-system,"PingFang SC",sans-serif'
+    }
+
+    // 玩家受击泛白
+    if (S.hurtAt) {
+      var pAge = Date.now() - S.hurtAt
+      if (pAge < 160) {
+        ctx.globalAlpha = 0.7 * (1 - pAge / 160)
+        ctx.fillStyle = '#fff'
+        ctx.beginPath()
+        ctx.arc((S.player.x - camX) * TS + TS / 2, (S.player.y - camY) * TS + TS / 2, TS * .34, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.globalAlpha = 1
+        // 屏幕边缘泛红
+        ctx.fillStyle = 'rgba(255,60,80,' + (0.18 * (1 - pAge / 160)) + ')'
+        ctx.fillRect(0, 0, cv.width, TS * .5)
+        ctx.fillRect(0, cv.height - TS * .5, cv.width, TS * .5)
+      } else {
+        S.hurtAt = 0
+      }
+    }
+
+    // 冲击环
+    if (S.impact) {
+      var iAge = Date.now() - S.impact.t
+      if (iAge < 220) {
+        var ik = iAge / 220
+        ctx.globalAlpha = (1 - ik) * 0.8
+        ctx.strokeStyle = S.impact.color || '#fff'
+        ctx.lineWidth = Math.max(1.5, TS * .06)
+        ctx.beginPath()
+        ctx.arc((S.impact.x - camX) * TS + TS / 2, (S.impact.y - camY) * TS + TS / 2, TS * (0.15 + ik * 0.55), 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.globalAlpha = 1
+        kickAnim(300)
+      } else {
+        S.impact = null
+      }
     }
 
     // 灰烬粒子
@@ -2593,6 +2727,7 @@
     this.textContent = m ? '🔇' : '🔊'
     if (!m) SND.click()
   })
+  if ($('cont-run')) $('cont-run').addEventListener('click', continueSaved)
   if (shopClose) shopClose.addEventListener('click', closeShop)
   if ($('meta-open')) $('meta-open').addEventListener('click', openMeta)
   if ($('meta-close')) $('meta-close').addEventListener('click', closeMeta)
@@ -2607,6 +2742,7 @@
 
   /* ---------------- 生命周期 ---------------- */
   function boot() {
+    refreshContinue()
     var sb0 = document.getElementById('btn-sound')
     if (sb0) sb0.textContent = SND.isMuted() ? '🔇' : '🔊'
     loadMeta()
