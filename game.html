@@ -1893,16 +1893,29 @@
 
   var pendingCheat = null
 
+  function afterCheat() {
+    if (S) {
+      S.cheatDirty = true
+      syncHud()
+      render()
+      if ($('ov-stats') && !$('ov-stats').hidden) renderStats()
+    }
+    if (META) META.cheatDirty = true
+    syncMetaBar()
+    refreshContinue()
+  }
+
   function runCheat(code) {
     var cmd = String(code || '').trim().toUpperCase()
     if (!cmd) return
     if (cmd === 'MAX_FRAGMENTS') {
       META.shards += 999
-      saveMeta()
-      syncMetaBar()
-      renderMeta()
+      META.cheatDirty = true          // 只在内存，不写 localStorage
       if (S) cheatLog('【警告：神秘力量已介入，记忆碎片 +999！】', true)
       else toast('记忆碎片 +999')
+      syncMetaBar()
+      renderMeta()
+      afterCheat()
       return
     }
     if (!S) {
@@ -1914,21 +1927,23 @@
       case 'GOD_MODE':
         S.god = true
         cheatLog('【警告：神秘力量已介入，GOD_MODE 已激活！】', true)
+        afterCheat()
         break
       case 'GIVE_ME_GOLD':
         S.gold = (S.gold || 0) + 999
-        syncHud()
         cheatLog('【警告：神秘力量已介入，金币 +999！】', true)
+        afterCheat()
         break
       case 'SYNERGY_ALL':
         S.forceSyn = true
         computeSynergy()
         cheatLog('【警告：神秘力量已介入，全体羁绊已被强行拉满！】', true)
+        afterCheat()
         break
       case 'ONE_PUNCH':
         S.atk += 9999
-        syncHud()
         cheatLog('【警告：神秘力量已介入，攻击力 +9999！】', true)
+        afterCheat()
         break
       case 'GOTO_5':
         if (S.floor >= 5) {
@@ -1937,8 +1952,9 @@
         }
         var guard = 0
         while (S.floor < 5 && guard++ < 12) nextFloor()
-        computeFov(); render(); syncHud(); saveRun()
+        computeFov()
         cheatLog('【警告：神秘力量已介入，已抵达第 5 层！】', true)
+        afterCheat()
         break
       default:
         cheatLog('【未知的神谕，什么也没有发生。】')
@@ -1976,27 +1992,55 @@
     if (val && val.trim()) runCheat(val)
   }
 
-  function bindCheatTitle() {
-    var title = document.getElementById('select-title')
-    if (!title) return
-    title.addEventListener('click', function () {
+  var cheatLongTimer = null
+  var cheatLongFired = false
+
+  function bindCheatTrigger() {
+    var btn = document.getElementById('btn-help')
+    if (!btn) return
+
+    // 长按 3 秒
+    function startLong() {
+      clearTimeout(cheatLongTimer)
+      cheatLongFired = false
+      cheatLongTimer = setTimeout(function () {
+        cheatLongFired = true
+        cheatClicks = 0
+        cheatLast = 0
+        askCheat()
+      }, 3000)
+    }
+    function endLong() { clearTimeout(cheatLongTimer) }
+    btn.addEventListener('touchstart', startLong, { passive: true })
+    btn.addEventListener('touchend', endLong)
+    btn.addEventListener('touchcancel', endLong)
+    btn.addEventListener('mousedown', startLong)
+    btn.addEventListener('mouseup', endLong)
+    btn.addEventListener('mouseleave', endLong)
+
+    // 连点 5 次（1.5 秒内）
+    btn.addEventListener('click', function () {
+      if (cheatLongFired) { cheatLongFired = false; return }
       var now = Date.now()
-      if (now - cheatLast > CHEAT_TIMEOUT) cheatClicks = 0
+      if (now - cheatLast > 1500) cheatClicks = 0
       cheatClicks++
       cheatLast = now
-      if (cheatClicks >= 10) {
+      if (cheatClicks >= 5) {
         cheatClicks = 0
         cheatLast = 0
         askCheat()
       }
     })
+
+    function insideHelp(node) {
+      while (node) {
+        if (node.id === 'btn-help') return true
+        node = node.parentNode
+      }
+      return false
+    }
     document.addEventListener('click', function (e) {
-      try {
-        if (!e.target || !e.target.closest || !e.target.closest('#select-title')) {
-          cheatClicks = 0
-          cheatLast = 0
-        }
-      } catch (err) { /* ignore */ }
+      if (!insideHelp(e.target)) { cheatClicks = 0; cheatLast = 0 }
     })
   }
 
@@ -2146,6 +2190,7 @@
   }
 
   function saveMeta() {
+    if (META && META.cheatDirty) return   // 作弊改的碎片/解锁只在内存里
     try { localStorage.setItem(META_KEY, JSON.stringify(META)) } catch (e) { /* ignore */ }
   }
 
@@ -2374,6 +2419,7 @@
   var RUN_KEY = 'cyrene.rogue.run'
 
   function saveRun() {
+    if (S && S.cheatDirty) return   // 作弊局不写存档，刷新即回到真实存档
     if (!S || S.over) { clearRun(); return }
     try {
       var snap = {}
@@ -3892,7 +3938,7 @@
 
   /* ---------------- 生命周期 ---------------- */
   function boot() {
-    bindCheatTitle()
+    bindCheatTrigger()
     refreshContinue()
     var sb0 = document.getElementById('btn-sound')
     if (sb0) sb0.textContent = SND.isMuted() ? '🔇' : '🔊'
