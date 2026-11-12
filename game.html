@@ -162,6 +162,11 @@
   }
   .meta-row button:disabled{opacity:.45;border-color:rgba(255,255,255,.18);color:#b9b1cd;background:rgba(255,255,255,.04)}
 
+  .shop-gold{text-align:center;font-size:.78rem;color:#ffd9a0;margin:0}
+  .shop-gold b{font-size:1rem;color:#fff}
+  .shop-row-sold{opacity:.45}
+  .shop-row-sold button{pointer-events:none}
+
   /* 奇物拾取卡 */
   .item-card{
     width:100%;max-width:380px;text-align:center;
@@ -234,6 +239,7 @@
     </div>
     <span class="stat">攻 <b id="h-atk">0</b></span>
     <span class="stat">Lv <b id="h-lv">1</b></span>
+    <span class="stat">金币 <b id="h-gold">0</b></span>
     <span class="stat">EXP <b id="h-xp">0/6</b></span>
     <span class="stat">层 <b id="h-floor">1</b></span>
     <span class="stat">门 <b id="h-dir">—</b></span>
@@ -276,6 +282,25 @@
       </div>
     </div>
 
+    <div class="ov ov-global" id="ov-chest" hidden>
+      <div class="item-card">
+        <div class="item-icon">🎁</div>
+        <h2>宝箱</h2>
+        <p>挑一件带走 —— 被动遗物可以叠加，叠出流派。</p>
+        <div class="talents" id="chest-list"></div>
+      </div>
+    </div>
+
+    <div class="ov ov-global" id="ov-shop" hidden>
+      <div class="item-card">
+        <div class="item-icon">🪙</div>
+        <h2>记忆商人</h2>
+        <p class="shop-gold">金币 <b id="shop-gold">0</b></p>
+        <div class="meta-list" id="shop-list" style="width:100%;max-width:400px"></div>
+        <button class="btn ghost" id="shop-close" type="button">走了</button>
+      </div>
+    </div>
+
     <div class="ov ov-global" id="ov-item" hidden>
       <div class="item-card">
         <div class="item-icon" id="item-icon">🕰️</div>
@@ -312,7 +337,7 @@
 
     <div class="ov ov-global ov-tapclose" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
+      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
       <p class="tap-hint">点任意位置也能关掉</p>
     </div>
@@ -391,9 +416,11 @@
   var stage = $('stage')
   var logEl = $('log')
   var hName = $('h-name'), hHp = $('h-hp'), hFill = $('h-fill'), hAtk = $('h-atk'), hFloor = $('h-floor'), hRelics = $('h-relics')
-  var hLv = $('h-lv'), hXp = $('h-xp'), hDir = $('h-dir'), hTalents = $('h-talents')
+  var hLv = $('h-lv'), hXp = $('h-xp'), hDir = $('h-dir'), hTalents = $('h-talents'), hGold = $('h-gold')
   var ovTalent = $('ov-talent'), talentList = $('talent-list'), talentTitle = $('talent-title')
   var ovMeta = $('ov-meta')
+  var ovChest = $('ov-chest'), chestList = $('chest-list')
+  var ovShop = $('ov-shop'), shopList = $('shop-list'), shopGold = $('shop-gold'), shopClose = $('shop-close')
   var ovItem = $('ov-item'), itemIcon = $('item-icon'), itemName = $('item-name'), itemDesc = $('item-desc'), itemEffect = $('item-effect'), itemTake = $('item-take')
   var ovSummary = $('ov-summary'), sumKicker = $('sum-kicker'), sumTitle = $('sum-title')
   var sumFloor = $('sum-floor'), sumKills = $('sum-kills'), sumTime = $('sum-time')
@@ -976,7 +1003,20 @@
       }
     }
 
-    return { grid: g, rooms: rooms, start: start, stairs: stairs, items: items, enemies: enemies, floor: floor, seed: seed }
+    // 层间：宝箱或商店（BOSS 层不给，铁墓本身就是奖励）
+    var special = null
+    if (floor % 5 !== 0 && rooms.length > 1) {
+      var sr = rooms[1 + rnd(rooms.length - 1)]
+      for (var sp2 = 0; sp2 < 40; sp2++) {
+        var sx2 = sr.x + (sr.w > 2 ? 1 + rnd(sr.w - 2) : 0)
+        var sy2 = sr.y + (sr.h > 2 ? 1 + rnd(sr.h - 2) : 0)
+        if (!free(sx2, sy2)) continue
+        special = { kind: rnd(100) < 58 ? 'chest' : 'shop', x: sx2, y: sy2 }
+        break
+      }
+    }
+
+    return { grid: g, rooms: rooms, start: start, stairs: stairs, items: items, enemies: enemies, floor: floor, seed: seed, special: special }
   }
 
   /* ---------------- 视野 ---------------- */
@@ -1078,6 +1118,20 @@
     return (h && h.color) || '#ff9ec4'
   }
 
+  /* ---------------- 可叠加被动遗物 ---------------- */
+  var PASSIVES = [
+    { id: 'bloodsword', name: '嗜血剑', icon: '🗡️', desc: '每次暴击回 1 血。', apply: function () { S.relics2.bloodsword = (S.relics2.bloodsword || 0) + 1 } },
+    { id: 'berserk', name: '狂战士之血', icon: '🩸', desc: '血量越低，攻击越高（每层最多 +3 攻）。', apply: function () { S.relics2.berserk = (S.relics2.berserk || 0) + 1 } },
+    { id: 'thorns2', name: '荆棘甲', icon: '🌵', desc: '被攻击时反弹 1 点伤害。', apply: function () { S.relics2.thorns2 = (S.relics2.thorns2 || 0) + 1; S.thorns = (S.thorns || 0) + 1 } },
+    { id: 'shadow', name: '影步靴', icon: '👟', desc: '闪避 +6%。', apply: function () { S.relics2.shadow = (S.relics2.shadow || 0) + 1; S.dodge += 0.06 } },
+    { id: 'lantern', name: '猎魂灯', icon: '🏮', desc: '每下一层，攻击 +1。', apply: function () { S.relics2.lantern = (S.relics2.lantern || 0) + 1 } },
+  ]
+
+  function passiveById(id) {
+    for (var i = 0; i < PASSIVES.length; i++) if (PASSIVES[i].id === id) return PASSIVES[i]
+    return null
+  }
+
   /* ---------------- 天赋 ---------------- */
   var TALENTS = [
     { id: 'blade', name: '刀比嘴快', desc: '攻击 +2。「先砍，再问为什么。」', apply: function () { S.atk += 2 } },
@@ -1147,6 +1201,126 @@
     syncHud()
     render()
     if (S.pending > 0) setTimeout(openTalent, 160)
+  }
+
+  /* ---------------- 宝箱与商店 ---------------- */
+  function openChest() {
+    if (!ovChest || !chestList) return
+    S.paused = true
+    var pool = PASSIVES.slice()
+    var picks = []
+    while (picks.length < 3 && pool.length) picks.push(pool.splice(rnd(pool.length), 1)[0])
+    chestList.innerHTML = ''
+    picks.forEach(function (p) {
+      var b = document.createElement('button')
+      b.type = 'button'
+      b.className = 'talent'
+      var nb = document.createElement('b')
+      nb.textContent = p.icon + ' ' + p.name
+      var sp = document.createElement('span')
+      sp.textContent = p.desc
+      b.appendChild(nb)
+      b.appendChild(sp)
+      b.addEventListener('click', function () { takeChest(p) })
+      chestList.appendChild(b)
+    })
+    ovChest.hidden = false
+  }
+
+  function takeChest(p) {
+    p.apply()
+    if (S.relics2[p.id]) S.relics2[p.id] = S.relics2[p.id]
+    log('宝箱里是「' + p.name + '」。')
+    SND.chime()
+    if (ovChest) ovChest.hidden = true
+    if (S) S.paused = false
+    syncHud()
+    render()
+  }
+
+  function rollShop() {
+    var pool = PASSIVES.slice()
+    var offers = []
+    for (var i = 0; i < 2 && pool.length; i++) {
+      var p = pool.splice(rnd(pool.length), 1)[0]
+      offers.push({ kind: 'passive', p: p, price: 7 + rnd(5), sold: false })
+    }
+    offers.push({ kind: 'potion', price: 5, sold: false })
+    offers.push({ kind: 'heal', price: 6, sold: false })
+    S.shopOffers = offers
+  }
+
+  function renderShop() {
+    if (!shopList) return
+    if (shopGold) shopGold.textContent = String(S.gold || 0)
+    shopList.innerHTML = ''
+    S.shopOffers.forEach(function (o, idx) {
+      var row = document.createElement('div')
+      row.className = 'meta-row' + (o.sold ? ' shop-row-sold' : '')
+      var info = document.createElement('div')
+      info.className = 'm-info'
+      var name = document.createElement('b')
+      var desc = document.createElement('span')
+      if (o.kind === 'passive') {
+        name.textContent = o.p.icon + ' ' + o.p.name + (S.relics2[o.p.id] ? ' ×' + S.relics2[o.p.id] : '')
+        desc.textContent = o.p.desc
+      } else if (o.kind === 'potion') {
+        name.textContent = '♥ 药水'
+        desc.textContent = '立刻回 ' + Math.round(7 * S.potionMul) + ' 血。'
+      } else {
+        name.textContent = '✨ 治愈'
+        desc.textContent = '回 ' + Math.round(S.maxHp * 0.35) + ' 血。'
+      }
+      info.appendChild(name)
+      info.appendChild(desc)
+      var btn = document.createElement('button')
+      btn.type = 'button'
+      btn.textContent = o.sold ? '已售' : o.price + ' 金币'
+      btn.disabled = o.sold || (S.gold || 0) < o.price
+      btn.addEventListener('click', function () { buyOffer(idx) })
+      row.appendChild(info)
+      row.appendChild(btn)
+      shopList.appendChild(row)
+    })
+  }
+
+  function buyOffer(idx) {
+    var o = S.shopOffers[idx]
+    if (!o || o.sold) return
+    if ((S.gold || 0) < o.price) return
+    S.gold -= o.price
+    o.sold = true
+    if (o.kind === 'passive') {
+      o.p.apply()
+      log('买下「' + o.p.name + '」。')
+    } else if (o.kind === 'potion') {
+      var h = Math.round(7 * S.potionMul)
+      S.hp = Math.min(S.maxHp, S.hp + h)
+      log('喝下药水，回 ' + h + ' 血。')
+    } else {
+      var h2 = Math.round(S.maxHp * 0.35)
+      S.hp = Math.min(S.maxHp, S.hp + h2)
+      log('治愈，回 ' + h2 + ' 血。')
+    }
+    SND.coin()
+    syncHud()
+    renderShop()
+    render()
+  }
+
+  function openShop() {
+    if (!ovShop) return
+    S.paused = true
+    rollShop()
+    renderShop()
+    ovShop.hidden = false
+  }
+
+  function closeShop() {
+    if (ovShop) ovShop.hidden = true
+    if (S) S.paused = false
+    render()
+    syncHud()
   }
 
   /* ---------------- 记忆存档 ---------------- */
@@ -1450,6 +1624,10 @@
       echo: 0,
       bullets: [],
       turnCount: 0,
+      gold: 0,
+      relics2: {},
+      special: null,
+      shopOffers: [],
       shakeMag: 0,
       shakeUntil: 0,
       shakeMs: 240,
@@ -1466,6 +1644,7 @@
     S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
     S.player.x = m.start.x; S.player.y = m.start.y
     S.stairs = m.stairs
+    S.special = m.special
     log('你是「' + hero.name + '」。第 1 层，回廊还在往下延伸。')
     SND.ambience('calm')
     SND.music('calm')
@@ -1476,6 +1655,11 @@
 
   function nextFloor() {
     S.floor++
+    S.gold += 3
+    if (S.relics2.lantern) {
+      S.atk += S.relics2.lantern
+      log('猎魂灯亮了：攻击 +' + S.relics2.lantern + '。')
+    }
     if (S.floor % 5 === 0) {
       S.hp = S.maxHp
       log('铁墓的气息……先回满血。')
@@ -1490,6 +1674,7 @@
     S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
     S.player.x = m.start.x; S.player.y = m.start.y
     S.stairs = m.stairs
+    S.special = m.special
     S.seen = {}; S.vis = {}
     S.hp = Math.min(S.maxHp, S.hp + 2 + (S.floorHeal || 0))
     if (S.hero.id === 'firefly') { S.hp = Math.min(S.maxHp, S.hp + 1); log('流萤的微光护住了你，回 3 血。') }
@@ -1510,6 +1695,7 @@
   function killEnemy(e) {
     if (e.type === 'tomb' && S.hero.id === 'sparkle' && Math.random() < 0.35) return sparkleTrick(e)
     S.kills = (S.kills || 0) + 1
+    S.gold = (S.gold || 0) + 1 + rnd(2)
     log('「' + e.name + '」散成了光。')
     var ebase = ENEMIES[e.type] || ENEMIES.shard
     spawnDust(e.x, e.y, 16, { hot: ebase.color, cool: '#5d2333' })
@@ -1561,8 +1747,20 @@
 
   function hitEnemy(e) {
     var dmg = S.atk
+    var ber = (S.relics2 && S.relics2.berserk) || 0
+    if (ber) {
+      var low = 1 - S.hp / S.maxHp
+      dmg += Math.min(3 * ber, Math.floor(low * 3) * ber)
+    }
     var crit = Math.random() < S.crit
-    if (crit) dmg = dmg * 2
+    if (crit) {
+      dmg = dmg * 2
+      var sword = (S.relics2 && S.relics2.bloodsword) || 0
+      if (sword) {
+        S.hp = Math.min(S.maxHp, S.hp + sword)
+        fx(S.player.x, S.player.y, '+' + sword, '#ff9ec4', -0.6)
+      }
+    }
     e.hp -= dmg
     log((crit ? '暴击！' : '') + '你击中「' + e.name + '」' + dmg + ' 点。')
     fx(e.x, e.y, (crit ? '暴击 -' : '-') + dmg, crit ? '#ffb347' : '#ff4d5e', -0.45, (rnd(3) - 1) * 0.22)
@@ -1770,6 +1968,12 @@
         break
       }
     }
+    if (S.special && x === S.special.x && y === S.special.y) {
+      var spKind = S.special.kind
+      S.special = null
+      if (spKind === 'chest') openChest()
+      else openShop()
+    }
     if (x === S.stairs.x && y === S.stairs.y) {
       if (S.enemies.some(function (e) { return e.hp > 0 && e.type === 'tomb' })) {
         log('铁墓还挡在洞口。')
@@ -1844,6 +2048,7 @@
     }
     if (hFloor) hFloor.textContent = String(S.floor)
     if (hDir) hDir.textContent = dirArrow()
+    if (hGold) hGold.textContent = String(S.gold || 0)
     if (hLv) hLv.textContent = String(S.level)
     if (hXp) hXp.textContent = S.xp + '/' + S.xpNext
     if (hRelics) {
@@ -1854,6 +2059,14 @@
         b.className = 'relic'
         b.textContent = RELICS[k] ? RELICS[k].name : k
         hRelics.appendChild(b)
+      }
+      for (var pid in S.relics2) {
+        if (!S.relics2[pid]) continue
+        var bt2 = document.createElement('span')
+        bt2.className = 'relic'
+        var pobj = passiveById(pid)
+        bt2.textContent = (pobj ? pobj.icon + ' ' + pobj.name : pid) + (S.relics2[pid] > 1 ? ' ×' + S.relics2[pid] : '')
+        hRelics.appendChild(bt2)
       }
       for (var tk2 in S.trinkets) {
         if (!S.trinkets[tk2]) continue
@@ -1927,6 +2140,39 @@
         if (!vis) {
           ctx.fillStyle = 'rgba(10,9,16,.62)'
           ctx.fillRect(px, py, TS, TS)
+        }
+      }
+    }
+
+    // 宝箱 / 商店
+    if (S.special) {
+      var spv = S.vis[S.special.x + ',' + S.special.y]
+      if (spv) {
+        var spx = (S.special.x - camX) * TS + TS / 2
+        var spy = (S.special.y - camY) * TS + TS / 2
+        var spPulse = 0.5 + 0.5 * Math.sin(Date.now() / 420)
+        if (S.special.kind === 'chest') {
+          ctx.fillStyle = 'rgba(255,217,160,' + (0.10 + 0.10 * spPulse) + ')'
+          ctx.beginPath(); ctx.arc(spx, spy, TS * .42, 0, Math.PI * 2); ctx.fill()
+          ctx.fillStyle = '#d9a24a'
+          ctx.fillRect(spx - TS * .17, spy - TS * .1, TS * .34, TS * .22)
+          ctx.fillStyle = '#ffd9a0'
+          ctx.fillRect(spx - TS * .19, spy - TS * .18, TS * .38, TS * .09)
+          ctx.fillStyle = '#5a3a12'
+          ctx.fillRect(spx - TS * .03, spy - TS * .03, TS * .06, TS * .1)
+        } else {
+          ctx.fillStyle = 'rgba(159,180,255,' + (0.10 + 0.10 * spPulse) + ')'
+          ctx.beginPath(); ctx.arc(spx, spy, TS * .42, 0, Math.PI * 2); ctx.fill()
+          ctx.fillStyle = '#9fb4ff'
+          ctx.beginPath(); ctx.arc(spx, spy + TS * .04, TS * .16, 0, Math.PI * 2); ctx.fill()
+          ctx.fillStyle = '#dfe6ff'
+          ctx.beginPath(); ctx.arc(spx, spy + TS * .04, TS * .07, 0, Math.PI * 2); ctx.fill()
+          ctx.fillStyle = '#cfe0ff'
+          ctx.beginPath()
+          ctx.moveTo(spx - TS * .2, spy - TS * .12)
+          ctx.lineTo(spx, spy - TS * .28)
+          ctx.lineTo(spx + TS * .2, spy - TS * .12)
+          ctx.closePath(); ctx.fill()
         }
       }
     }
@@ -2324,6 +2570,8 @@
     if (ovSummary) ovSummary.hidden = true
     if (ovItem) ovItem.hidden = true
     if (ovTalent) ovTalent.hidden = true
+    if (ovChest) ovChest.hidden = true
+    if (ovShop) ovShop.hidden = true
     itemOpen = false
     choosing = false
     newRun(heroId, seed)
@@ -2345,6 +2593,7 @@
     this.textContent = m ? '🔇' : '🔊'
     if (!m) SND.click()
   })
+  if (shopClose) shopClose.addEventListener('click', closeShop)
   if ($('meta-open')) $('meta-open').addEventListener('click', openMeta)
   if ($('meta-close')) $('meta-close').addEventListener('click', closeMeta)
   if (sumAgain) sumAgain.addEventListener('click', restartRun)
@@ -2391,6 +2640,23 @@
       S.enemies.push(e)
       return e
     },
+    passives: function () { return PASSIVES.map(function (p) { return p.id }) },
+    grantPassive: function (id) {
+      var p = passiveById(id)
+      if (!p) return false
+      S.relics2[id] = (S.relics2[id] || 0) + 1
+      if (id === 'thorns2') S.thorns = (S.thorns || 0) + 1
+      if (id === 'shadow') S.dodge += 0.06
+      return true
+    },
+    specialPos: function () { return S ? S.special : null },
+    clearEnemies: function () { if (S) S.enemies.forEach(function (e) { e.hp = 0 }) },
+    setHp: function (n) { if (S) { S.hp = Math.max(1, Math.min(S.maxHp, n)) } },
+    setCrit: function (x) { if (S) S.crit = x },
+    descend: function () { if (S) { nextFloor(); } },
+    openChest: openChest,
+    openShop: openShop,
+    setGold: function (n) { if (S) { S.gold = n; syncHud() } },
     die: function () { if (S && !S.over) { S.hp = 0; lose() } },
     trinketIds: function () { return TRINKETS.map(function (t) { return t.id }) },
     pickTrinket: pickTrinket,
@@ -2413,7 +2679,8 @@
         leech: S.leech, thorns: S.thorns, reduce: S.dmgReduce, bonusXp: S.bonusXp, floorHeal: S.floorHeal,
         talents: Object.keys(S.talents).length, tricks: S.tricks || 0,
         shakeLeft: Math.max(0, (S.shakeUntil || 0) - Date.now()), shakeMag: S.shakeMag || 0,
-        kills: S.kills || 0, steps: S.steps || 0,
+        kills: S.kills || 0, steps: S.steps || 0, gold: S.gold || 0,
+        relics2: Object.keys(S.relics2 || {}).length, special: S.special ? S.special.kind : null, thornsNow: S.thorns || 0,
         items: S.items.length, relics: Object.keys(S.relics)
       }
     }
