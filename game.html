@@ -141,6 +141,8 @@
       <div class="hpbar"><div class="hpfill" id="h-fill" style="width:100%"></div></div>
     </div>
     <span class="stat">攻 <b id="h-atk">0</b></span>
+    <span class="stat">Lv <b id="h-lv">1</b></span>
+    <span class="stat">EXP <b id="h-xp">0/6</b></span>
     <span class="stat">层 <b id="h-floor">1</b>/5</span>
     <span class="relics" id="h-relics"></span>
   </div>
@@ -215,8 +217,8 @@
   }
 
   var ENEMIES = {
-    shard: { id: 'shard', name: '碎片', glyph: '✦', color: '#ff9ec4', hp: 3, atk: 1, chase: 4 },
-    shade: { id: 'shade', name: '残影', glyph: '◍', color: '#a98bff', hp: 5, atk: 2, chase: 5 },
+    shard: { id: 'shard', name: '碎片', glyph: '✦', color: '#ff4d5e', hp: 3, atk: 1, chase: 4 },
+    shade: { id: 'shade', name: '残影', glyph: '◍', color: '#ff7a3c', hp: 5, atk: 2, chase: 5 },
     tomb: { id: 'tomb', name: '铁墓', glyph: '☗', color: '#ffd9a0', hp: 24, atk: 4, chase: 99 }
   }
 
@@ -227,6 +229,7 @@
   var stage = $('stage')
   var logEl = $('log')
   var hName = $('h-name'), hHp = $('h-hp'), hFill = $('h-fill'), hAtk = $('h-atk'), hFloor = $('h-floor'), hRelics = $('h-relics')
+  var hLv = $('h-lv'), hXp = $('h-xp')
   var ovSelect = $('ov-select'), pickEl = $('pick'), seedLine = $('seed-line')
   var ovEnd = $('ov-end'), endBig = $('end-big'), endTitle = $('end-title'), endDesc = $('end-desc'), endAgain = $('end-again')
   var bestEl = null
@@ -240,6 +243,26 @@
   var running = false
   var bestFloor = 0
   try { bestFloor = Number(localStorage.getItem('cyrene.rogue.best') || 0) || 0 } catch (e) { bestFloor = 0 }
+
+  var FX = []
+  var rafFn = (typeof window !== 'undefined' && window.requestAnimationFrame)
+    ? window.requestAnimationFrame.bind(window)
+    : function (f) { setTimeout(f, 40) }
+  var animUntil = 0
+  function kickAnim() {
+    var until = Date.now() + 800
+    if (animUntil > Date.now()) { if (until > animUntil) animUntil = until; return }
+    animUntil = until
+    ;(function step() {
+      if (S) render()
+      if (Date.now() < animUntil) rafFn(step)
+    })()
+  }
+  function fx(x, y, text, color) {
+    FX.push({ x: x, y: y, text: text, color: color, t: Date.now() })
+    if (FX.length > 24) FX.shift()
+    kickAnim()
+  }
 
   function rnd(n) { return Math.floor(Math.random() * n) }
   function pick(a) { return a[rnd(a.length)] }
@@ -310,7 +333,7 @@
 
     var isBoss = floor >= 5
     if (isBoss) {
-      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: 8 + floor * 2, atk: 1 + ((floor / 2) | 0), name: '铁墓' })
+      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: 8 + floor * 2, max: 8 + floor * 2, atk: 1 + ((floor / 2) | 0), name: '铁墓' })
     }
 
     var nEnemy = isBoss ? 2 : 2 + Math.min(3, floor)
@@ -320,7 +343,20 @@
         if (!free(ex, ey)) continue
         var kind = rnd(100) < Math.min(70, 30 + floor * 10) ? 'shade' : 'shard'
         var base = ENEMIES[kind]
-        enemies.push({ type: kind, x: ex, y: ey, hp: base.hp + Math.max(0, floor - 1), atk: base.atk + ((floor / 3) | 0), name: base.name })
+        enemies.push({ type: kind, x: ex, y: ey, hp: base.hp + Math.max(0, floor - 1), max: base.hp + Math.max(0, floor - 1), atk: base.atk + ((floor / 3) | 0), name: base.name })
+        break
+      }
+    }
+
+    // 起点附近强制放两只，保证一进游戏就能看到敌人
+    for (var n2 = 0; n2 < 1; n2++) {
+      for (var t2 = 0; t2 < 80; t2++) {
+        var gx = start.x + rnd(9) - 4, gy = start.y + rnd(9) - 4
+        if (gx < 1 || gy < 1 || gx >= MAP_W - 1 || gy >= MAP_H - 1) continue
+        if (Math.abs(gx - start.x) + Math.abs(gy - start.y) < 2) continue
+        if (!free(gx, gy)) continue
+        var nearHp = ENEMIES.shard.hp
+        enemies.push({ type: 'shard', x: gx, y: gy, hp: nearHp, max: nearHp, atk: ENEMIES.shard.atk, name: ENEMIES.shard.name })
         break
       }
     }
@@ -429,7 +465,10 @@
       seen: {},
       vis: {},
       over: false,
-      turns: 0
+      turns: 0,
+      xp: 0,
+      level: 1,
+      xpNext: 6
     }
 
     var m = genMap(1, seed)
@@ -469,8 +508,22 @@
     if (crit) dmg = dmg * 2
     e.hp -= dmg
     log((crit ? '暴击！' : '') + '你击中「' + e.name + '」' + dmg + ' 点。')
+    fx(e.x, e.y, (crit ? '!' : '') + '-' + dmg, crit ? '#ffd9a0' : '#ffe6ee')
     if (e.hp <= 0) {
       log('「' + e.name + '」散成了光。')
+      var gain = e.type === 'tomb' ? 10 : e.type === 'shade' ? 3 : 2
+      S.xp += gain
+      fx(e.x, e.y, '+' + gain + ' EXP', '#ffd9a0')
+      while (S.xp >= S.xpNext) {
+        S.xp -= S.xpNext
+        S.level++
+        S.xpNext = 6 + S.level * 3
+        S.maxHp += 2
+        S.atk += 1
+        S.hp = Math.min(S.maxHp, S.hp + 3)
+        log('升到 Lv.' + S.level + '：上限 +2、攻击 +1，回了 3 血。')
+        fx(S.player.x, S.player.y, 'LV UP', '#ff9ec4')
+      }
       if (S.hero.id === 'thanos' || S.relics.leech) {
         var heal = (S.hero.id === 'thanos' ? 1 : 0) + (S.relics.leech ? 1 : 0)
         S.hp = Math.min(S.maxHp, S.hp + heal)
@@ -484,6 +537,7 @@
     if (S.hero.id === 'pig') dmg = Math.max(1, dmg - 1)
     S.hp -= dmg
     log('你受到 ' + dmg + ' 点伤害。')
+    fx(S.player.x, S.player.y, '-' + dmg, '#ff4d5e')
     if (S.hp <= 0) { S.hp = 0; lose() }
   }
 
@@ -619,6 +673,8 @@
     if (hFill) hFill.style.width = Math.max(0, Math.min(100, (S.hp / S.maxHp) * 100)) + '%'
     if (hAtk) hAtk.textContent = String(S.atk)
     if (hFloor) hFloor.textContent = String(Math.min(5, S.floor))
+    if (hLv) hLv.textContent = String(S.level)
+    if (hXp) hXp.textContent = S.xp + '/' + S.xpNext
     if (hRelics) {
       hRelics.innerHTML = ''
       for (var k in S.relics) {
@@ -737,6 +793,15 @@
         ctx.lineTo(ex, ey + TS * .2); ctx.lineTo(ex - TS * .17, ey)
         ctx.closePath(); ctx.fill()
       }
+      // 受过伤的敌人头顶挂一条血条
+      if (e.max && e.hp > 0 && e.hp < e.max) {
+        var bw = TS * .66, bh = Math.max(2, TS * .09)
+        var bx = ex - bw / 2, by = ey - TS * .42
+        ctx.fillStyle = 'rgba(0,0,0,.6)'
+        ctx.fillRect(bx, by, bw, bh)
+        ctx.fillStyle = '#ff4d5e'
+        ctx.fillRect(bx, by, bw * Math.max(0, Math.min(1, e.hp / e.max)), bh)
+      }
     }
 
     // 玩家：白色圆点 + 玫瑰描边（不依赖字体，任何设备都能显示）
@@ -748,6 +813,22 @@
     ctx.strokeStyle = '#ff9ec4'
     ctx.lineWidth = Math.max(1.5, TS * .07)
     ctx.beginPath(); ctx.arc(pxx, pyy, TS * .27, 0, Math.PI * 2); ctx.stroke()
+
+    // 飘字（伤害 / 经验 / 升级）
+    if (FX.length) {
+      var nowT = Date.now()
+      ctx.font = Math.round(TS * .5) + 'px -apple-system,"PingFang SC",sans-serif'
+      for (var q = FX.length - 1; q >= 0; q--) {
+        var f = FX[q]
+        var age = nowT - f.t, life = 780
+        if (age > life) { FX.splice(q, 1); continue }
+        var kk = age / life
+        ctx.globalAlpha = 1 - kk
+        ctx.fillStyle = f.color
+        ctx.fillText(f.text, (f.x - camX) * TS + TS / 2, (f.y - camY) * TS + TS / 2 - kk * TS * 1.2)
+        ctx.globalAlpha = 1
+      }
+    }
   }
 
   /* ---------------- 输入 ---------------- */
@@ -848,6 +929,7 @@
     start: start,
     act: act,
     dir: doDir,
+    fxCount: function () { return FX.length },
     map: function () {
       return S && { grid: S.grid, stairs: S.stairs, w: MAP_W, h: MAP_H, items: S.items, enemies: S.enemies }
     },
@@ -855,6 +937,7 @@
       return S && {
         hero: S.hero.id, hp: S.hp, maxHp: S.maxHp, atk: S.atk, floor: S.floor,
         x: S.player.x, y: S.player.y, alive: !S.over, enemies: S.enemies.length,
+        xp: S.xp, level: S.level, xpNext: S.xpNext,
         items: S.items.length, relics: Object.keys(S.relics)
       }
     }
