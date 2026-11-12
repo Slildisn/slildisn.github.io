@@ -123,6 +123,25 @@
   .pick button i{font-style:normal;font-size:.6rem;color:var(--dim);text-align:center;line-height:1.35}
   .pick button:active{background:rgba(255,158,196,.18)}
   .seed{font-size:.66rem;color:#6f6885;letter-spacing:.06em}
+
+  /* 天赋三选一 */
+  .ov-global{
+    position:fixed;inset:0;z-index:60;overflow:auto;
+    padding:max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+    background:radial-gradient(700px 500px at 50% 0%, rgba(255,158,196,.14), transparent 70%), rgba(8,7,13,.94);
+    backdrop-filter:blur(4px)
+  }
+  .talents{display:flex;flex-direction:column;gap:8px;width:100%;max-width:430px;margin-top:6px}
+  .talent{
+    display:flex;flex-direction:column;gap:4px;text-align:left;
+    border:1px solid rgba(255,158,196,.32);border-radius:14px;
+    background:linear-gradient(180deg,rgba(255,158,196,.10),rgba(255,158,196,.04));
+    color:#f6eefc;padding:11px 13px;font-family:inherit;transition:background .2s,transform .2s
+  }
+  .talent:hover{background:rgba(255,158,196,.2)}
+  .talent:active{transform:translateY(1px)}
+  .talent b{font-size:.9rem;font-weight:600;color:#fff;letter-spacing:.02em}
+  .talent span{font-size:.74rem;color:#c9c1dc;line-height:1.55}
 </style>
 </head>
 <body>
@@ -146,6 +165,7 @@
     <span class="stat">层 <b id="h-floor">1</b></span>
     <span class="stat">门 <b id="h-dir">—</b></span>
     <span class="relics" id="h-relics"></span>
+    <span class="relics" id="h-talents"></span>
   </div>
 
   <div class="stage" id="stage">
@@ -156,9 +176,15 @@
       <div class="pick" id="pick"></div>
       <p class="seed" id="seed-line">种子 —</p>
     </div>
+    <div class="ov ov-global" id="ov-talent" hidden>
+      <h2 id="talent-title">挑一个天赋</h2>
+      <p>记忆里多出一条路。选哪条，你就变成哪样的人。</p>
+      <div class="talents" id="talent-list"></div>
+    </div>
+
     <div class="ov" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击。<br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。</p>
+      <p>方向键走一步，撞到敌人就是攻击。<br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
     </div>
 
@@ -230,7 +256,8 @@
   var stage = $('stage')
   var logEl = $('log')
   var hName = $('h-name'), hHp = $('h-hp'), hFill = $('h-fill'), hAtk = $('h-atk'), hFloor = $('h-floor'), hRelics = $('h-relics')
-  var hLv = $('h-lv'), hXp = $('h-xp'), hDir = $('h-dir')
+  var hLv = $('h-lv'), hXp = $('h-xp'), hDir = $('h-dir'), hTalents = $('h-talents')
+  var ovTalent = $('ov-talent'), talentList = $('talent-list'), talentTitle = $('talent-title')
   var ovSelect = $('ov-select'), pickEl = $('pick'), seedLine = $('seed-line')
   var ovEnd = $('ov-end'), endBig = $('end-big'), endTitle = $('end-title'), endDesc = $('end-desc'), endAgain = $('end-again')
   var bestEl = null
@@ -435,6 +462,77 @@
     }
   }
 
+  /* ---------------- 天赋 ---------------- */
+  var TALENTS = [
+    { id: 'blade', name: '刀比嘴快', desc: '攻击 +2。「先砍，再问为什么。」', apply: function () { S.atk += 2 } },
+    { id: 'iron', name: '一身铁皮', desc: '生命上限 +5，并且立刻回满。「疼是疼，但死不了。」', apply: function () { S.maxHp += 5; S.hp = S.maxHp } },
+    { id: 'cat', name: '猫的脚步', desc: '闪避 +20%。「你踩不到影子。」', apply: function () { S.dodge += 0.2 } },
+    { id: 'crit', name: '专挑软肋', desc: '暴击率 +10%。「哪儿最薄，就往哪儿戳。」', apply: function () { S.crit += 0.1 } },
+    { id: 'leech', name: '顺手牵血', desc: '每次击杀回 1 血。「你的也是我的。」', apply: function () { S.leech = (S.leech || 0) + 1 } },
+    { id: 'eye', name: '多长一只眼', desc: '视野 +2。「看得远一点，死得晚一点。」', apply: function () { S.vision += 2 } },
+    { id: 'potion', name: '药罐子', desc: '药水治疗效果 +50%。「苦是苦了点，但管用。」', apply: function () { S.potionMul += 0.5 } },
+    { id: 'thorns', name: '带刺的', desc: '被攻击时反弹 1 点伤害。「摸一下试试？」', apply: function () { S.thorns = (S.thorns || 0) + 1 } },
+    { id: 'thick', name: '皮糙肉厚', desc: '每次受伤 -1（最低 1）。「挠痒痒呢。」', apply: function () { S.dmgReduce = (S.dmgReduce || 0) + 1 } },
+    { id: 'greed', name: '贪一口', desc: '击杀经验 +1。「多吞一口不算过分。」', apply: function () { S.bonusXp = (S.bonusXp || 0) + 1 } },
+    { id: 'stride', name: '走楼梯怪', desc: '每次下楼多回 3 血。「楼梯就是我的床。」', apply: function () { S.floorHeal = (S.floorHeal || 0) + 3 } },
+    { id: 'lucky', name: '命硬的', desc: '闪避 +10%、暴击 +5%。「运气也是实力的一种。」', apply: function () { S.dodge += 0.1; S.crit += 0.05 } }
+  ]
+
+  var choosing = false
+  var offered = []
+
+  function rollTalents(n) {
+    var pool = TALENTS.slice()
+    var out = []
+    while (out.length < n && pool.length) out.push(pool.splice(rnd(pool.length), 1)[0])
+    return out
+  }
+
+  function talentName(id) {
+    for (var i = 0; i < TALENTS.length; i++) if (TALENTS[i].id === id) return TALENTS[i].name
+    return id
+  }
+
+  function openTalent() {
+    if (!S || S.over || choosing || S.pending <= 0) return
+    if (!ovTalent || !talentList) return
+    choosing = true
+    offered = rollTalents(3)
+    talentList.innerHTML = ''
+    for (var i = 0; i < offered.length; i++) {
+      (function (t) {
+        var b = document.createElement('button')
+        b.type = 'button'
+        b.className = 'talent'
+        var nb = document.createElement('b')
+        nb.textContent = t.name
+        var sp = document.createElement('span')
+        sp.textContent = t.desc
+        b.appendChild(nb)
+        b.appendChild(sp)
+        b.addEventListener('click', function () { pickTalent(t) })
+        talentList.appendChild(b)
+      })(offered[i])
+    }
+    if (talentTitle) talentTitle.textContent = 'Lv.' + S.level + ' —— 挑一个天赋'
+    ovTalent.hidden = false
+    render()
+    syncHud()
+  }
+
+  function pickTalent(t) {
+    if (!choosing) return
+    choosing = false
+    ovTalent.hidden = true
+    t.apply()
+    S.talents[t.id] = (S.talents[t.id] || 0) + 1
+    S.pending--
+    log('天赋「' + t.name + '」已生效。')
+    syncHud()
+    render()
+    if (S.pending > 0) setTimeout(openTalent, 160)
+  }
+
   /* ---------------- 开局 ---------------- */
   function newRun(heroId, seed) {
     var hero = null
@@ -478,7 +576,14 @@
       turns: 0,
       xp: 0,
       level: 1,
-      xpNext: 6
+      xpNext: 6,
+      pending: 0,
+      talents: {},
+      leech: 0,
+      thorns: 0,
+      dmgReduce: 0,
+      bonusXp: 0,
+      floorHeal: 0
     }
 
     var m = genMap(1, seed)
@@ -499,7 +604,7 @@
     S.player.x = m.start.x; S.player.y = m.start.y
     S.stairs = m.stairs
     S.seen = {}; S.vis = {}
-    S.hp = Math.min(S.maxHp, S.hp + 2)
+    S.hp = Math.min(S.maxHp, S.hp + 2 + (S.floorHeal || 0))
     if (S.hero.id === 'firefly') { S.hp = Math.min(S.maxHp, S.hp + 1); log('流萤的微光护住了你，回 3 血。') }
     log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + (S.floor % 5 === 0 ? '铁墓守着门。' : ''))
     computeFov(); render(); syncHud()
@@ -511,6 +616,39 @@
     return null
   }
 
+  // 击杀结算：经验、升级蓄力、吸血、铁墓开门
+  function killEnemy(e) {
+    log('「' + e.name + '」散成了光。')
+    var gain = (e.type === 'tomb' ? 10 : e.type === 'shade' ? 3 : 2) + (S.bonusXp || 0)
+    S.xp += gain
+    fx(e.x, e.y, '+' + gain + ' EXP', '#ffd9a0')
+
+    while (S.xp >= S.xpNext) {
+      S.xp -= S.xpNext
+      S.level++
+      S.xpNext = 6 + S.level * 3
+      S.pending++
+      fx(S.player.x, S.player.y, 'LV UP', '#ff9ec4')
+      log('升到 Lv.' + S.level + '，记忆里多出一条路。')
+    }
+
+    var heal = (S.hero.id === 'thanos' ? 1 : 0) + (S.relics.leech ? 1 : 0) + (S.leech || 0)
+    if (heal) S.hp = Math.min(S.maxHp, S.hp + heal)
+
+    if (S.pending > 0) setTimeout(openTalent, 90)
+
+    if (e.type === 'tomb') {
+      S.hp = Math.min(S.maxHp, S.hp + 4)
+      log('铁墓倒下，光门开了。')
+      fx(e.x, e.y, '开门', '#ffd9a0')
+      if (S.player.x === S.stairs.x && S.player.y === S.stairs.y) {
+        var r = nextFloor()
+        if (S.pending > 0) setTimeout(openTalent, 120)
+        return (r === 'floor' || true) ? 'floor' : 'floor'
+      }
+    }
+  }
+
   function hitEnemy(e) {
     var dmg = S.atk + rnd(2)
     var crit = Math.random() < S.crit
@@ -518,40 +656,21 @@
     e.hp -= dmg
     log((crit ? '暴击！' : '') + '你击中「' + e.name + '」' + dmg + ' 点。')
     fx(e.x, e.y, (crit ? '!' : '') + '-' + dmg, crit ? '#ffd9a0' : '#ffe6ee')
-    if (e.hp <= 0) {
-      log('「' + e.name + '」散成了光。')
-      var gain = e.type === 'tomb' ? 10 : e.type === 'shade' ? 3 : 2
-      S.xp += gain
-      fx(e.x, e.y, '+' + gain + ' EXP', '#ffd9a0')
-      while (S.xp >= S.xpNext) {
-        S.xp -= S.xpNext
-        S.level++
-        S.xpNext = 6 + S.level * 3
-        S.maxHp += 2
-        S.atk += 1
-        S.hp = Math.min(S.maxHp, S.hp + 3)
-        log('升到 Lv.' + S.level + '：上限 +2、攻击 +1，回了 3 血。')
-        fx(S.player.x, S.player.y, 'LV UP', '#ff9ec4')
-      }
-      if (S.hero.id === 'thanos' || S.relics.leech) {
-        var heal = (S.hero.id === 'thanos' ? 1 : 0) + (S.relics.leech ? 1 : 0)
-        S.hp = Math.min(S.maxHp, S.hp + heal)
-      }
-      if (e.type === 'tomb') {
-        S.hp = Math.min(S.maxHp, S.hp + 4)
-        log('铁墓倒下，光门开了。')
-        fx(e.x, e.y, '开门', '#ffd9a0')
-        if (S.player.x === S.stairs.x && S.player.y === S.stairs.y) return nextFloor(), 'floor'
-      }
-    }
+    if (e.hp <= 0) return killEnemy(e)
   }
 
-  function hurtPlayer(dmg) {
-    if (Math.random() < S.dodge) { log('你侧身躲开了。'); return }
-    if (S.hero.id === 'pig') dmg = Math.max(1, dmg - 1)
+  function hurtPlayer(dmg, attacker) {
+    if (Math.random() < Math.min(0.75, S.dodge)) { log('你侧身躲开了。'); return }
+    var reduce = (S.hero.id === 'pig' ? 1 : 0) + (S.dmgReduce || 0)
+    dmg = Math.max(1, dmg - reduce)
     S.hp -= dmg
     log('你受到 ' + dmg + ' 点伤害。')
     fx(S.player.x, S.player.y, '-' + dmg, '#ff4d5e')
+    if (attacker && S.thorns) {
+      attacker.hp -= S.thorns
+      log('刺回「' + attacker.name + '」' + S.thorns + ' 点。')
+      if (attacker.hp <= 0) killEnemy(attacker)
+    }
     if (S.hp <= 0) { S.hp = 0; lose() }
   }
 
@@ -563,7 +682,7 @@
       var dist = Math.abs(dx) + Math.abs(dy)
       if (dist === 1) {
         if (e.type === 'tomb' && Math.random() < .3) { log('铁墓这一锤落空。'); continue }
-        hurtPlayer(e.atk + rnd(2)); if (S.over) return; continue
+        hurtPlayer(e.atk + rnd(2), e); if (S.over) return; continue
       }
       var base = ENEMIES[e.type]
       var chase = base ? base.chase : 5
@@ -580,7 +699,7 @@
       if (S.grid[ny][nx] === WALL) continue
       if (nx === S.player.x && ny === S.player.y) {
         if (e.type === 'tomb' && Math.random() < .3) { log('铁墓这一锤落空。'); continue }
-        hurtPlayer(e.atk + rnd(2)); if (S.over) return; continue
+        hurtPlayer(e.atk + rnd(2), e); if (S.over) return; continue
       }
       if (enemyAt(nx, ny)) continue
       e.x = nx; e.y = ny
@@ -589,7 +708,7 @@
 
   /* ---------------- 行动 ---------------- */
   function act(dx, dy, wait) {
-    if (!S || S.over || !running) return false
+    if (!S || S.over || !running || choosing) return false
     if (!wait) {
       var nx = S.player.x + dx, ny = S.player.y + dy
       if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return false
@@ -687,6 +806,16 @@
     if (hHp) hHp.textContent = S.hp + ' / ' + S.maxHp
     if (hFill) hFill.style.width = Math.max(0, Math.min(100, (S.hp / S.maxHp) * 100)) + '%'
     if (hAtk) hAtk.textContent = String(S.atk)
+    if (hTalents) {
+      hTalents.innerHTML = ''
+      for (var tid in S.talents) {
+        if (!S.talents[tid]) continue
+        var chip = document.createElement('span')
+        chip.className = 'relic'
+        chip.textContent = talentName(tid) + (S.talents[tid] > 1 ? ' ×' + S.talents[tid] : '')
+        hTalents.appendChild(chip)
+      }
+    }
     if (hFloor) hFloor.textContent = String(S.floor)
     if (hDir) hDir.textContent = dirArrow()
     if (hLv) hLv.textContent = String(S.level)
@@ -954,6 +1083,13 @@
     act: act,
     dir: doDir,
     fxCount: function () { return FX.length },
+    grant: function (id) {
+      for (var i = 0; i < TALENTS.length; i++) {
+        if (TALENTS[i].id === id) { TALENTS[i].apply(); S.talents[id] = (S.talents[id] || 0) + 1; return true }
+      }
+      return false
+    },
+    talentCount: function () { return TALENTS.length },
     map: function () {
       return S && { grid: S.grid, stairs: S.stairs, w: MAP_W, h: MAP_H, items: S.items, enemies: S.enemies }
     },
@@ -961,7 +1097,10 @@
       return S && {
         hero: S.hero.id, hp: S.hp, maxHp: S.maxHp, atk: S.atk, floor: S.floor,
         x: S.player.x, y: S.player.y, alive: !S.over, enemies: S.enemies.length,
-        xp: S.xp, level: S.level, xpNext: S.xpNext,
+        xp: S.xp, level: S.level, xpNext: S.xpNext, pending: S.pending,
+        v: S.vision, dodge: +S.dodge.toFixed(2), crit: +S.crit.toFixed(2), potion: S.potionMul,
+        leech: S.leech, thorns: S.thorns, reduce: S.dmgReduce, bonusXp: S.bonusXp, floorHeal: S.floorHeal,
+        talents: Object.keys(S.talents).length,
         items: S.items.length, relics: Object.keys(S.relics)
       }
     }
