@@ -135,6 +135,18 @@
   .tap-hint{margin:2px 0 0;font-size:.66rem;color:#8f87a6;letter-spacing:.06em}
   .ov-tapclose .btn,.ov-tapclose h2,.ov-tapclose p{cursor:pointer}
 
+  /* 队伍条 */
+  .team-strip{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+  .team-strip[hidden]{display:none}
+  .tchip{
+    display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:12px;
+    border:1px solid rgba(255,158,196,.3);background:rgba(255,158,196,.08);
+    font-size:.68rem;color:#f0e6f7
+  }
+  .tchip .tem{font-size:.9rem;line-height:1}
+  .tchip .tbar{width:34px;height:4px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden}
+  .tchip .tbar i{display:block;height:100%;background:linear-gradient(90deg,#ff6fa8,#ff9ec4)}
+
   /* 记忆升级 */
   .meta-bar{
     display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
@@ -246,6 +258,8 @@
     <span class="relics" id="h-relics"></span>
     <span class="relics" id="h-talents"></span>
   </div>
+
+  <div class="team-strip" id="team-strip" hidden></div>
 
   <div class="stage" id="stage">
     <canvas id="cv" width="480" height="352" aria-label="地牢画面"></canvas>
@@ -426,6 +440,7 @@
   var stage = $('stage')
   var logEl = $('log')
   var hName = $('h-name'), hHp = $('h-hp'), hFill = $('h-fill'), hAtk = $('h-atk'), hFloor = $('h-floor'), hRelics = $('h-relics')
+  var teamStrip = $('team-strip')
   var hLv = $('h-lv'), hXp = $('h-xp'), hDir = $('h-dir'), hTalents = $('h-talents'), hGold = $('h-gold')
   var ovTalent = $('ov-talent'), talentList = $('talent-list'), talentTitle = $('talent-title')
   var ovMeta = $('ov-meta')
@@ -1312,7 +1327,7 @@
 
   function recruit(hero) {
     var spot = freeAdjacent(S.player.x, S.player.y)
-    S.team.push({ heroId: hero.id, x: spot.x, y: spot.y, hp: hero.hp, atk: Math.max(1, hero.atk - 1) })
+    S.team.push({ heroId: hero.id, x: spot.x, y: spot.y, hp: hero.hp, maxHp: hero.hp, atk: hero.atk })
     if (ovTeam) ovTeam.hidden = true
     S.paused = false
     log('「' + hero.name + '」加入了队伍。')
@@ -1991,9 +2006,36 @@
     if (S.hp <= 0) { S.hp = 0; lose() }
   }
 
-  function fireBullet(e) {
+  /* 队伍成员统一定义：玩家 + 队友 */
+  function teamTargets() {
+    var list = [{ kind: 'player', x: S.player.x, y: S.player.y }]
+    for (var i = 0; i < S.team.length; i++) {
+      var m = S.team[i]
+      if (m.hp > 0) list.push({ kind: 'member', m: m, x: m.x, y: m.y })
+    }
+    return list
+  }
+
+  function damageCompanion(m, dmg) {
+    if (!m || m.hp <= 0) return
+    m.hp -= dmg
+    fx(m.x, m.y, '-' + dmg, '#ff8fb0', -0.4)
+    log('「' + (heroById(m.heroId) ? heroById(m.heroId).name : '队友') + '」受到 ' + dmg + ' 点伤害。')
+    shake(3.2, 200)
+    if (m.hp <= 0) {
+      m.hp = 0
+      spawnDust(m.x, m.y, 18, { hot: '#ffd9e6', cool: '#7a3a55' })
+      log('「' + (heroById(m.heroId) ? heroById(m.heroId).name : '队友') + '」的记忆散了。')
+      var idx = S.team.indexOf(m)
+      if (idx >= 0) S.team.splice(idx, 1)
+      syncHud()
+    }
+    render()
+  }
+
+  function fireBullet(e, tgt) {
     if (!S.bullets) S.bullets = []
-    var b = { sx: e.x, sy: e.y, tx: S.player.x, ty: S.player.y, t: Date.now(), dur: 280, dmg: e.atk, from: e }
+    var b = { sx: e.x, sy: e.y, tx: tgt.x, ty: tgt.y, t: Date.now(), dur: 280, dmg: e.atk, from: e, tgt: tgt }
     S.bullets.push(b)
     log('暗箭手放了一箭。')
     kickAnim(500)
@@ -2001,38 +2043,45 @@
       if (!S) return
       S.bullets = (S.bullets || []).filter(function (x) { return x !== b })
       if (S.over) { render(); return }
-      if (S.player.x === b.tx && S.player.y === b.ty) {
-        hurtPlayer(b.dmg, e)
+      var cur = null
+      if (b.tgt.kind === 'player') cur = { x: S.player.x, y: S.player.y, kind: 'player' }
+      else if (b.tgt.m && b.tgt.m.hp > 0) cur = { x: b.tgt.m.x, y: b.tgt.m.y, kind: 'member', m: b.tgt.m }
+      if (cur && cur.x === b.tx && cur.y === b.ty) {
+        if (cur.kind === 'player') hurtPlayer(b.dmg, e)
+        else damageCompanion(cur.m, b.dmg)
       } else {
-        log('箭擦着你过去了。')
+        log('箭擦着过去了。')
       }
       render()
     }, b.dur)
   }
 
-  function bomberTurn(e) {
+  function bomberTurn(e, tgt) {
     for (var step = 0; step < 2; step++) {
-      var dx = S.player.x - e.x, dy = S.player.y - e.y
-      if (Math.abs(dx) + Math.abs(dy) === 1) { explodem(e); return }
+      var dx = tgt.x - e.x, dy = tgt.y - e.y
+      if (Math.abs(dx) + Math.abs(dy) === 1) { explodem(e, tgt); return }
       var sx = 0, sy = 0
       if (Math.abs(dx) > Math.abs(dy)) sx = dx > 0 ? 1 : -1
       else sy = dy > 0 ? 1 : -1
       var nx = e.x + sx, ny = e.y + sy
       if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H || S.grid[ny][nx] === WALL) return
-      if (nx === S.player.x && ny === S.player.y) { explodem(e); return }
+      if (nx === tgt.x && ny === tgt.y) { explodem(e, tgt); return }
       if (enemyAt(nx, ny)) return
       e.x = nx; e.y = ny
+      tgt.x = tgt.kind === 'player' ? S.player.x : tgt.m.x
+      tgt.y = tgt.kind === 'player' ? S.player.y : tgt.m.y
     }
   }
 
-  function explodem(e) {
+  function explodem(e, tgt) {
     log('自爆虫炸开了！')
     spawnDust(e.x, e.y, 26, { hot: '#e8ff9a', cool: '#6b8a1e' })
     shake(6, 320)
     SND.hit(true)
     e.hp = 0
     e.__counted = true
-    hurtPlayer(e.atk, e)
+    if (tgt.kind === 'player') hurtPlayer(e.atk, e)
+    else damageCompanion(tgt.m, e.atk)
     if (!S.over) {
       S.kills = (S.kills || 0) + 1
       var gain = 2 + (S.bonusXp || 0)
@@ -2044,6 +2093,7 @@
   function teamTurn() {
     for (var i = 0; i < S.team.length; i++) {
       var m = S.team[i]
+      if (m.hp <= 0) continue
       var target = null
       var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]]
       for (var d = 0; d < 4; d++) {
@@ -2051,7 +2101,7 @@
         if (te) { target = te; break }
       }
       if (target) {
-        var dmg = m.atk + rnd(2)
+        var dmg = m.atk
         target.hp -= dmg
         var th = heroById(m.heroId)
         log('「' + (th ? th.name : '队友') + '」打了「' + target.name + '」' + dmg + ' 点。')
@@ -2088,28 +2138,30 @@
     for (var i = 0; i < S.enemies.length; i++) {
       var e = S.enemies[i]
       if (e.hp <= 0) continue
-      var dx = S.player.x - e.x, dy = S.player.y - e.y
-      var dist = Math.abs(dx) + Math.abs(dy)
 
-      // 游魂：动一半的回合，但很耐打
+      // 敌人随机挑一名队伍成员当目标
+      var targets = teamTargets()
+      var tgt = targets[rnd(targets.length)]
+
+      // 游魂：动一半的回合
       if (e.type === 'ghost' && S.turnCount % 2 === 0) continue
 
-      // 自爆虫：一回合冲两格，贴身就炸
-      if (e.type === 'bomber') { bomberTurn(e); if (S.over) return; continue }
+      // 自爆虫：冲两格，贴身就炸
+      if (e.type === 'bomber') { bomberTurn(e, tgt); if (S.over) return; continue }
 
       // 暗箭手：不靠近，保持距离放箭
       if (e.type === 'archer') {
         var abase = ENEMIES.archer
-        if (dist === 1) {
-          // 被贴身就后退
-          var away = -1
-          if (Math.abs(dx) >= Math.abs(dy)) away = dx > 0 ? -1 : 1
-          var bx = e.x + (Math.abs(dx) >= Math.abs(dy) ? away : 0)
-          var by = e.y + (Math.abs(dx) >= Math.abs(dy) ? 0 : (dy > 0 ? -1 : 1))
+        var adx = tgt.x - e.x, ady = tgt.y - e.y
+        var adist = Math.abs(adx) + Math.abs(ady)
+        if (adist === 1) {
+          var bx = e.x, by = e.y
+          if (Math.abs(adx) >= Math.abs(ady)) bx -= adx > 0 ? 1 : -1
+          else by -= ady > 0 ? 1 : -1
           if (bx >= 0 && by >= 0 && bx < MAP_W && by < MAP_H && S.grid[by][bx] !== WALL && !enemyAt(bx, by)) { e.x = bx; e.y = by }
           continue
         }
-        if (dist <= abase.range && los(S.grid, e.x, e.y, S.player.x, S.player.y)) { fireBullet(e); continue }
+        if (adist <= abase.range && los(S.grid, e.x, e.y, tgt.x, tgt.y)) { fireBullet(e, tgt); continue }
         if (Math.random() < .4) {
           var rx = e.x + pick([-1, 0, 1]), ry = e.y + pick([-1, 0, 1])
           if (rx >= 0 && ry >= 0 && rx < MAP_W && ry < MAP_H && S.grid[ry][rx] !== WALL && !enemyAt(rx, ry)) { e.x = rx; e.y = ry }
@@ -2117,18 +2169,25 @@
         continue
       }
 
-      // 贴身：它打你，你回手 —— 互相掉血
+      var dx = tgt.x - e.x, dy = tgt.y - e.y
+      var dist = Math.abs(dx) + Math.abs(dy)
+      var base = ENEMIES[e.type]
+      var chase = base ? base.chase : 5
+
+      // 贴身：打目标
       if (dist === 1) {
         if (e.type === 'tomb' && Math.random() < .3) { log('铁墓这一锤落空。'); continue }
-        hurtPlayer(e.atk, e)
-        if (S.over) return
-        counterAttack(e)
-        if (S.over) return
+        if (tgt.kind === 'player') {
+          hurtPlayer(e.atk, e)
+          if (S.over) return
+          counterAttack(e)
+          if (S.over) return
+        } else {
+          damageCompanion(tgt.m, e.atk)
+        }
         continue
       }
 
-      var base = ENEMIES[e.type]
-      var chase = base ? base.chase : 5
       var stepX = 0, stepY = 0
       if (dist <= chase) {
         if (Math.abs(dx) > Math.abs(dy)) stepX = dx > 0 ? 1 : -1
@@ -2141,13 +2200,17 @@
       if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue
       if (S.grid[ny][nx] === WALL) continue
 
-      // 撞到你身上：同样互相掉血
-      if (nx === S.player.x && ny === S.player.y) {
+      // 撞到目标身上
+      if (nx === tgt.x && ny === tgt.y) {
         if (e.type === 'tomb' && Math.random() < .3) { log('铁墓这一锤落空。'); continue }
-        hurtPlayer(e.atk, e)
-        if (S.over) return
-        counterAttack(e)
-        if (S.over) return
+        if (tgt.kind === 'player') {
+          hurtPlayer(e.atk, e)
+          if (S.over) return
+          counterAttack(e)
+          if (S.over) return
+        } else {
+          damageCompanion(tgt.m, e.atk)
+        }
         continue
       }
       if (enemyAt(nx, ny)) continue
@@ -2309,6 +2372,34 @@
     }
     if (hFloor) hFloor.textContent = String(S.floor)
     if (hDir) hDir.textContent = dirArrow()
+    if (teamStrip) {
+      teamStrip.innerHTML = ''
+      if (S.team && S.team.length) {
+        teamStrip.hidden = false
+        S.team.forEach(function (m) {
+          var hh = heroById(m.heroId)
+          var maxH = m.maxHp || (hh ? hh.hp : 10)
+          var chip = document.createElement('span')
+          chip.className = 'tchip'
+          var em = document.createElement('span')
+          em.className = 'tem'
+          em.textContent = hh ? (hh.emoji || '👤') : '👤'
+          var nm = document.createElement('span')
+          nm.textContent = (hh ? hh.name : '队友') + ' ' + Math.max(0, m.hp) + '/' + maxH
+          var bar = document.createElement('span')
+          bar.className = 'tbar'
+          var fill = document.createElement('i')
+          fill.style.width = Math.max(0, Math.min(100, (m.hp / maxH) * 100)) + '%'
+          bar.appendChild(fill)
+          chip.appendChild(em)
+          chip.appendChild(nm)
+          chip.appendChild(bar)
+          teamStrip.appendChild(chip)
+        })
+      } else {
+        teamStrip.hidden = true
+      }
+    }
     if (hGold) hGold.textContent = String(S.gold || 0)
     if (hLv) hLv.textContent = String(S.level)
     if (hXp) hXp.textContent = S.xp + '/' + S.xpNext
@@ -3018,7 +3109,8 @@
     specialPos: function () { return S ? S.special : null },
     altarPos: function () { return S ? S.altar : null },
     openAltar: openAltar,
-    team: function () { return S ? S.team.map(function (m) { return { id: m.heroId, x: m.x, y: m.y } }) : [] },
+    hurtTeam: function (n) { if (S && S.team[0]) damageCompanion(S.team[0], n) },
+    team: function () { return S ? S.team.map(function (m) { return { id: m.heroId, x: m.x, y: m.y, hp: m.hp, maxHp: m.maxHp, atk: m.atk } }) : [] },
     clearEnemies: function () { if (S) S.enemies.forEach(function (e) { e.hp = 0 }) },
     setHp: function (n) { if (S) { S.hp = Math.max(1, Math.min(S.maxHp, n)) } },
     setCrit: function (x) { if (S) S.crit = x },
