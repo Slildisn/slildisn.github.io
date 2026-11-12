@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>记忆回廊 · 肉鸽 ｜ 昔涟 CYRENE</title>
+<meta name="description" content="昔涟同人站的小游戏：回合制肉鸽地牢「记忆回廊」，9 个角色可选，逐层下降、拾取遗物、击败铁墓。纯前端、无依赖。">
+<meta name="theme-color" content="#0b0a12">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23241a33'/%3E%3Ctext x='32' y='43' font-size='30' text-anchor='middle' fill='%23ff9ec4'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --ink:#0b0a12; --bg:#12101c; --fg:#efe9f7; --dim:#9c93b4;
+    --rose:#ff9ec4; --rose-deep:#ff6fa8; --violet:#a98bff; --gold:#ffd9a0;
+    --line:rgba(255,255,255,.10);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{
+    background:
+      radial-gradient(1200px 700px at 50% -10%, rgba(255,158,196,.13), transparent 60%),
+      radial-gradient(900px 600px at 85% 100%, rgba(169,139,255,.10), transparent 65%),
+      var(--ink);
+    color:var(--fg);
+    font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    padding:max(10px, env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom));
+  }
+  a{color:var(--rose)}
+  .wrap{max-width:760px;margin:0 auto}
+
+  header{display:flex;align-items:center;gap:10px;margin:2px 0 10px}
+  .back{
+    display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#e8cfe3;
+    font-size:.82rem;padding:6px 11px;border-radius:999px;
+    border:1px solid rgba(255,158,196,.28);background:rgba(255,158,196,.07)
+  }
+  .back:active{transform:translateY(1px)}
+  .mark{margin-left:auto;font-size:.7rem;letter-spacing:.34em;color:var(--rose);opacity:.85}
+
+  h1{
+    margin:4px 0 2px;font-size:1.32rem;font-weight:600;letter-spacing:.04em;
+    font-family:"Songti SC","Noto Serif SC",STSong,serif;
+  }
+  .sub{margin:0 0 12px;color:var(--dim);font-size:.78rem}
+
+  /* HUD */
+  .hud{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:9px 11px;border:1px solid var(--line);border-radius:14px;
+    background:rgba(255,255,255,.03);margin-bottom:8px;
+  }
+  .hpwrap{flex:1 1 130px;min-width:120px}
+  .hpline{display:flex;justify-content:space-between;font-size:.7rem;color:var(--dim);margin-bottom:4px;font-variant-numeric:tabular-nums}
+  .hpbar{height:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+  .hpfill{height:100%;width:100%;border-radius:99px;background:linear-gradient(90deg,var(--rose-deep),var(--rose));transition:width .25s}
+  .stat{font-size:.74rem;color:#d9d2ea;white-space:nowrap}
+  .stat b{color:#fff;font-weight:600}
+  .relics{display:flex;gap:4px;flex-wrap:wrap}
+  .relic{
+    font-size:.64rem;padding:2px 7px;border-radius:99px;color:#ffe6f1;
+    border:1px solid rgba(255,158,196,.3);background:rgba(255,158,196,.10)
+  }
+
+  /* stage */
+  .stage{
+    position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;
+    background:#0a0910;box-shadow:0 20px 50px -30px rgba(255,120,170,.55);
+  }
+  canvas{display:block;width:100%;height:auto;touch-action:none}
+
+  .log{
+    margin:8px 0 0;padding:8px 11px;border:1px solid var(--line);border-radius:12px;
+    background:rgba(255,255,255,.02);min-height:58px;
+    font-size:.75rem;color:#cfc7e0;line-height:1.55;
+  }
+  .log p{margin:0;opacity:.9}
+  .log p:last-child{color:#fff;opacity:1}
+
+  /* controls */
+  .ctrl{display:flex;gap:14px;align-items:center;justify-content:center;margin-top:12px}
+  .dpad{
+    display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:6px;
+  }
+  .dpad button{
+    border:1px solid rgba(255,158,196,.25);border-radius:14px;background:rgba(255,158,196,.08);
+    color:#ffe6f1;font-size:1.05rem;display:grid;place-items:center;user-select:none;
+  }
+  .dpad button:active{background:rgba(255,158,196,.24);transform:translateY(1px)}
+  .dpad .sp{visibility:hidden}
+  .dpad .wait{font-size:.72rem;letter-spacing:.06em}
+  .side{display:flex;flex-direction:column;gap:8px;min-width:96px}
+  .side button{
+    border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.04);
+    color:#e8e1f4;padding:9px 10px;font-size:.78rem
+  }
+  .side button:active{background:rgba(255,255,255,.1)}
+  .hint{margin:10px 0 0;font-size:.7rem;color:#8f87a6;text-align:center}
+
+  /* overlays */
+  .ov{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:10px;padding:18px;text-align:center;
+    background:linear-gradient(180deg, rgba(11,10,18,.86), rgba(11,10,18,.96));
+    backdrop-filter:blur(3px);
+  }
+  .ov[hidden]{display:none}
+  .ov h2{margin:0;font-size:1.06rem;font-family:"Songti SC","Noto Serif SC",STSong,serif;color:#fff}
+  .ov p{margin:0;font-size:.78rem;color:#c9c1dc;max-width:26em}
+  .ov .big{font-size:1.9rem;line-height:1;color:var(--rose)}
+  .btn{
+    border:1px solid rgba(255,158,196,.45);border-radius:999px;padding:9px 22px;
+    background:linear-gradient(180deg, rgba(255,158,196,.22), rgba(255,158,196,.10));
+    color:#fff;font-size:.84rem
+  }
+  .btn:active{transform:translateY(1px)}
+
+  .pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;max-width:420px;margin-top:4px}
+  .pick button{
+    border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.04);
+    color:#efe9f7;padding:8px 4px;display:flex;flex-direction:column;gap:2px;align-items:center
+  }
+  .pick button b{font-size:.86rem;font-weight:600}
+  .pick button i{font-style:normal;font-size:.6rem;color:var(--dim);text-align:center;line-height:1.35}
+  .pick button:active{background:rgba(255,158,196,.18)}
+  .seed{font-size:.66rem;color:#6f6885;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="./">← 回到昔涟</a>
+    <span class="mark">CYRENE</span>
+  </header>
+
+  <h1>记忆回廊 · 肉鸽</h1>
+  <p class="sub">回合制地牢。逐层下降 5 层，在铁墓醒来之前把它打回去。</p>
+
+  <div class="hud">
+    <div class="hpwrap">
+      <div class="hpline"><span id="h-name">—</span><span id="h-hp">— / —</span></div>
+      <div class="hpbar"><div class="hpfill" id="h-fill" style="width:100%"></div></div>
+    </div>
+    <span class="stat">攻 <b id="h-atk">0</b></span>
+    <span class="stat">层 <b id="h-floor">1</b>/5</span>
+    <span class="relics" id="h-relics"></span>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" width="480" height="352" aria-label="地牢画面"></canvas>
+    <div class="ov" id="ov-select">
+      <h2>选一个同行的人</h2>
+      <p>每个人带的记忆不一样：血、攻、视野、暴击都不同。</p>
+      <div class="pick" id="pick"></div>
+      <p class="seed" id="seed-line">种子 —</p>
+    </div>
+    <div class="ov" id="ov-end" hidden>
+      <div class="big" id="end-big">✦</div>
+      <h2 id="end-title">—</h2>
+      <p id="end-desc">—</p>
+      <button class="btn" id="end-again" type="button">再来一次</button>
+    </div>
+  </div>
+
+  <div class="log" id="log"><p>选好角色，开始吧。</p></div>
+
+  <div class="ctrl">
+    <div class="dpad">
+      <span class="sp"></span>
+      <button type="button" data-dir="0,-1" aria-label="上">↑</button>
+      <span class="sp"></span>
+      <button type="button" data-dir="-1,0" aria-label="左">←</button>
+      <button type="button" class="wait" data-dir="wait" aria-label="原地等待">等</button>
+      <button type="button" data-dir="1,0" aria-label="右">→</button>
+      <span class="sp"></span>
+      <button type="button" data-dir="0,1" aria-label="下">↓</button>
+      <span class="sp"></span>
+    </div>
+    <div class="side">
+      <button type="button" id="btn-new">重开</button>
+      <button type="button" id="btn-help">说明</button>
+    </div>
+  </div>
+
+  <p class="hint">点方向键 / 键盘方向键 / 在画面上滑动都能走一步 · 撞到敌人就是攻击</p>
+</div>
+
+<script>
+;(function () {
+  'use strict'
+
+  /* ---------------- 数据 ---------------- */
+  var HEROES = [
+    { id: 'murasame', name: '丛雨', hp: 12, atk: 4, vision: 6, crit: .12, dodge: 0, potion: 1.0, desc: '刀灵：攻击 +1', icon: '刀' },
+    { id: 'mika', name: '未花', hp: 16, atk: 3, vision: 6, crit: .10, dodge: 0, potion: 1.6, desc: '温柔：药水效果 ×1.6', icon: '花' },
+    { id: 'firefly', name: '流萤', hp: 12, atk: 3, vision: 7, crit: .10, dodge: .05, potion: 1.0, desc: '微光：视野 +1，下层回 1 血', icon: '萤' },
+    { id: 'sparkle', name: '花火', hp: 11, atk: 3, vision: 6, crit: .25, dodge: .05, potion: 1.0, desc: '乐子人：暴击率 +15%', icon: '戏' },
+    { id: 'thanos', name: '灭霸', hp: 14, atk: 4, vision: 6, crit: .10, dodge: 0, potion: 1.0, desc: '天命：击杀回 1 血', icon: '命' },
+    { id: 'pig', name: '猪猪侠', hp: 15, atk: 3, vision: 6, crit: .10, dodge: 0, potion: 1.0, desc: '猪皮：每次受伤 -1', icon: '侠' },
+    { id: 'nailong', name: '奶龙', hp: 18, atk: 2, vision: 5, crit: .05, dodge: 0, potion: 1.0, desc: '奶龙：血厚，攻低', icon: '龙' },
+    { id: 'fatcat', name: '胖橘', hp: 13, atk: 3, vision: 6, crit: .10, dodge: .15, potion: 1.0, desc: '滑溜：闪避 15%，开局 2 瓶药', icon: '橘' },
+    { id: 'taffy', name: '塔菲', hp: 12, atk: 3, vision: 6, crit: .18, dodge: .08, potion: 1.0, desc: '主播：暴击 +8%、闪避 +8%', icon: '菲' }
+  ]
+
+  var RELICS = {
+    fang: { id: 'fang', name: '锋刃', desc: '攻击 +2' },
+    iron: { id: 'iron', name: '铁衣', desc: '生命上限 +4' },
+    leech: { id: 'leech', name: '吸血符', desc: '击杀回 1 血' },
+    star: { id: 'star', name: '星图', desc: '视野 +2' }
+  }
+
+  var ENEMIES = {
+    shard: { id: 'shard', name: '碎片', glyph: '✦', color: '#ff9ec4', hp: 3, atk: 1, chase: 4 },
+    shade: { id: 'shade', name: '残影', glyph: '◍', color: '#a98bff', hp: 5, atk: 2, chase: 5 },
+    tomb: { id: 'tomb', name: '铁墓', glyph: '☗', color: '#ffd9a0', hp: 24, atk: 4, chase: 99 }
+  }
+
+  /* ---------------- DOM ---------------- */
+  var $ = function (id) { return document.getElementById(id) }
+  var cv = $('cv')
+  var ctx = cv && cv.getContext ? cv.getContext('2d') : null
+  var stage = $('stage')
+  var logEl = $('log')
+  var hName = $('h-name'), hHp = $('h-hp'), hFill = $('h-fill'), hAtk = $('h-atk'), hFloor = $('h-floor'), hRelics = $('h-relics')
+  var ovSelect = $('ov-select'), pickEl = $('pick'), seedLine = $('seed-line')
+  var ovEnd = $('ov-end'), endBig = $('end-big'), endTitle = $('end-title'), endDesc = $('end-desc'), endAgain = $('end-again')
+  var bestEl = null
+
+  /* ---------------- 状态 ---------------- */
+  var VIEW_W = 15, VIEW_H = 11
+  var MAP_W = 41, MAP_H = 31
+  var WALL = 1, FLOOR = 0, STAIRS = 2
+
+  var S = null
+  var running = false
+  var bestFloor = 0
+  try { bestFloor = Number(localStorage.getItem('cyrene.rogue.best') || 0) || 0 } catch (e) { bestFloor = 0 }
+
+  function rnd(n) { return Math.floor(Math.random() * n) }
+  function pick(a) { return a[rnd(a.length)] }
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v }
+
+  /* ---------------- 地图生成 ---------------- */
+  function blankMap() {
+    var g = []
+    for (var y = 0; y < MAP_H; y++) {
+      var row = []
+      for (var x = 0; x < MAP_W; x++) row.push(WALL)
+      g.push(row)
+    }
+    return g
+  }
+
+  function carveRoom(g, r) {
+    for (var y = r.y; y < r.y + r.h; y++) for (var x = r.x; x < r.x + r.w; x++) g[y][x] = FLOOR
+  }
+
+  function genMap(floor, seed) {
+    var g = blankMap()
+    var rooms = []
+    var tries = 0
+    var target = 7 + Math.min(3, floor)
+    while (rooms.length < target && tries < 300) {
+      tries++
+      var w = 4 + rnd(5), h = 4 + rnd(4)
+      var x = 1 + rnd(MAP_W - w - 2), y = 1 + rnd(MAP_H - h - 2)
+      var r = { x: x, y: y, w: w, h: h, cx: x + ((w / 2) | 0), cy: y + ((h / 2) | 0) }
+      var hit = false
+      for (var i = 0; i < rooms.length; i++) {
+        var o = rooms[i]
+        if (r.x <= o.x + o.w + 1 && r.x + r.w + 1 >= o.x && r.y <= o.y + o.h + 1 && r.y + r.h + 1 >= o.y) { hit = true; break }
+      }
+      if (hit) continue
+      carveRoom(g, r)
+      rooms.push(r)
+    }
+    // 房间之间用 L 形走廊连起来
+    for (var k = 1; k < rooms.length; k++) {
+      var a = rooms[k - 1], b = rooms[k]
+      var x1 = a.cx, y1 = a.cy, x2 = b.cx, y2 = b.cy
+      if (rnd(2)) {
+        for (var x0 = Math.min(x1, x2); x0 <= Math.max(x1, x2); x0++) g[y1][x0] = FLOOR
+        for (var y0 = Math.min(y1, y2); y0 <= Math.max(y1, y2); y0++) g[y0][x2] = FLOOR
+      } else {
+        for (var y1b = Math.min(y1, y2); y1b <= Math.max(y1, y2); y1b++) g[y1b][x1] = FLOOR
+        for (var x1b = Math.min(x1, x2); x1b <= Math.max(x1, x2); x1b++) g[y2][x1b] = FLOOR
+      }
+    }
+    if (!rooms.length) return { grid: g, rooms: [{ cx: 2, cy: 2, x: 1, y: 1, w: 3, h: 3 }], start: { x: 2, y: 2 } }
+
+    var start = { x: rooms[0].cx, y: rooms[0].cy }
+    var last = rooms[rooms.length - 1]
+    var stairs = { x: last.cx, y: last.cy }
+
+    // 放东西
+    var items = [], enemies = []
+    var free = function (x, y) {
+      if (g[y][x] !== FLOOR) return false
+      if (x === start.x && y === start.y) return false
+      if (x === stairs.x && y === stairs.y) return false
+      for (var i = 0; i < items.length; i++) if (items[i].x === x && items[i].y === y) return false
+      for (var j = 0; j < enemies.length; j++) if (enemies[j].x === x && enemies[j].y === y) return false
+      return true
+    }
+
+    var isBoss = floor >= 5
+    if (isBoss) {
+      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: 8 + floor * 2, atk: 1 + ((floor / 2) | 0), name: '铁墓' })
+    }
+
+    var nEnemy = isBoss ? 2 : 2 + Math.min(3, floor)
+    for (var e = 0; e < nEnemy; e++) {
+      for (var t = 0; t < 60; t++) {
+        var ex = 1 + rnd(MAP_W - 2), ey = 1 + rnd(MAP_H - 2)
+        if (!free(ex, ey)) continue
+        var kind = rnd(100) < Math.min(70, 30 + floor * 10) ? 'shade' : 'shard'
+        var base = ENEMIES[kind]
+        enemies.push({ type: kind, x: ex, y: ey, hp: base.hp + Math.max(0, floor - 1), atk: base.atk + ((floor / 3) | 0), name: base.name })
+        break
+      }
+    }
+
+    // 道具：药水 / 遗物
+    var nItem = 3 + rnd(2)
+    for (var it = 0; it < nItem; it++) {
+      for (var q = 0; q < 60; q++) {
+        var ix = 1 + rnd(MAP_W - 2), iy = 1 + rnd(MAP_H - 2)
+        if (!free(ix, iy)) continue
+        var roll = rnd(100)
+        if (roll < 62) items.push({ x: ix, y: iy, kind: 'potion' })
+        else {
+          var ids = Object.keys(RELICS)
+          items.push({ x: ix, y: iy, kind: 'relic', relic: pick(ids) })
+        }
+        break
+      }
+    }
+
+    return { grid: g, rooms: rooms, start: start, stairs: stairs, items: items, enemies: enemies, floor: floor, seed: seed }
+  }
+
+  /* ---------------- 视野 ---------------- */
+  function los(g, x0, y0, x1, y1) {
+    var dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0)
+    var sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1
+    var err = dx - dy, x = x0, y = y0, guard = 0
+    while (guard++ < 200) {
+      if (x === x1 && y === y1) return true
+      var e2 = err * 2
+      if (e2 > -dy) { err -= dy; x += sx }
+      if (e2 < dx) { err += dx; y += sy }
+      if (x === x1 && y === y1) return true
+      if (g[y] && g[y][x] === WALL) return false
+    }
+    return false
+  }
+
+  function computeFov() {
+    var p = S.player, r = S.player.vision
+    var vis = {}
+    for (var y = Math.max(0, p.y - r); y <= Math.min(MAP_H - 1, p.y + r); y++) {
+      for (var x = Math.max(0, p.x - r); x <= Math.min(MAP_W - 1, p.x + r); x++) {
+        if ((x - p.x) * (x - p.x) + (y - p.y) * (y - p.y) > r * r + r) continue
+        if (los(S.grid, p.x, p.y, x, y)) {
+          vis[x + ',' + y] = true
+          S.seen[x + ',' + y] = true
+        }
+      }
+    }
+    S.vis = vis
+  }
+
+  /* ---------------- 日志 ---------------- */
+  function log(msg) {
+    S.logs.push(msg)
+    if (S.logs.length > 4) S.logs.shift()
+    if (logEl) {
+      logEl.innerHTML = ''
+      for (var i = 0; i < S.logs.length; i++) {
+        var p = document.createElement('p')
+        p.textContent = S.logs[i]
+        logEl.appendChild(p)
+      }
+    }
+  }
+
+  /* ---------------- 开局 ---------------- */
+  function newRun(heroId, seed) {
+    var hero = null
+    for (var i = 0; i < HEROES.length; i++) if (HEROES[i].id === heroId) hero = HEROES[i]
+    if (!hero) hero = HEROES[0]
+
+    seed = seed || (Date.now() % 1000000)
+    // 用种子初始化一个简单的伪随机
+    var s0 = seed >>> 0
+    Math.random = (function () {
+      var s = s0 || 1
+      return function () {
+        s ^= s << 13; s >>>= 0
+        s ^= s >> 17
+        s ^= s << 5; s >>>= 0
+        return (s % 100000) / 100000
+      }
+    })()
+
+    S = {
+      seed: seed,
+      hero: hero,
+      floor: 1,
+      hp: hero.hp,
+      maxHp: hero.hp,
+      atk: hero.atk,
+      vision: hero.vision,
+      crit: hero.crit,
+      dodge: hero.dodge,
+      potionMul: hero.potion,
+      potions: hero.id === 'fatcat' ? 2 : 1,
+      relics: {},
+      logs: [],
+      grid: null,
+      items: [],
+      enemies: [],
+      player: { x: 0, y: 0 },
+      seen: {},
+      vis: {},
+      over: false,
+      turns: 0
+    }
+
+    var m = genMap(1, seed)
+    S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
+    S.player.x = m.start.x; S.player.y = m.start.y
+    S.stairs = m.stairs
+    log('你是「' + hero.name + '」。第 1 层，回廊还在往下延伸。')
+    computeFov()
+    render()
+    syncHud()
+  }
+
+  function nextFloor() {
+    S.floor++
+    if (S.floor > 5) return win()
+    if (S.floor === 5) { S.hp = S.maxHp; log('回廊尽头亮了一下——记忆回光，血回满了。') }
+    var m = genMap(S.floor, S.seed + S.floor * 7919)
+    S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
+    S.player.x = m.start.x; S.player.y = m.start.y
+    S.stairs = m.stairs
+    S.seen = {}; S.vis = {}
+    S.hp = Math.min(S.maxHp, S.hp + 2)
+    if (S.hero.id === 'firefly') { S.hp = Math.min(S.maxHp, S.hp + 1); log('流萤的微光护住了你，回 3 血。') }
+    log('第 ' + S.floor + ' 层' + (S.floor >= 5 ? '：铁墓在等你了。' : '。'))
+    computeFov(); render(); syncHud()
+  }
+
+  /* ---------------- 战斗 ---------------- */
+  function enemyAt(x, y) {
+    for (var i = 0; i < S.enemies.length; i++) if (S.enemies[i].x === x && S.enemies[i].y === y && S.enemies[i].hp > 0) return S.enemies[i]
+    return null
+  }
+
+  function hitEnemy(e) {
+    var dmg = S.atk + rnd(2)
+    var crit = Math.random() < S.crit
+    if (crit) dmg = dmg * 2
+    e.hp -= dmg
+    log((crit ? '暴击！' : '') + '你击中「' + e.name + '」' + dmg + ' 点。')
+    if (e.hp <= 0) {
+      log('「' + e.name + '」散成了光。')
+      if (S.hero.id === 'thanos' || S.relics.leech) {
+        var heal = (S.hero.id === 'thanos' ? 1 : 0) + (S.relics.leech ? 1 : 0)
+        S.hp = Math.min(S.maxHp, S.hp + heal)
+      }
+      if (e.type === 'tomb') return win()
+    }
+  }
+
+  function hurtPlayer(dmg) {
+    if (Math.random() < S.dodge) { log('你侧身躲开了。'); return }
+    if (S.hero.id === 'pig') dmg = Math.max(1, dmg - 1)
+    S.hp -= dmg
+    log('你受到 ' + dmg + ' 点伤害。')
+    if (S.hp <= 0) { S.hp = 0; lose() }
+  }
+
+  function enemiesTurn() {
+    for (var i = 0; i < S.enemies.length; i++) {
+      var e = S.enemies[i]
+      if (e.hp <= 0) continue
+      var dx = S.player.x - e.x, dy = S.player.y - e.y
+      var dist = Math.abs(dx) + Math.abs(dy)
+      if (dist === 1) {
+        if (e.type === 'tomb' && Math.random() < .3) { log('铁墓这一锤落空。'); continue }
+        hurtPlayer(e.atk + rnd(2)); if (S.over) return; continue
+      }
+      var base = ENEMIES[e.type]
+      var chase = base ? base.chase : 5
+      var stepX = 0, stepY = 0
+      if (dist <= chase) {
+        if (Math.abs(dx) > Math.abs(dy)) stepX = dx > 0 ? 1 : -1
+        else stepY = dy > 0 ? 1 : -1
+      } else if (Math.random() < .35) {
+        stepX = pick([-1, 0, 1]); stepY = stepX === 0 ? pick([-1, 1]) : 0
+      }
+      if (!stepX && !stepY) continue
+      var nx = e.x + stepX, ny = e.y + stepY
+      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue
+      if (S.grid[ny][nx] === WALL) continue
+      if (nx === S.player.x && ny === S.player.y) {
+        if (e.type === 'tomb' && Math.random() < .3) { log('铁墓这一锤落空。'); continue }
+        hurtPlayer(e.atk + rnd(2)); if (S.over) return; continue
+      }
+      if (enemyAt(nx, ny)) continue
+      e.x = nx; e.y = ny
+    }
+  }
+
+  /* ---------------- 行动 ---------------- */
+  function act(dx, dy, wait) {
+    if (!S || S.over || !running) return false
+    if (!wait) {
+      var nx = S.player.x + dx, ny = S.player.y + dy
+      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return false
+      var e = enemyAt(nx, ny)
+      if (e) {
+        hitEnemy(e)
+        if (S.over) return true
+      } else if (S.grid[ny][nx] === WALL) {
+        return false
+      } else {
+        S.player.x = nx; S.player.y = ny
+        var landed = stepOn(nx, ny)
+        if (landed === 'floor') return true
+        if (S.over) return true
+      }
+    }
+    S.turns++
+    enemiesTurn()
+    if (S.over) return true
+    computeFov(); render(); syncHud()
+    return true
+  }
+
+  function stepOn(x, y) {
+    for (var i = 0; i < S.items.length; i++) {
+      var it = S.items[i]
+      if (it.x === x && it.y === y) {
+        if (it.kind === 'potion') {
+          var heal = Math.round(7 * S.potionMul)
+          S.hp = Math.min(S.maxHp, S.hp + heal)
+          log('捡到一瓶药水，回 ' + heal + ' 血。')
+        } else {
+          var r = RELICS[it.relic]
+          if (r && !S.relics[it.relic]) {
+            S.relics[it.relic] = true
+            if (it.relic === 'fang') S.atk += 2
+            if (it.relic === 'iron') { S.maxHp += 4; S.hp += 4 }
+            if (it.relic === 'star') { S.vision += 2 }
+            log('遗物「' + r.name + '」：' + r.desc + '。')
+          } else {
+            S.hp = Math.min(S.maxHp, S.hp + 3)
+            log('重复的遗物化成 3 点血。')
+          }
+        }
+        S.items.splice(i, 1)
+        break
+      }
+    }
+    if (x === S.stairs.x && y === S.stairs.y) {
+      if (S.enemies.some(function (e) { return e.hp > 0 && e.type === 'tomb' })) {
+        log('铁墓还挡在洞口。')
+        return
+      }
+      return nextFloor(), 'floor'
+    }
+  }
+
+  /* ---------------- 结束 ---------------- */
+  function lose() {
+    S.over = true
+    running = false
+    if (S.floor > bestFloor) {
+      bestFloor = S.floor
+      try { localStorage.setItem('cyrene.rogue.best', String(bestFloor)) } catch (e) { /* ignore */ }
+    }
+    if (ovEnd) {
+      ovEnd.hidden = false
+      endBig.textContent = '✧'
+      endTitle.textContent = '记忆散了'
+      endDesc.textContent = '你在第 ' + S.floor + ' 层倒下。最远到过第 ' + bestFloor + ' 层。'
+      endAgain.textContent = '再来一次'
+    }
+    render()
+  }
+
+  function win() {
+    S.over = true
+    running = false
+    bestFloor = 5
+    try { localStorage.setItem('cyrene.rogue.best', '5') } catch (e) { /* ignore */ }
+    if (ovEnd) {
+      ovEnd.hidden = false
+      endBig.textContent = '✦'
+      endTitle.textContent = '铁墓归位'
+      endDesc.textContent = '五层回廊走完，' + S.hero.name + '把这段记忆带回去了。'
+      endAgain.textContent = '再走一遍'
+    }
+    render()
+  }
+
+  function syncHud() {
+    if (!S) return
+    if (hName) hName.textContent = S.hero.name
+    if (hHp) hHp.textContent = S.hp + ' / ' + S.maxHp
+    if (hFill) hFill.style.width = Math.max(0, Math.min(100, (S.hp / S.maxHp) * 100)) + '%'
+    if (hAtk) hAtk.textContent = String(S.atk)
+    if (hFloor) hFloor.textContent = String(Math.min(5, S.floor))
+    if (hRelics) {
+      hRelics.innerHTML = ''
+      for (var k in S.relics) {
+        if (!S.relics[k]) continue
+        var b = document.createElement('span')
+        b.className = 'relic'
+        b.textContent = RELICS[k] ? RELICS[k].name : k
+        hRelics.appendChild(b)
+      }
+    }
+  }
+
+  /* ---------------- 渲染 ---------------- */
+  var TS = 24
+
+  function fit() {
+    if (!cv) return
+    var w = stage ? stage.clientWidth : 480
+    if (!w) w = 480
+    TS = Math.max(14, Math.floor(Math.min(w / VIEW_W, (w * 0.78) / VIEW_H)))
+    var cw = TS * VIEW_W, ch = TS * VIEW_H
+    cv.width = cw; cv.height = ch
+    cv.style.height = ch + 'px'
+  }
+
+  function render() {
+    if (!ctx || !S) return
+    var camX = clamp(S.player.x - ((VIEW_W / 2) | 0), 0, MAP_W - VIEW_W)
+    var camY = clamp(S.player.y - ((VIEW_H / 2) | 0), 0, MAP_H - VIEW_H)
+    ctx.fillStyle = '#0a0910'
+    ctx.fillRect(0, 0, cv.width, cv.height)
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.font = Math.round(TS * 0.62) + 'px -apple-system,"PingFang SC",sans-serif'
+
+    for (var vy = 0; vy < VIEW_H; vy++) {
+      for (var vx = 0; vx < VIEW_W; vx++) {
+        var x = camX + vx, y = camY + vy
+        if (x >= MAP_W || y >= MAP_H) continue
+        var key = x + ',' + y
+        var vis = S.vis[key]
+        if (!vis && !S.seen[key]) continue
+        var px = vx * TS, py = vy * TS
+        var t = S.grid[y][x]
+        if (t === WALL) {
+          ctx.fillStyle = vis ? '#2a2040' : '#191327'
+          ctx.fillRect(px, py, TS, TS)
+        } else {
+          ctx.fillStyle = vis ? '#151021' : '#100c19'
+          ctx.fillRect(px, py, TS, TS)
+          ctx.fillStyle = vis ? '#2b2340' : '#1a1528'
+          ctx.fillRect(px + TS / 2 - 1, py + TS / 2 - 1, 2, 2)
+        }
+        if (!vis) {
+          ctx.fillStyle = 'rgba(10,9,16,.62)'
+          ctx.fillRect(px, py, TS, TS)
+        }
+      }
+    }
+
+    // 楼梯
+    var st = S.stairs
+    if (st && S.vis[st.x + ',' + st.y]) {
+      ctx.fillStyle = '#ffd9a0'
+      ctx.fillText('⌄', (st.x - camX) * TS + TS / 2, (st.y - camY) * TS + TS / 2 + 1)
+    }
+
+    // 道具
+    for (var i = 0; i < S.items.length; i++) {
+      var it = S.items[i]
+      if (!S.vis[it.x + ',' + it.y]) continue
+      var ix = (it.x - camX) * TS + TS / 2, iy = (it.y - camY) * TS + TS / 2
+      if (it.kind === 'potion') { ctx.fillStyle = '#ff9ec4'; ctx.fillText('♥', ix, iy) }
+      else { ctx.fillStyle = '#ffd9a0'; ctx.fillText('◇', ix, iy) }
+    }
+
+    // 敌人
+    for (var j = 0; j < S.enemies.length; j++) {
+      var e = S.enemies[j]
+      if (e.hp <= 0 || !S.vis[e.x + ',' + e.y]) continue
+      var base = ENEMIES[e.type] || ENEMIES.shard
+      ctx.fillStyle = base.color
+      ctx.fillText(base.glyph, (e.x - camX) * TS + TS / 2, (e.y - camY) * TS + TS / 2)
+    }
+
+    // 玩家
+    var pxx = (S.player.x - camX) * TS + TS / 2, pyy = (S.player.y - camY) * TS + TS / 2
+    ctx.fillStyle = 'rgba(255,158,196,.20)'
+    ctx.beginPath(); ctx.arc(pxx, pyy, TS * 0.46, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = '#fff'
+    ctx.fillText('✦', pxx, pyy)
+  }
+
+  /* ---------------- 输入 ---------------- */
+  var DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }
+
+  function doDir(name) {
+    if (name === 'wait') return act(0, 0, true)
+    var d = DIRS[name]
+    if (!d) return false
+    return act(d[0], d[1], false)
+  }
+
+  document.addEventListener('keydown', function (e) {
+    var k = e.key
+    if (k === 'ArrowUp' || k === 'w' || k === 'W') { e.preventDefault(); doDir('up') }
+    else if (k === 'ArrowDown' || k === 's' || k === 'S') { e.preventDefault(); doDir('down') }
+    else if (k === 'ArrowLeft' || k === 'a' || k === 'A') { e.preventDefault(); doDir('left') }
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D') { e.preventDefault(); doDir('right') }
+    else if (k === ' ' || k === '.') { e.preventDefault(); doDir('wait') }
+  })
+
+  var buttons = document.querySelectorAll('[data-dir]')
+  Array.prototype.forEach.call(buttons, function (b) {
+    b.addEventListener('click', function () {
+      var v = b.getAttribute('data-dir')
+      if (v === 'wait') return doDir('wait')
+      var xy = v.split(',')
+      return act(Number(xy[0]), Number(xy[1]), false)
+    })
+  })
+
+  // 滑动
+  var touch = null
+  if (cv) {
+    cv.addEventListener('pointerdown', function (e) { touch = { x: e.clientX, y: e.clientY } })
+    cv.addEventListener('pointerup', function (e) {
+      if (!touch) return
+      var dx = e.clientX - touch.x, dy = e.clientY - touch.y
+      touch = null
+      if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return
+      if (Math.abs(dx) > Math.abs(dy)) doDir(dx > 0 ? 'right' : 'left')
+      else doDir(dy > 0 ? 'down' : 'up')
+    })
+  }
+
+  /* ---------------- 选择界面 ---------------- */
+  function buildPicker() {
+    if (!pickEl) return
+    pickEl.innerHTML = ''
+    HEROES.forEach(function (h) {
+      var b = document.createElement('button')
+      b.type = 'button'
+      b.innerHTML = '<b>' + h.name + '</b><i>' + h.desc + '</i>'
+      b.addEventListener('click', function () { start(h.id) })
+      pickEl.appendChild(b)
+    })
+  }
+
+  function start(heroId, seed) {
+    if (ovSelect) ovSelect.hidden = true
+    if (ovEnd) ovEnd.hidden = true
+    newRun(heroId, seed)
+    running = true
+    fit(); render(); syncHud()
+  }
+
+  /* ---------------- 生命周期 ---------------- */
+  function boot() {
+    buildPicker()
+    fit()
+    var seed = Date.now() % 1000000
+    if (seedLine) seedLine.textContent = '种子 ' + seed
+    if (!S) {
+      // 先画一个空场，避免闪白
+      ctx.fillStyle = '#0a0910'; ctx.fillRect(0, 0, cv.width, cv.height)
+    }
+    window.addEventListener('resize', function () { fit(); if (S) render() })
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot)
+  else boot()
+
+  // 调试/自动化入口
+  window.CYRENE_ROGUE = {
+    heroes: HEROES,
+    start: start,
+    act: act,
+    dir: doDir,
+    map: function () {
+      return S && { grid: S.grid, stairs: S.stairs, w: MAP_W, h: MAP_H, items: S.items, enemies: S.enemies }
+    },
+    state: function () {
+      return S && {
+        hero: S.hero.id, hp: S.hp, maxHp: S.maxHp, atk: S.atk, floor: S.floor,
+        x: S.player.x, y: S.player.y, alive: !S.over, enemies: S.enemies.length,
+        items: S.items.length, relics: Object.keys(S.relics)
+      }
+    }
+  }
+})()
+</script>
+</body>
+</html>
