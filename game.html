@@ -579,7 +579,7 @@
           if (!AC) return false
           ac = new AC()
           master = ac.createGain()
-          master.gain.value = muted ? 0 : 0.55
+          master.gain.value = muted ? 0 : 0.7
           master.connect(ac.destination)
         } catch (e) { ac = null; return false }
       }
@@ -691,7 +691,7 @@
         o.type = 'sine'
         o.frequency.setValueAtTime(90, t)
         o.frequency.exponentialRampToValueAtTime(38, t + 0.22)
-        g.gain.setValueAtTime(0.16, t)
+        g.gain.setValueAtTime(0.3, t)
         g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28)
         o.connect(g); g.connect(mus.gain)
         o.start(t); o.stop(t + 0.3)
@@ -710,12 +710,12 @@
         var chord = chords[(mus.step >> 3) % chords.length]
 
         if (s16 === 0) {
-          for (var i = 0; i < chord.length; i++) pad(chord[i], t, beat * 14, boss ? 0.035 : 0.03)
+          for (var i = 0; i < chord.length; i++) pad(chord[i], t, beat * 14, boss ? 0.17 : 0.15)
         }
-        if (s16 === 0 || s16 === 8) voice('sine', chord[0] / 2, t, beat * 3.2, 0.06, 0.01)
+        if (s16 === 0 || s16 === 8) voice('sine', chord[0] / 2, t, beat * 3.2, 0.16, 0.01)
         if (s16 % 2 === 0) {
           var n = chord[(s16 / 2) % chord.length] * (s16 === 6 ? 2 : 1)
-          voice('triangle', n, t, beat * 1.6, boss ? 0.035 : 0.03, 0.008)
+          voice('triangle', n, t, beat * 1.6, boss ? 0.11 : 0.095, 0.008)
         }
         if (boss && (s16 === 0 || s16 === 6)) kick(t)
         mus.step++
@@ -732,8 +732,9 @@
         mus.nextT = ac.currentTime + 0.12
         mus.step = 0
         mus.timer = setInterval(function () { try { scheduleMusic() } catch (e) { /* ignore */ } }, 45)
+        try { if (typeof S !== 'undefined' && S && S.logs) log('♪ 背景音乐已开（右侧 🔊 可静音）。') } catch (e) { /* ignore */ }
       }
-      var target = kind === 'boss' ? 0.15 : kind === 'none' ? 0.0001 : 0.11
+      var target = kind === 'boss' ? 0.62 : kind === 'none' ? 0.0001 : 0.5
       try { mus.gain.gain.setTargetAtTime(target, ac.currentTime, 0.7) } catch (e) { /* ignore */ }
     }
 
@@ -744,7 +745,7 @@
       toggleMute: function () {
         muted = !muted
         try { localStorage.setItem('cyrene.rogue.mute', muted ? '1' : '0') } catch (e) { /* ignore */ }
-        if (master && ac) master.gain.setTargetAtTime(muted ? 0 : 0.55, ac.currentTime, 0.05)
+        if (master && ac) master.gain.setTargetAtTime(muted ? 0 : 0.7, ac.currentTime, 0.05)
         return muted
       },
       hover: function () {
@@ -833,7 +834,7 @@
       var btn = document.getElementById('btn-sound')
       if (btn) btn.textContent = SND.isMuted() ? '🔇' : '🔊'
     }
-    ;['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
+    ;['pointerdown', 'mousedown', 'keydown', 'touchstart', 'click'].forEach(function (ev) {
       window.addEventListener(ev, first, { once: true })
     })
     // 全局 UI 反馈
