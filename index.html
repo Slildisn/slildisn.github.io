@@ -967,6 +967,39 @@ b{color:var(--fg)}
 .ov-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
 
 .game-hint{margin:12px 0 0;font-size:.75rem;color:var(--dim);letter-spacing:.02em}
+/* ===== 路口 ===== */
+.crossroad{max-width:var(--max);margin:0 auto;padding:clamp(54px,9vw,92px) 20px 6px}
+.crossroad-head{text-align:center;margin:0 auto 26px;max-width:34em}
+.crossroad-kicker{margin:0 0 10px;font-size:.68rem;letter-spacing:.42em;color:var(--rose);opacity:.9}
+.crossroad h2{
+  margin:0 0 10px;font-family:"Songti SC","Noto Serif SC","Source Han Serif SC",STSong,serif;
+  font-size:clamp(1.5rem,5.2vw,2.1rem);font-weight:600;letter-spacing:.04em;
+}
+.crossroad .sec-sub{margin:0;color:var(--dim);font-size:.86rem;line-height:1.8}
+.roads{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px}
+.road{
+  position:relative;display:flex;flex-direction:column;gap:9px;
+  padding:18px 18px 16px;border-radius:20px;
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+  transition:transform .3s cubic-bezier(.2,.7,.3,1),border-color .3s,box-shadow .3s;
+}
+.road:hover{transform:translateY(-3px);border-color:rgba(255,158,196,.42);box-shadow:0 20px 44px -30px rgba(255,120,170,.75)}
+.road.hot{border-color:rgba(255,158,196,.45);background:linear-gradient(180deg,rgba(255,158,196,.13),rgba(255,158,196,.03))}
+.road-no{font-size:.64rem;letter-spacing:.3em;color:var(--rose);opacity:.85}
+.road h3{margin:0;font-size:1.02rem;font-weight:600;letter-spacing:.02em;color:#f6eefc}
+.road p{margin:0;flex:1;color:#b9b1cd;font-size:.8rem;line-height:1.75}
+.road-go{
+  align-self:flex-start;margin-top:4px;display:inline-flex;align-items:center;gap:7px;
+  padding:8px 17px;border-radius:999px;cursor:pointer;
+  border:1px solid rgba(255,158,196,.4);background:rgba(255,158,196,.1);
+  color:#fff;font-size:.79rem;letter-spacing:.02em;text-decoration:none;
+  font-family:inherit;transition:background .25s,transform .25s
+}
+.road-go:hover{background:rgba(255,158,196,.24)}
+.road-go:active{transform:translateY(1px)}
+@media (max-width:520px){.road{padding:15px 15px 14px}}
+
 
 @media (max-width:720px){
   .game-stage{height:320px}
@@ -2291,6 +2324,7 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
   <span class="nav-mark">CYRENE</span>
   <nav>
     <a href="#game" data-open="game">小游戏</a>
+    <a href="#crossroad">路口</a>
     <a href="game.html">肉鸽</a>
   </nav>
   <a class="nav-gh" href="https://github.com/Slildisn/slildisn.github.io" target="_blank" rel="noopener noreferrer" aria-label="在 GitHub 上查看源码" title="GitHub 源码">
@@ -2322,6 +2356,35 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
     </div>
 
     <div class="scroll-cue" aria-hidden="true"><span>往下</span><i></i></div>
+  </section>
+
+  <!-- ===================== 路口 ===================== -->
+  <section class="crossroad" id="crossroad">
+    <div class="crossroad-head">
+      <p class="crossroad-kicker">CROSSROAD · 路口</p>
+      <h2>三条路，随便挑一条</h2>
+      <p class="sec-sub">往哪边走都不算白走 —— 只是走回来的方式不太一样。</p>
+    </div>
+    <div class="roads">
+      <article class="road hot">
+        <span class="road-no">01</span>
+        <h3>记忆回廊 · 肉鸽</h3>
+        <p>回合制地牢，九个人各有各的打法。五层往下，铁墓在最后一层等你。</p>
+        <a class="road-go" href="game.html">走这条路 <span aria-hidden="true">→</span></a>
+      </article>
+      <article class="road">
+        <span class="road-no">02</span>
+        <h3>守夜 · 记忆回廊</h3>
+        <p>接着落下来的记忆，躲开黑色的碎片。手比脑子快一点就行。</p>
+        <button type="button" class="road-go" data-open="game">进去看看 <span aria-hidden="true">→</span></button>
+      </article>
+      <article class="road">
+        <span class="road-no">03</span>
+        <h3>窗户型号</h3>
+        <p>和九个人里随便哪位聊两句，说错话也不会被赶走。</p>
+        <button type="button" class="road-go" data-open="chat">推门进去 <span aria-hidden="true">→</span></button>
+      </article>
+    </div>
   </section>
 
   <!-- ===================== 07 终端 ===================== -->
