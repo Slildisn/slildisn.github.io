@@ -131,6 +131,48 @@
     background:radial-gradient(700px 500px at 50% 0%, rgba(255,158,196,.14), transparent 70%), rgba(8,7,13,.94);
     backdrop-filter:blur(4px)
   }
+  /* 奇物拾取卡 */
+  .item-card{
+    width:100%;max-width:380px;text-align:center;
+    border:1px solid rgba(255,158,196,.45);border-radius:22px;
+    background:linear-gradient(180deg,rgba(255,158,196,.14),rgba(20,16,32,.96));
+    box-shadow:0 30px 80px -30px rgba(255,120,170,.8), 0 0 0 1px rgba(255,255,255,.05) inset;
+    padding:26px 20px 22px;display:flex;flex-direction:column;align-items:center;gap:10px
+  }
+  .item-icon{
+    font-size:54px;line-height:1;
+    filter:drop-shadow(0 8px 22px rgba(255,158,196,.55))
+  }
+  .item-card h2{margin:2px 0 0;font-size:1.12rem;color:#fff;letter-spacing:.02em}
+  .item-card p{margin:0;font-size:.82rem;color:#cfc7e0;line-height:1.65}
+  .item-effect{
+    margin-top:2px;font-size:.76rem;color:#ffd9a0;
+    border:1px dashed rgba(255,217,160,.4);border-radius:10px;padding:6px 12px
+  }
+  .item-card .btn{margin-top:6px}
+
+  /* 结算页 */
+  .sum-card{
+    width:100%;max-width:420px;
+    border:1px solid rgba(255,255,255,.12);border-radius:24px;
+    background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(12,10,20,.92));
+    box-shadow:0 40px 100px -40px rgba(255,120,170,.75);
+    padding:24px 20px 20px;display:flex;flex-direction:column;gap:14px
+  }
+  .sum-kicker{margin:0;font-size:.64rem;letter-spacing:.34em;color:var(--rose);text-align:center}
+  .sum-card h2{margin:0;text-align:center;font-size:1.2rem;font-family:"Songti SC","Noto Serif SC",STSong,serif;color:#fff}
+  .sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .sum-grid div{
+    border:1px solid rgba(255,255,255,.09);border-radius:14px;
+    background:rgba(255,255,255,.035);padding:10px 6px;text-align:center
+  }
+  .sum-grid b{display:block;font-size:1.25rem;color:#fff;font-variant-numeric:tabular-nums}
+  .sum-grid span{font-size:.66rem;color:var(--dim);letter-spacing:.08em}
+  .sum-block h3{margin:0 0 5px;font-size:.72rem;color:var(--rose);letter-spacing:.12em;font-weight:600}
+  .sum-block p{margin:0;font-size:.76rem;color:#cfc7e0;line-height:1.7}
+  .sum-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:2px}
+  .btn.ghost{border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.06);color:#e8e1f4}
+
   .talents{display:flex;flex-direction:column;gap:8px;width:100%;max-width:430px;margin-top:6px}
   .talent{
     display:flex;flex-direction:column;gap:4px;text-align:left;
@@ -180,6 +222,40 @@
       <h2 id="talent-title">挑一个天赋</h2>
       <p>记忆里多出一条路。选哪条，你就变成哪样的人。</p>
       <div class="talents" id="talent-list"></div>
+    </div>
+
+    <div class="ov ov-global" id="ov-item" hidden>
+      <div class="item-card">
+        <div class="item-icon" id="item-icon">🕰️</div>
+        <h2 id="item-name">奇物</h2>
+        <p id="item-desc">—</p>
+        <p class="item-effect" id="item-effect">—</p>
+        <button class="btn" id="item-take" type="button">收下</button>
+      </div>
+    </div>
+
+    <div class="ov ov-global" id="ov-summary" hidden>
+      <div class="sum-card">
+        <p class="sum-kicker" id="sum-kicker">记忆回廊 · 结算</p>
+        <h2 id="sum-title">这一梦结束了</h2>
+        <div class="sum-grid">
+          <div><b id="sum-floor">1</b><span>存活层数</span></div>
+          <div><b id="sum-kills">0</b><span>击杀</span></div>
+          <div><b id="sum-time">0:00</b><span>用时</span></div>
+        </div>
+        <div class="sum-block">
+          <h3>拾得天赋</h3>
+          <p id="sum-talents">—</p>
+        </div>
+        <div class="sum-block">
+          <h3>遗物与奇物</h3>
+          <p id="sum-items">—</p>
+        </div>
+        <div class="sum-btns">
+          <button class="btn" id="sum-again" type="button">再次入梦</button>
+          <button class="btn ghost" id="sum-continue" type="button" hidden>继续深入</button>
+        </div>
+      </div>
     </div>
 
     <div class="ov" id="ov-help" hidden>
@@ -258,6 +334,10 @@
   var hName = $('h-name'), hHp = $('h-hp'), hFill = $('h-fill'), hAtk = $('h-atk'), hFloor = $('h-floor'), hRelics = $('h-relics')
   var hLv = $('h-lv'), hXp = $('h-xp'), hDir = $('h-dir'), hTalents = $('h-talents')
   var ovTalent = $('ov-talent'), talentList = $('talent-list'), talentTitle = $('talent-title')
+  var ovItem = $('ov-item'), itemIcon = $('item-icon'), itemName = $('item-name'), itemDesc = $('item-desc'), itemEffect = $('item-effect'), itemTake = $('item-take')
+  var ovSummary = $('ov-summary'), sumKicker = $('sum-kicker'), sumTitle = $('sum-title')
+  var sumFloor = $('sum-floor'), sumKills = $('sum-kills'), sumTime = $('sum-time')
+  var sumTalents = $('sum-talents'), sumItems = $('sum-items'), sumAgain = $('sum-again'), sumContinue = $('sum-continue')
   var ovSelect = $('ov-select'), pickEl = $('pick'), seedLine = $('seed-line')
   var ovEnd = $('ov-end'), endBig = $('end-big'), endTitle = $('end-title'), endDesc = $('end-desc'), endAgain = $('end-again')
   var bestEl = null
@@ -536,11 +616,9 @@
         var ix = 1 + rnd(MAP_W - 2), iy = 1 + rnd(MAP_H - 2)
         if (!free(ix, iy)) continue
         var roll = rnd(100)
-        if (roll < 62) items.push({ x: ix, y: iy, kind: 'potion' })
-        else {
-          var ids = Object.keys(RELICS)
-          items.push({ x: ix, y: iy, kind: 'relic', relic: pick(ids) })
-        }
+        if (roll < 55) items.push({ x: ix, y: iy, kind: 'potion' })
+        else if (roll < 78) items.push({ x: ix, y: iy, kind: 'relic', relic: pick(Object.keys(RELICS)) })
+        else items.push({ x: ix, y: iy, kind: 'trinket', trinket: pick(TRINKETS).id })
         break
       }
     }
@@ -591,6 +669,23 @@
         logEl.appendChild(p)
       }
     }
+  }
+
+  /* ---------------- 奇物（创意道具） ---------------- */
+  var TRINKETS = [
+    { id: 'watch', name: '泣血的怀表', icon: '🕰️', desc: '表盘里凝着别人的血，走一步，它就滴一下。', effect: '每走 10 步，对身旁 1 格的怨灵造成 1 点伤害', apply: function () { S.watch = true } },
+    { id: 'finger', name: '断掉的小指', icon: '🖐️', desc: '还带着一点体温，握上去却很有劲。', effect: '攻击 +2，最大生命 -3', apply: function () { S.atk += 2; S.maxHp = Math.max(4, S.maxHp - 3); S.hp = Math.min(S.hp, S.maxHp) } },
+    { id: 'dice', name: '空心的骰子', icon: '🎲', desc: '摇起来没有声音，点数却总在变。', effect: '暴击 +15%，但每次受伤多 1 点', apply: function () { S.crit += 0.15; S.extraHurt = (S.extraHurt || 0) + 1 } },
+    { id: 'mirror', name: '半块镜子', icon: '🪞', desc: '照不出你，照得出你身后那一步。', effect: '闪避 +15%，攻击 -1', apply: function () { S.dodge += 0.15; S.atk = Math.max(1, S.atk - 1) } },
+    { id: 'heart', name: '冷藏的心脏', icon: '🫀', desc: '冰袋还没化，是谁把它放进来的？', effect: '每次击杀回 2 血，药水效果 -50%', apply: function () { S.leech += 2; S.potionMul = Math.max(0.4, S.potionMul - 0.5) } },
+    { id: 'eye', name: '无眼的护符', icon: '👁️', desc: '它没有眼睛，所以看得比你清楚。', effect: '视野 +3，攻击 -1', apply: function () { S.vision += 3; S.atk = Math.max(1, S.atk - 1) } },
+    { id: 'tooth', name: '会说话的牙齿', icon: '🦷', desc: '它一直在小声讲你听不懂的笑话。', effect: '击杀经验 +2，最大生命 -2', apply: function () { S.bonusXp = (S.bonusXp || 0) + 2; S.maxHp = Math.max(4, S.maxHp - 2); S.hp = Math.min(S.hp, S.maxHp) } },
+    { id: 'coin', name: '生锈的硬币', icon: '🪙', desc: '正反面都是楼下的地板。', effect: '每次下楼多回 2 血，闪避 -10%', apply: function () { S.floorHeal = (S.floorHeal || 0) + 2; S.dodge = Math.max(0, S.dodge - 0.1) } }
+  ]
+
+  function trinketById(id) {
+    for (var i = 0; i < TRINKETS.length; i++) if (TRINKETS[i].id === id) return TRINKETS[i]
+    return null
   }
 
   /* ---------------- 角色外观 ---------------- */
@@ -701,6 +796,129 @@
     if (S.pending > 0) setTimeout(openTalent, 160)
   }
 
+  /* ---------------- 拾取与结算 ---------------- */
+  var itemOpen = false
+
+  function openItemCard(info) {
+    if (!ovItem) return
+    itemOpen = true
+    if (itemIcon) itemIcon.textContent = info.icon || '🎁'
+    if (itemName) itemName.textContent = info.name || '奇物'
+    if (itemDesc) itemDesc.textContent = info.desc || ''
+    if (itemEffect) itemEffect.textContent = info.effect || ''
+    ovItem.hidden = false
+    render()
+    syncHud()
+  }
+
+  function closeItemCard() {
+    itemOpen = false
+    if (ovItem) ovItem.hidden = true
+    render()
+    syncHud()
+  }
+
+  function pickTrinket(id) {
+    var t = trinketById(id)
+    if (!t) return
+    if (S.trinkets[id]) {
+      S.hp = Math.min(S.maxHp, S.hp + 3)
+      log('重复的「' + t.name + '」化成 3 点血。')
+      return
+    }
+    S.trinkets[id] = true
+    t.apply()
+    log('拾得奇物「' + t.name + '」。')
+    fx(S.player.x, S.player.y, t.name, '#ffd9a0', -0.7)
+    openItemCard({ icon: t.icon, name: t.name, desc: t.desc, effect: t.effect })
+  }
+
+  function pickRelic(id) {
+    var r = RELICS[id]
+    if (!r) return
+    if (S.relics[id]) {
+      S.hp = Math.min(S.maxHp, S.hp + 3)
+      log('重复的遗物化成 3 点血。')
+      return
+    }
+    S.relics[id] = true
+    if (id === 'fang') S.atk += 2
+    if (id === 'iron') { S.maxHp += 4; S.hp += 4 }
+    if (id === 'star') S.vision += 2
+    log('遗物「' + r.name + '」：' + r.desc + '。')
+    openItemCard({ icon: '◇', name: r.name + ' · 遗物', desc: r.desc, effect: r.desc })
+  }
+
+  function watchPulse() {
+    var hit = false
+    for (var i = 0; i < S.enemies.length; i++) {
+      var e = S.enemies[i]
+      if (e.hp > 0 && Math.abs(e.x - S.player.x) + Math.abs(e.y - S.player.y) === 1) {
+        e.hp -= 1
+        fx(e.x, e.y, '-1', '#ff8fb0', -0.45)
+        hit = true
+        if (e.hp <= 0) killEnemy(e)
+      }
+    }
+    if (hit) {
+      log('怀表滴了一滴血。')
+      shake(2.5, 180)
+    }
+  }
+
+  function fmtTime(ms) {
+    var t = Math.max(0, Math.floor(ms / 1000))
+    var m = Math.floor(t / 60), sec = t % 60
+    return m + ':' + (sec < 10 ? '0' : '') + sec
+  }
+
+  function showSummary(isWin) {
+    if (!S || !ovSummary) return
+    S.paused = true
+    if (sumKicker) sumKicker.textContent = isWin ? '第 5 层 · 铁墓倒下' : '记忆回廊 · 结算'
+    if (sumTitle) sumTitle.textContent = isWin ? '你带着这段记忆回来了' : '这一梦结束了'
+    if (sumFloor) sumFloor.textContent = String(Math.max(S.floor, S.maxFloor || 1))
+    if (sumKills) sumKills.textContent = String(S.kills || 0)
+    if (sumTime) sumTime.textContent = fmtTime(Date.now() - (S.startedAt || Date.now()))
+    var tnames = []
+    for (var tid in S.talents) {
+      if (!S.talents[tid]) continue
+      tnames.push(talentName(tid) + (S.talents[tid] > 1 ? ' ×' + S.talents[tid] : ''))
+    }
+    if (sumTalents) sumTalents.textContent = tnames.length ? tnames.join('、') : '还没挑到天赋'
+    var inames = []
+    for (var rid in S.relics) if (S.relics[rid]) inames.push((RELICS[rid] ? RELICS[rid].name : rid) + ' · 遗物')
+    for (var kid in S.trinkets) {
+      if (!S.trinkets[kid]) continue
+      var tk = trinketById(kid)
+      inames.push((tk ? tk.name : kid) + ' · 奇物')
+    }
+    if (sumItems) sumItems.textContent = inames.length ? inames.join('、') : '两手空空'
+    if (sumContinue) sumContinue.hidden = !isWin
+    ovSummary.hidden = false
+    render()
+    syncHud()
+  }
+
+  function continueRun() {
+    if (ovSummary) ovSummary.hidden = true
+    if (S) S.paused = false
+    render()
+    syncHud()
+  }
+
+  function restartRun() {
+    if (ovSummary) ovSummary.hidden = true
+    if (ovEnd) ovEnd.hidden = true
+    if (ovItem) ovItem.hidden = true
+    if (ovTalent) ovTalent.hidden = true
+    if (ovSelect) ovSelect.hidden = true
+    itemOpen = false
+    choosing = false
+    var id = S ? S.hero.id : 'murasame'
+    start(id)
+  }
+
   /* ---------------- 开局 ---------------- */
   function newRun(heroId, seed) {
     var hero = null
@@ -746,6 +964,14 @@
       level: 1,
       xpNext: 6,
       pending: 0,
+      kills: 0,
+      steps: 0,
+      maxFloor: 1,
+      startedAt: Date.now(),
+      trinkets: {},
+      watch: false,
+      extraHurt: 0,
+      paused: false,
       snapFlash: 0,
       slowmo: 0,
       slash: null,
@@ -795,6 +1021,7 @@
   // 击杀结算：经验、升级蓄力、吸血、铁墓开门
   function killEnemy(e) {
     if (e.type === 'tomb' && S.hero.id === 'sparkle' && Math.random() < 0.35) return sparkleTrick(e)
+    S.kills = (S.kills || 0) + 1
     log('「' + e.name + '」散成了光。')
     var ebase = ENEMIES[e.type] || ENEMIES.shard
     spawnDust(e.x, e.y, 16, { hot: ebase.color, cool: '#5d2333' })
@@ -814,11 +1041,12 @@
 
     // 掉落：药水多，遗物少
     if (rnd(100) < 45) {
-      var isRelic = rnd(100) < 30
-      var drop = { x: e.x, y: e.y, kind: isRelic ? 'relic' : 'potion' }
-      if (isRelic) drop.relic = pick(Object.keys(RELICS))
+      var rollD = rnd(100)
+      var drop = { x: e.x, y: e.y, kind: 'potion' }
+      if (rollD < 30) { drop.kind = 'trinket'; drop.trinket = pick(TRINKETS).id }
+      else if (rollD < 55) { drop.kind = 'relic'; drop.relic = pick(Object.keys(RELICS)) }
       S.items.push(drop)
-      log('掉落：' + (isRelic ? '一件遗物' : '一瓶药水') + '。')
+      log('掉落：' + (drop.kind === 'trinket' ? '一件奇物' : drop.kind === 'relic' ? '一件遗物' : '一瓶药水') + '。')
       fx(e.x, e.y, '掉落', '#ffd9a0')
     }
 
@@ -828,6 +1056,7 @@
     if (S.pending > 0) setTimeout(openTalent, 90)
 
     if (e.type === 'tomb') {
+      if (S.floor === 5) showSummary(true)
       if (S.hero.id === 'thanos') thanosSnap(e)
       if (S.hero.id === 'murasame') murasameCut(e)
       S.hp = Math.min(S.maxHp, S.hp + 4)
@@ -854,6 +1083,7 @@
 
   function hurtPlayer(dmg, attacker) {
     if (Math.random() < Math.min(0.75, S.dodge)) { log('你侧身躲开了。'); return }
+    dmg += (S.extraHurt || 0)
     var reduce = (S.hero.id === 'pig' ? 1 : 0) + (S.dmgReduce || 0)
     dmg = Math.max(1, dmg - reduce)
     S.hp -= dmg
@@ -925,7 +1155,7 @@
 
   /* ---------------- 行动 ---------------- */
   function act(dx, dy, wait) {
-    if (!S || S.over || !running || choosing) return false
+    if (!S || S.over || !running || choosing || itemOpen || S.paused) return false
     if (!wait) {
       var nx = S.player.x + dx, ny = S.player.y + dy
       if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return false
@@ -941,6 +1171,8 @@
         var landed = stepOn(nx, ny)
         if (landed === 'floor') return true
         if (S.over) return true
+        S.steps++
+        if (S.watch && S.steps % 10 === 0) watchPulse()
       }
     }
     S.turns++
@@ -954,24 +1186,17 @@
     for (var i = 0; i < S.items.length; i++) {
       var it = S.items[i]
       if (it.x === x && it.y === y) {
+        S.items.splice(i, 1)
         if (it.kind === 'potion') {
           var heal = Math.round(7 * S.potionMul)
           S.hp = Math.min(S.maxHp, S.hp + heal)
           log('捡到一瓶药水，回 ' + heal + ' 血。')
+          fx(S.player.x, S.player.y, '+' + heal, '#ff9ec4', -0.5)
+        } else if (it.kind === 'trinket') {
+          pickTrinket(it.trinket)
         } else {
-          var r = RELICS[it.relic]
-          if (r && !S.relics[it.relic]) {
-            S.relics[it.relic] = true
-            if (it.relic === 'fang') S.atk += 2
-            if (it.relic === 'iron') { S.maxHp += 4; S.hp += 4 }
-            if (it.relic === 'star') { S.vision += 2 }
-            log('遗物「' + r.name + '」：' + r.desc + '。')
-          } else {
-            S.hp = Math.min(S.maxHp, S.hp + 3)
-            log('重复的遗物化成 3 点血。')
-          }
+          pickRelic(it.relic)
         }
-        S.items.splice(i, 1)
         break
       }
     }
@@ -997,14 +1222,10 @@
       bestFloor = S.floor
       try { localStorage.setItem('cyrene.rogue.best', String(bestFloor)) } catch (e) { /* ignore */ }
     }
+    showSummary(false)
     if (ovEnd) {
-      ovEnd.hidden = false
-      endBig.textContent = S.hero.id === 'nailong' ? '🦖' : '✧'
-      endTitle.textContent = S.hero.id === 'nailong' ? '奶龙……' : '记忆散了'
-      endDesc.textContent = S.hero.id === 'nailong'
-        ? '奶龙在第 ' + S.floor + ' 层安静下来，只剩一个影子。最远到过第 ' + bestFloor + ' 层。'
-        : '你在第 ' + S.floor + ' 层倒下。最远到过第 ' + bestFloor + ' 层。'
-      endAgain.textContent = '再来一次'
+      ovEnd.hidden = true
+      endAgain.textContent = '再次入梦'
     }
     render()
   }
@@ -1052,6 +1273,14 @@
         b.className = 'relic'
         b.textContent = RELICS[k] ? RELICS[k].name : k
         hRelics.appendChild(b)
+      }
+      for (var tk2 in S.trinkets) {
+        if (!S.trinkets[tk2]) continue
+        var bt = document.createElement('span')
+        bt.className = 'relic'
+        var tobj = trinketById(tk2)
+        bt.textContent = (tobj ? tobj.icon + ' ' + tobj.name : tk2)
+        hRelics.appendChild(bt)
       }
     }
   }
@@ -1436,6 +1665,11 @@
   function start(heroId, seed) {
     if (ovSelect) ovSelect.hidden = true
     if (ovEnd) ovEnd.hidden = true
+    if (ovSummary) ovSummary.hidden = true
+    if (ovItem) ovItem.hidden = true
+    if (ovTalent) ovTalent.hidden = true
+    itemOpen = false
+    choosing = false
     newRun(heroId, seed)
     running = true
     fit(); render(); syncHud()
@@ -1449,6 +1683,9 @@
     start(id)
   }
   if (btnNew) btnNew.addEventListener('click', function () { restart() })
+  if (itemTake) itemTake.addEventListener('click', closeItemCard)
+  if (sumAgain) sumAgain.addEventListener('click', restartRun)
+  if (sumContinue) sumContinue.addEventListener('click', continueRun)
   if (btnHelp && helpOv) btnHelp.addEventListener('click', function () { helpOv.hidden = false })
   if (helpClose && helpOv) helpClose.addEventListener('click', function () { helpOv.hidden = true })
 
@@ -1476,6 +1713,8 @@
     dir: doDir,
     fxCount: function () { return FX.length },
     dustCount: function () { return DUST.length },
+    trinketIds: function () { return TRINKETS.map(function (t) { return t.id }) },
+    pickTrinket: pickTrinket,
     grant: function (id) {
       for (var i = 0; i < TALENTS.length; i++) {
         if (TALENTS[i].id === id) { TALENTS[i].apply(); S.talents[id] = (S.talents[id] || 0) + 1; return true }
