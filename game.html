@@ -4,8 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>铁墓大乱斗：从灭霸开始 ｜ 昔涟 CYRENE</title>
-<meta name="description" content="昔涟同人站的小游戏《铁墓大乱斗：从灭霸开始》——回合制肉鸽地牢，11 个角色可选，逐层下降、拾取遗物与奇物、击败铁墓。纯前端、无依赖。">
-<meta name="theme-color" content="#0b0a12">
+<meta name="description" content="昔涟同人站的小游戏《铁墓大乱斗：从灭霸开始》——回合制肉鸽地牢，14 位跨次元角色可选，逐层下降、拾取遗物与奇物、击败铁墓。纯前端、可离线安装。">
+<meta name="theme-color" content="#2a1b3d">
+<meta name="application-name" content="铁墓大乱斗">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="铁墓大乱斗">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23241a33'/%3E%3Ctext x='32' y='43' font-size='30' text-anchor='middle' fill='%23ff9ec4'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E">
 <style>
   :root{
@@ -83,6 +91,15 @@
   canvas{display:block;width:100%;height:auto;touch-action:none}
   body.ov-open, body.ov-open .stage{touch-action:auto}
   body{overscroll-behavior-y:contain}
+  html,body{overscroll-behavior:none}
+  @media (display-mode: standalone){
+    body{
+      padding-top:env(safe-area-inset-top,0px);
+      padding-bottom:env(safe-area-inset-bottom,0px);
+      min-height:100vh;min-height:100dvh
+    }
+    .wrap{max-width:100%;padding-left:10px;padding-right:10px}
+  }
 
   .log{
     margin:8px 0 0;padding:8px 11px;border:1px solid var(--line);border-radius:12px;
@@ -322,6 +339,22 @@
   .syn-preview.down{color:#ff8a9c}
   .syn-replace{font-size:.62rem;color:#ff9ec4}
 </style>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function () {})
+    })
+  }
+  // 独立安装模式：吞掉边缘滑动返回（浏览器无法完全禁用，只能把历史栈钉住）
+  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+    try {
+      history.pushState({ pwaGuard: 1 }, '')
+      window.addEventListener('popstate', function () {
+        try { history.pushState({ pwaGuard: 1 }, '') } catch (e) { /* ignore */ }
+      })
+    } catch (e) { /* ignore */ }
+  }
+</script>
 </head>
 <body>
 <div class="wrap">
