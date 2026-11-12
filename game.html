@@ -801,14 +801,14 @@
     shake(5, 300)
     var gain = (e.type === 'tomb' ? 10 : e.type === 'shade' ? 3 : 2) + (S.bonusXp || 0)
     S.xp += gain
-    fx(e.x, e.y, '+' + gain + ' EXP', '#ffd9a0')
+    fx(e.x, e.y, '+' + gain + ' EXP', '#ffd9a0', 0.5)
 
     while (S.xp >= S.xpNext) {
       S.xp -= S.xpNext
       S.level++
       S.xpNext = 6 + S.level * 3
       S.pending++
-      fx(S.player.x, S.player.y, 'LV UP', '#ff9ec4')
+      fx(S.player.x, S.player.y, 'LV UP', '#ff9ec4', -0.6)
       log('升到 Lv.' + S.level + '，记忆里多出一条路。')
     }
 
