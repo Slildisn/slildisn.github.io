@@ -143,7 +143,8 @@
     <span class="stat">攻 <b id="h-atk">0</b></span>
     <span class="stat">Lv <b id="h-lv">1</b></span>
     <span class="stat">EXP <b id="h-xp">0/6</b></span>
-    <span class="stat">层 <b id="h-floor">1</b>/5</span>
+    <span class="stat">层 <b id="h-floor">1</b></span>
+    <span class="stat">门 <b id="h-dir">—</b></span>
     <span class="relics" id="h-relics"></span>
   </div>
 
@@ -157,7 +158,7 @@
     </div>
     <div class="ov" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击。<br>粉色 ♥ 是药水，金色 ◇ 是遗物，金色 ⌄ 是下一层。<br>第 5 层是铁墓，它每锤都有 30% 落空。<br>死了就从第 1 层重来，最高层会记在这台设备上。</p>
+      <p>方向键走一步，撞到敌人就是攻击。<br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
     </div>
 
@@ -229,7 +230,7 @@
   var stage = $('stage')
   var logEl = $('log')
   var hName = $('h-name'), hHp = $('h-hp'), hFill = $('h-fill'), hAtk = $('h-atk'), hFloor = $('h-floor'), hRelics = $('h-relics')
-  var hLv = $('h-lv'), hXp = $('h-xp')
+  var hLv = $('h-lv'), hXp = $('h-xp'), hDir = $('h-dir')
   var ovSelect = $('ov-select'), pickEl = $('pick'), seedLine = $('seed-line')
   var ovEnd = $('ov-end'), endBig = $('end-big'), endTitle = $('end-title'), endDesc = $('end-desc'), endAgain = $('end-again')
   var bestEl = null
@@ -262,6 +263,14 @@
     FX.push({ x: x, y: y, text: text, color: color, t: Date.now() })
     if (FX.length > 24) FX.shift()
     kickAnim()
+  }
+
+  function dirArrow() {
+    if (!S) return '—'
+    var dx = S.stairs.x - S.player.x, dy = S.stairs.y - S.player.y
+    if (!dx && !dy) return '到了'
+    var v = (dy < 0 ? '↑' : dy > 0 ? '↓' : '') + (dx < 0 ? '←' : dx > 0 ? '→' : '')
+    return v || '到了'
   }
 
   function rnd(n) { return Math.floor(Math.random() * n) }
@@ -331,19 +340,20 @@
       return true
     }
 
-    var isBoss = floor >= 5
+    var isBoss = floor % 5 === 0
     if (isBoss) {
-      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: 8 + floor * 2, max: 8 + floor * 2, atk: 1 + ((floor / 2) | 0), name: '铁墓' })
+      var bhp = 8 + floor * 3
+      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: bhp, max: bhp, atk: 1 + ((floor / 2) | 0), name: '铁墓' })
     }
 
-    var nEnemy = isBoss ? 2 : 2 + Math.min(3, floor)
+    var nEnemy = isBoss ? 2 : 2 + Math.min(4, floor)
     for (var e = 0; e < nEnemy; e++) {
       for (var t = 0; t < 60; t++) {
         var ex = 1 + rnd(MAP_W - 2), ey = 1 + rnd(MAP_H - 2)
         if (!free(ex, ey)) continue
         var kind = rnd(100) < Math.min(70, 30 + floor * 10) ? 'shade' : 'shard'
         var base = ENEMIES[kind]
-        enemies.push({ type: kind, x: ex, y: ey, hp: base.hp + Math.max(0, floor - 1), max: base.hp + Math.max(0, floor - 1), atk: base.atk + ((floor / 3) | 0), name: base.name })
+        enemies.push({ type: kind, x: ex, y: ey, hp: base.hp + Math.floor(floor / 2), max: base.hp + Math.floor(floor / 2), atk: base.atk + Math.floor(floor / 3), name: base.name })
         break
       }
     }
@@ -483,8 +493,7 @@
 
   function nextFloor() {
     S.floor++
-    if (S.floor > 5) return win()
-    if (S.floor === 5) { S.hp = S.maxHp; log('回廊尽头亮了一下——记忆回光，血回满了。') }
+    if (S.floor % 5 === 0) { S.hp = S.maxHp; log('铁墓的气息……先回满血。') }
     var m = genMap(S.floor, S.seed + S.floor * 7919)
     S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
     S.player.x = m.start.x; S.player.y = m.start.y
@@ -492,7 +501,7 @@
     S.seen = {}; S.vis = {}
     S.hp = Math.min(S.maxHp, S.hp + 2)
     if (S.hero.id === 'firefly') { S.hp = Math.min(S.maxHp, S.hp + 1); log('流萤的微光护住了你，回 3 血。') }
-    log('第 ' + S.floor + ' 层' + (S.floor >= 5 ? '：铁墓在等你了。' : '。'))
+    log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + (S.floor % 5 === 0 ? '铁墓守着门。' : ''))
     computeFov(); render(); syncHud()
   }
 
@@ -528,7 +537,12 @@
         var heal = (S.hero.id === 'thanos' ? 1 : 0) + (S.relics.leech ? 1 : 0)
         S.hp = Math.min(S.maxHp, S.hp + heal)
       }
-      if (e.type === 'tomb') return win()
+      if (e.type === 'tomb') {
+        S.hp = Math.min(S.maxHp, S.hp + 4)
+        log('铁墓倒下，光门开了。')
+        fx(e.x, e.y, '开门', '#ffd9a0')
+        if (S.player.x === S.stairs.x && S.player.y === S.stairs.y) return nextFloor(), 'floor'
+      }
     }
   }
 
@@ -581,7 +595,8 @@
       if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return false
       var e = enemyAt(nx, ny)
       if (e) {
-        hitEnemy(e)
+        var hitResult = hitEnemy(e)
+        if (hitResult === 'floor') return true
         if (S.over) return true
       } else if (S.grid[ny][nx] === WALL) {
         return false
@@ -672,7 +687,8 @@
     if (hHp) hHp.textContent = S.hp + ' / ' + S.maxHp
     if (hFill) hFill.style.width = Math.max(0, Math.min(100, (S.hp / S.maxHp) * 100)) + '%'
     if (hAtk) hAtk.textContent = String(S.atk)
-    if (hFloor) hFloor.textContent = String(Math.min(5, S.floor))
+    if (hFloor) hFloor.textContent = String(S.floor)
+    if (hDir) hDir.textContent = dirArrow()
     if (hLv) hLv.textContent = String(S.level)
     if (hXp) hXp.textContent = S.xp + '/' + S.xpNext
     if (hRelics) {
@@ -735,17 +751,25 @@
       }
     }
 
-    // 楼梯：向下的箭头
+    // 传送门：发光的方块（走上去进下一层）
     var st = S.stairs
-    if (st && S.vis[st.x + ',' + st.y]) {
-      var sx0 = (st.x - camX) * TS + TS / 2, sy0 = (st.y - camY) * TS + TS / 2
-      ctx.strokeStyle = '#ffd9a0'
-      ctx.lineWidth = Math.max(2, TS * .09)
-      ctx.beginPath()
-      ctx.moveTo(sx0 - TS * .18, sy0 - TS * .1)
-      ctx.lineTo(sx0, sy0 + TS * .12)
-      ctx.lineTo(sx0 + TS * .18, sy0 - TS * .1)
-      ctx.stroke()
+    if (st) {
+      var visP = S.vis[st.x + ',' + st.y]
+      var seenP = S.seen[st.x + ',' + st.y]
+      if (visP || seenP) {
+        var sx0 = (st.x - camX) * TS + TS / 2, sy0 = (st.y - camY) * TS + TS / 2
+        var pulse = 0.5 + 0.5 * Math.sin(Date.now() / 380)
+        var half = TS * (0.25 + 0.05 * pulse)
+        ctx.globalAlpha = visP ? 1 : 0.3
+        ctx.fillStyle = 'rgba(255,217,160,' + (0.10 + 0.16 * pulse) + ')'
+        ctx.fillRect(sx0 - half * 2.1, sy0 - half * 2.1, half * 4.2, half * 4.2)
+        ctx.strokeStyle = '#ffd9a0'
+        ctx.lineWidth = Math.max(2, TS * .08)
+        ctx.strokeRect(sx0 - half, sy0 - half, half * 2, half * 2)
+        ctx.fillStyle = 'rgba(255,217,160,' + (0.30 + 0.35 * pulse) + ')'
+        ctx.fillRect(sx0 - half * .45, sy0 - half * .45, half * .9, half * .9)
+        ctx.globalAlpha = 1
+      }
     }
 
     // 道具：药水=粉色圆点带十字，遗物=金色菱形
