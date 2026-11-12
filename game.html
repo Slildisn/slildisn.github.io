@@ -292,6 +292,13 @@
   .talent span{font-size:.74rem;color:#c9c1dc;line-height:1.55}
   .syn-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
   .syn-tags i{font-style:normal;font-size:.62rem;padding:1px 7px;border-radius:99px;color:#ffe9f2;border:1px solid rgba(255,158,196,.4);background:rgba(255,158,196,.12)}
+  .card-syn{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-top:3px}
+  .card-syn i{font-style:normal;font-size:.56rem;padding:1px 6px;border-radius:99px;color:#ffd9ec;border:1px solid rgba(255,158,196,.35);background:rgba(255,158,196,.10);white-space:nowrap}
+  .stat-card{border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.04);padding:10px 12px;margin-bottom:8px;text-align:left}
+  .stat-card h3{margin:0 0 6px;font-size:.82rem;color:#fff;display:flex;align-items:center;gap:6px}
+  .stat-card h3 em{font-style:normal;font-size:.62rem;color:#ff9ec4}
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 8px;font-size:.7rem;color:#cfc7e0}
+  .stat-grid b{color:#fff;font-variant-numeric:tabular-nums}
   .syn-preview{margin-top:2px;font-size:.64rem;color:#9c93b4}
   .syn-preview.up{color:#ffd9a0}
   .syn-preview.down{color:#ff8a9c}
@@ -308,6 +315,7 @@
   <div class="topbtns">
     <button type="button" id="btn-new" aria-label="重开">🔄</button>
     <button type="button" id="btn-help" aria-label="说明">❓</button>
+    <button type="button" id="btn-stats" aria-label="查看队伍属性">ℹ️</button>
     <button type="button" id="btn-sound" aria-label="声音开关">🔊</button>
   </div>
 
@@ -393,6 +401,16 @@
         <p class="shop-gold">金币 <b id="shop-gold">0</b></p>
         <div class="meta-list" id="shop-list" style="width:100%;max-width:400px"></div>
         <button class="btn ghost" id="shop-close" type="button">走了</button>
+      </div>
+    </div>
+
+    <div class="ov ov-global" id="ov-stats" hidden>
+      <div class="item-card" style="max-width:430px;align-items:stretch">
+        <div class="item-icon">📊</div>
+        <h2>队伍终极面板</h2>
+        <p>已计入天赋、奇物、被动与所有激活羁绊。</p>
+        <div id="stats-list"></div>
+        <button class="btn" id="stats-close" type="button">关闭</button>
       </div>
     </div>
 
@@ -1215,6 +1233,7 @@
     { id: 'chaos', name: '混沌乐子人', members: ['thanos', 'pig', 'nailong', 'taffy'], tiers: [{ n: 2, desc: '全队生命上限 +5，受击 10% 免疫' }, { n: 4, desc: '生命上限 +15，击杀 20% 掉落' }] },
     { id: 'abyss', name: '深渊守望者', members: ['murasame', 'fatcat', 'mimi'], tiers: [{ n: 2, desc: '全队闪避 +15%' }, { n: 3, desc: '闪避成功后反击周围敌人' }] },
     { id: 'elder', name: '不可名状之神', members: ['dem', 'mimi'], tiers: [{ n: 2, desc: '全属性 +20%，每走 10 步秒杀一个小怪' }] },
+    { id: 'train', name: '星穹列车组', members: ['trailblazer', 'march', 'danheng'], tiers: [{ n: 2, desc: '全队攻击 +1' }, { n: 3, desc: '攻击 +2、暴击 +10%' }] },
   ]
 
   /* ---------------- 可叠加被动遗物 ---------------- */
@@ -1592,7 +1611,21 @@
       }
     }
 
+    // 星穹列车组：全队攻击
+    var wantAtk = next.train >= 3 ? 2 : next.train >= 2 ? 1 : 0
+    if (wantAtk !== (S.synAtk || 0)) {
+      var dAtk = wantAtk - (S.synAtk || 0)
+      S.synAtk = wantAtk
+      S.atk = Math.max(1, S.atk + dAtk)
+      for (var ai2 = 0; ai2 < S.team.length; ai2++) {
+        var am2 = S.team[ai2]
+        if (am2.dead) continue
+        am2.atk = Math.max(1, am2.atk + dAtk)
+      }
+    }
+
     var wantCrit = next.otaku >= 3 ? 0.30 : next.otaku >= 2 ? 0.15 : 0
+    if (next.train >= 3) wantCrit += 0.10
     if (wantCrit !== (S.synCrit || 0)) {
       S.crit += wantCrit - (S.synCrit || 0)
       S.synCrit = wantCrit
@@ -1771,6 +1804,7 @@
 
   function closeShop() {
     if (ovShop) ovShop.hidden = true
+    if ($('ov-stats')) $('ov-stats').hidden = true
     if (S) S.paused = false
     render()
     syncHud()
@@ -1868,6 +1902,75 @@
         }
       } catch (err) { /* ignore */ }
     })
+  }
+
+  /* ---------------- 队伍终极面板 ---------------- */
+  function leechValue() {
+    return (S.hero.id === 'thanos' ? 1 : 0) + (S.relics && S.relics.leech ? 1 : 0) + (S.leech || 0)
+  }
+
+  function renderStats() {
+    var box = $('stats-list')
+    if (!box || !S) return
+    box.innerHTML = ''
+    var crit = Math.round(S.crit * 100)
+    var dodge = Math.round(S.dodge * 100)
+    var thorns = S.thorns || 0
+    var leech = leechValue()
+    var vis = S.vision
+
+    function card(icon, name, tag, atk, hp, maxHp) {
+      var c = document.createElement('div')
+      c.className = 'stat-card'
+      var h3 = document.createElement('h3')
+      h3.textContent = icon + ' ' + name
+      var em = document.createElement('em')
+      em.textContent = tag
+      h3.appendChild(em)
+      c.appendChild(h3)
+      var g = document.createElement('div')
+      g.className = 'stat-grid'
+      var rows = [
+        ['生命', Math.max(0, hp) + '/' + maxHp],
+        ['攻击', atk],
+        ['暴击', crit + '%'],
+        ['闪避', dodge + '%'],
+        ['反伤', thorns],
+        ['吸血', leech],
+        ['视野', vis],
+      ]
+      for (var i = 0; i < rows.length; i++) {
+        var sp = document.createElement('span')
+        sp.textContent = rows[i][0] + ' '
+        var b = document.createElement('b')
+        b.textContent = String(rows[i][1])
+        sp.appendChild(b)
+        g.appendChild(sp)
+      }
+      c.appendChild(g)
+      box.appendChild(c)
+    }
+
+    card(S.hero.emoji || '👤', S.hero.name, '主角', S.atk, S.hp, S.maxHp)
+    for (var i = 0; i < S.team.length; i++) {
+      var m = S.team[i]
+      var hh = heroById(m.heroId)
+      card(hh ? hh.emoji : '👤', hh ? hh.name : '队友', m.dead ? '已阵亡' : '队友', m.atk, m.hp, m.maxHp)
+    }
+  }
+
+  function openStats() {
+    if (!S || !$('ov-stats')) return
+    S.paused = true
+    renderStats()
+    $('ov-stats').hidden = false
+  }
+
+  function closeStats() {
+    if ($('ov-stats')) $('ov-stats').hidden = true
+    if (S) S.paused = false
+    render()
+    syncHud()
   }
 
   /* ---------------- 记忆存档 ---------------- */
@@ -3568,6 +3671,17 @@
         b.addEventListener('click', openMeta)
       } else {
         b.innerHTML = '<b>' + (h.emoji || '') + ' ' + h.name + '</b><i>' + h.desc + '</i>'
+        var syn = heroSynergies(h.id)
+        if (syn.length) {
+          var tags = document.createElement('span')
+          tags.className = 'card-syn'
+          for (var si = 0; si < syn.length; si++) {
+            var ti = document.createElement('i')
+            ti.textContent = '【' + syn[si] + '】'
+            tags.appendChild(ti)
+          }
+          b.appendChild(tags)
+        }
         b.addEventListener('click', function () { start(h.id) })
       }
       pickEl.appendChild(b)
@@ -3600,6 +3714,8 @@
   }
   if (btnNew) btnNew.addEventListener('click', function () { restart() })
   if (itemTake) itemTake.addEventListener('click', closeItemCard)
+  if ($('btn-stats')) $('btn-stats').addEventListener('click', openStats)
+  if ($('stats-close')) $('stats-close').addEventListener('click', closeStats)
   if ($('btn-sound')) $('btn-sound').addEventListener('click', function () {
     var m = SND.toggleMute()
     this.textContent = m ? '🔇' : '🔊'
