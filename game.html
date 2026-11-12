@@ -184,7 +184,7 @@
 
     <div class="ov" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击。<br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。</p>
+      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」，撞上就互相扣。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
     </div>
 
@@ -245,7 +245,7 @@
 
   var ENEMIES = {
     shard: { id: 'shard', name: '碎片', glyph: '✦', color: '#ff4d5e', hp: 3, atk: 1, chase: 4 },
-    shade: { id: 'shade', name: '残影', glyph: '◍', color: '#ff7a3c', hp: 5, atk: 2, chase: 5 },
+    shade: { id: 'shade', name: '残影', glyph: '◍', color: '#d92b45', hp: 5, atk: 2, chase: 5 },
     tomb: { id: 'tomb', name: '铁墓', glyph: '☗', color: '#ffd9a0', hp: 24, atk: 4, chase: 99 }
   }
 
@@ -373,7 +373,7 @@
       enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: bhp, max: bhp, atk: 1 + ((floor / 2) | 0), name: '铁墓' })
     }
 
-    var nEnemy = isBoss ? 2 : 2 + Math.min(4, floor)
+    var nEnemy = isBoss ? 3 : 2 + Math.min(3, floor)
     for (var e = 0; e < nEnemy; e++) {
       for (var t = 0; t < 60; t++) {
         var ex = 1 + rnd(MAP_W - 2), ey = 1 + rnd(MAP_H - 2)
@@ -385,15 +385,23 @@
       }
     }
 
-    // 起点附近强制放两只，保证一进游戏就能看到敌人
-    for (var n2 = 0; n2 < 1; n2++) {
-      for (var t2 = 0; t2 < 80; t2++) {
-        var gx = start.x + rnd(9) - 4, gy = start.y + rnd(9) - 4
-        if (gx < 1 || gy < 1 || gx >= MAP_W - 1 || gy >= MAP_H - 1) continue
-        if (Math.abs(gx - start.x) + Math.abs(gy - start.y) < 2) continue
+    // 起点房间里必定有 3 只：一进游戏就不安静
+    var home = rooms[0]
+    for (var n2 = 0; n2 < 2; n2++) {
+      for (var t2 = 0; t2 < 60; t2++) {
+        var gx = home.x + (home.w > 2 ? rnd(home.w - 2) + 1 : 0)
+        var gy = home.y + (home.h > 2 ? rnd(home.h - 2) + 1 : 0)
+        if (gx === start.x && gy === start.y) continue
         if (!free(gx, gy)) continue
-        var nearHp = ENEMIES.shard.hp
-        enemies.push({ type: 'shard', x: gx, y: gy, hp: nearHp, max: nearHp, atk: ENEMIES.shard.atk, name: ENEMIES.shard.name })
+        var isShade = rnd(100) < 30
+        var nearBase = isShade ? ENEMIES.shade : ENEMIES.shard
+        var nearHp = nearBase.hp + Math.floor(floor / 2)
+        enemies.push({
+          type: isShade ? 'shade' : 'shard',
+          x: gx, y: gy, hp: nearHp, max: nearHp,
+          atk: nearBase.atk + Math.floor(floor / 3),
+          name: nearBase.name,
+        })
         break
       }
     }
@@ -632,6 +640,16 @@
       log('升到 Lv.' + S.level + '，记忆里多出一条路。')
     }
 
+    // 掉落：药水多，遗物少
+    if (rnd(100) < 45) {
+      var isRelic = rnd(100) < 30
+      var drop = { x: e.x, y: e.y, kind: isRelic ? 'relic' : 'potion' }
+      if (isRelic) drop.relic = pick(Object.keys(RELICS))
+      S.items.push(drop)
+      log('掉落：' + (isRelic ? '一件遗物' : '一瓶药水') + '。')
+      fx(e.x, e.y, '掉落', '#ffd9a0')
+    }
+
     var heal = (S.hero.id === 'thanos' ? 1 : 0) + (S.relics.leech ? 1 : 0) + (S.leech || 0)
     if (heal) S.hp = Math.min(S.maxHp, S.hp + heal)
 
@@ -650,7 +668,7 @@
   }
 
   function hitEnemy(e) {
-    var dmg = S.atk + rnd(2)
+    var dmg = S.atk
     var crit = Math.random() < S.crit
     if (crit) dmg = dmg * 2
     e.hp -= dmg
@@ -682,7 +700,7 @@
       var dist = Math.abs(dx) + Math.abs(dy)
       if (dist === 1) {
         if (e.type === 'tomb' && Math.random() < .3) { log('铁墓这一锤落空。'); continue }
-        hurtPlayer(e.atk + rnd(2), e); if (S.over) return; continue
+        hurtPlayer(e.atk, e); if (S.over) return; continue
       }
       var base = ENEMIES[e.type]
       var chase = base ? base.chase : 5
@@ -699,7 +717,7 @@
       if (S.grid[ny][nx] === WALL) continue
       if (nx === S.player.x && ny === S.player.y) {
         if (e.type === 'tomb' && Math.random() < .3) { log('铁墓这一锤落空。'); continue }
-        hurtPlayer(e.atk + rnd(2), e); if (S.over) return; continue
+        hurtPlayer(e.atk, e); if (S.over) return; continue
       }
       if (enemyAt(nx, ny)) continue
       e.x = nx; e.y = ny
@@ -922,30 +940,57 @@
       }
     }
 
-    // 敌人：碎片=实心菱形，残影=空心环，铁墓=方框加十字
+    // 敌人：红色怨灵（发光的眼睛），铁墓是金色方框
     for (var j = 0; j < S.enemies.length; j++) {
       var e = S.enemies[j]
       if (e.hp <= 0 || !S.vis[e.x + ',' + e.y]) continue
       var base = ENEMIES[e.type] || ENEMIES.shard
       var ex = (e.x - camX) * TS + TS / 2, ey = (e.y - camY) * TS + TS / 2
-      ctx.strokeStyle = base.color; ctx.fillStyle = base.color
-      ctx.lineWidth = Math.max(1.5, TS * .07)
+      var pulse = 0.5 + 0.5 * Math.sin(Date.now() / 320 + e.x * 0.7 + e.y)
+
       if (e.type === 'tomb') {
+        ctx.strokeStyle = base.color
+        ctx.lineWidth = Math.max(1.5, TS * .07)
         var half = TS * .24
         ctx.strokeRect(ex - half, ey - half, half * 2, half * 2)
         ctx.beginPath()
         ctx.moveTo(ex, ey - half * .55); ctx.lineTo(ex, ey + half * .55)
         ctx.moveTo(ex - half * .55, ey); ctx.lineTo(ex + half * .55, ey)
         ctx.stroke()
-      } else if (e.type === 'shade') {
-        ctx.beginPath(); ctx.arc(ex, ey, TS * .2, 0, Math.PI * 2); ctx.stroke()
-        ctx.beginPath(); ctx.arc(ex, ey, TS * .07, 0, Math.PI * 2); ctx.fill()
       } else {
+        // 外发光
+        ctx.fillStyle = 'rgba(255,77,94,' + (0.07 + 0.10 * pulse) + ')'
         ctx.beginPath()
-        ctx.moveTo(ex, ey - TS * .2); ctx.lineTo(ex + TS * .17, ey)
-        ctx.lineTo(ex, ey + TS * .2); ctx.lineTo(ex - TS * .17, ey)
-        ctx.closePath(); ctx.fill()
+        ctx.arc(ex, ey, TS * (0.38 + 0.06 * pulse), 0, Math.PI * 2)
+        ctx.fill()
+        // 幽灵身体：上半圆 + 波浪下摆
+        var rr = TS * (e.type === 'shade' ? 0.20 : 0.16)
+        ctx.beginPath()
+        ctx.arc(ex, ey - TS * .04, rr, Math.PI, 0)
+        ctx.lineTo(ex + rr, ey + rr * .75)
+        ctx.quadraticCurveTo(ex + rr * .5, ey + rr * 1.25, ex, ey + rr * .7)
+        ctx.quadraticCurveTo(ex - rr * .5, ey + rr * 1.25, ex - rr, ey + rr * .75)
+        ctx.closePath()
+        ctx.fillStyle = base.color
+        ctx.fill()
+        // 发光的眼睛
+        var eyeR = Math.max(1.3, rr * .27)
+        ctx.fillStyle = '#ffe9ec'
+        ctx.beginPath(); ctx.arc(ex - rr * .42, ey - TS * .07, eyeR, 0, Math.PI * 2); ctx.fill()
+        ctx.beginPath(); ctx.arc(ex + rr * .42, ey - TS * .07, eyeR, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = '#26060c'
+        ctx.beginPath(); ctx.arc(ex - rr * .42, ey - TS * .07, Math.max(.8, eyeR * .45), 0, Math.PI * 2); ctx.fill()
+        ctx.beginPath(); ctx.arc(ex + rr * .42, ey - TS * .07, Math.max(.8, eyeR * .45), 0, Math.PI * 2); ctx.fill()
       }
+
+      // 相邻时显示它的攻击力（伤害就是按这个算的）
+      if (Math.abs(e.x - S.player.x) + Math.abs(e.y - S.player.y) === 1) {
+        ctx.fillStyle = 'rgba(255,120,130,.95)'
+        ctx.font = Math.round(TS * .4) + 'px -apple-system,"PingFang SC",sans-serif'
+        ctx.fillText('攻' + e.atk, ex, ey - TS * .5)
+        ctx.font = Math.round(TS * .62) + 'px -apple-system,"PingFang SC",sans-serif'
+      }
+
       // 受过伤的敌人头顶挂一条血条
       if (e.max && e.hp > 0 && e.hp < e.max) {
         var bw = TS * .66, bh = Math.max(2, TS * .09)
