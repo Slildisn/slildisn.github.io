@@ -1409,30 +1409,6 @@ body::after{
   .hero-links .foot-police em{display:none}   /* 窄屏去掉「安卓 · 应用宝」小字 */
 }
 
-/* ---------- 「萝莉」按钮（粉） ---------- */
-.foot-link.link-loli{
-  border-color:rgba(255,150,200,.38);
-  background:linear-gradient(120deg,rgba(255,120,190,.12),rgba(200,120,255,.10));
-  color:#ffd6ee;
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  letter-spacing:.18em;
-}
-.foot-link.link-loli:hover{
-  border-color:rgba(255,150,200,.75);
-  background:linear-gradient(120deg,rgba(255,120,190,.22),rgba(200,120,255,.18));
-  color:#fff;
-}
-.loli-dot{
-  width:7px;height:7px;border-radius:50%;
-  background:#ff8fd0;
-  box-shadow:0 0 10px rgba(255,143,208,.9);
-  animation:loliBlink 2.4s ease-in-out infinite;
-}
-@keyframes loliBlink{0%,100%{opacity:.4;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
-@media (prefers-reduced-motion:reduce){
-  .loli-dot{animation:none;opacity:.9}
-}
-
 /* ============================================================
    「变坏」主题
    ============================================================ */
@@ -2076,7 +2052,6 @@ html.theme-hazard .panel-btn.active{
   background:rgba(247,210,0,.28);border-color:#f7d200;color:#fff;
 }
 html.theme-hazard .virus-dot,
-html.theme-hazard .loli-dot,
 html.theme-hazard .panel-dot,
 html.theme-hazard .theme-dot{
   background:#f7d200;box-shadow:0 0 10px rgba(247,210,0,.9);
@@ -2130,7 +2105,6 @@ html.theme-ocean .foot-link:hover,
 html.theme-ocean .panel-btn:hover,
 html.theme-ocean .panel-btn.active{border-color:#4fd2ff;background:rgba(79,210,255,.2);color:#fff}
 html.theme-ocean .virus-dot,
-html.theme-ocean .loli-dot,
 html.theme-ocean .panel-dot,
 html.theme-ocean .theme-dot{background:#4fd2ff;box-shadow:0 0 10px rgba(79,210,255,.9)}
 html.theme-ocean .btn-play{border-color:rgba(79,210,255,.55);background:linear-gradient(120deg,rgba(79,210,255,.18),rgba(42,143,208,.14));box-shadow:0 10px 30px -14px rgba(79,210,255,.7)}
@@ -2172,7 +2146,6 @@ html.theme-neon .foot-link:hover,
 html.theme-neon .panel-btn:hover,
 html.theme-neon .panel-btn.active{border-color:#4dff9e;background:rgba(77,255,158,.2);color:#fff}
 html.theme-neon .virus-dot,
-html.theme-neon .loli-dot,
 html.theme-neon .panel-dot,
 html.theme-neon .theme-dot{background:#4dff9e;box-shadow:0 0 10px rgba(77,255,158,1)}
 html.theme-neon .btn-play{border-color:rgba(77,255,158,.55);background:linear-gradient(120deg,rgba(77,255,158,.16),rgba(0,180,120,.12));box-shadow:0 10px 30px -14px rgba(77,255,158,.75)}
@@ -2348,7 +2321,6 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
       <div class="hero-links">
         <a class="foot-gh" href="https://github.com/Slildisn/slildisn.github.io" target="_blank" rel="noopener noreferrer">在 GitHub 上看这个页面 ↗</a>
         <a class="foot-link foot-virus" href="https://mxdfghsh.github.io/pocket-tools/" target="_blank" rel="noopener noreferrer" title="口袋小站 · Pocket Tools"><span class="virus-dot"></span>病毒</a>
-        <a class="foot-link link-loli" href="https://zhaopin.sgcc.com.cn/sgcchr/static/webviews/index.html#/unitsList" target="_blank" rel="noopener noreferrer" title="国家电网招聘"><span class="loli-dot"></span>萝莉</a>
         <button type="button" class="foot-link theme-btn" id="theme-btn" aria-pressed="false"><span class="theme-dot"></span><span id="theme-label">变坏主题</span></button>
                 <button type="button" class="foot-link panel-btn" data-open="chat"><span class="panel-dot"></span>窗户型号</button>
 <button type="button" class="foot-link panel-btn" data-open="game"><span class="panel-dot"></span>守夜 · 记忆回廊</button>
