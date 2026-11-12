@@ -153,6 +153,12 @@
       <div class="pick" id="pick"></div>
       <p class="seed" id="seed-line">种子 —</p>
     </div>
+    <div class="ov" id="ov-help" hidden>
+      <h2>怎么玩</h2>
+      <p>方向键走一步，撞到敌人就是攻击。<br>粉色 ♥ 是药水，金色 ◇ 是遗物，金色 ⌄ 是下一层。<br>第 5 层是铁墓，它每锤都有 30% 落空。<br>死了就从第 1 层重来，最高层会记在这台设备上。</p>
+      <button class="btn" id="help-close" type="button">知道了</button>
+    </div>
+
     <div class="ov" id="ov-end" hidden>
       <div class="big" id="end-big">✦</div>
       <h2 id="end-title">—</h2>
@@ -355,7 +361,7 @@
   }
 
   function computeFov() {
-    var p = S.player, r = S.player.vision
+    var p = S.player, r = S.vision
     var vis = {}
     for (var y = Math.max(0, p.y - r); y <= Math.min(MAP_H - 1, p.y + r); y++) {
       for (var x = Math.max(0, p.x - r); x <= Math.min(MAP_W - 1, p.x + r); x++) {
@@ -673,43 +679,82 @@
       }
     }
 
-    // 楼梯
+    // 楼梯：向下的箭头
     var st = S.stairs
     if (st && S.vis[st.x + ',' + st.y]) {
-      ctx.fillStyle = '#ffd9a0'
-      ctx.fillText('⌄', (st.x - camX) * TS + TS / 2, (st.y - camY) * TS + TS / 2 + 1)
+      var sx0 = (st.x - camX) * TS + TS / 2, sy0 = (st.y - camY) * TS + TS / 2
+      ctx.strokeStyle = '#ffd9a0'
+      ctx.lineWidth = Math.max(2, TS * .09)
+      ctx.beginPath()
+      ctx.moveTo(sx0 - TS * .18, sy0 - TS * .1)
+      ctx.lineTo(sx0, sy0 + TS * .12)
+      ctx.lineTo(sx0 + TS * .18, sy0 - TS * .1)
+      ctx.stroke()
     }
 
-    // 道具
+    // 道具：药水=粉色圆点带十字，遗物=金色菱形
     for (var i = 0; i < S.items.length; i++) {
       var it = S.items[i]
       if (!S.vis[it.x + ',' + it.y]) continue
       var ix = (it.x - camX) * TS + TS / 2, iy = (it.y - camY) * TS + TS / 2
-      if (it.kind === 'potion') { ctx.fillStyle = '#ff9ec4'; ctx.fillText('♥', ix, iy) }
-      else { ctx.fillStyle = '#ffd9a0'; ctx.fillText('◇', ix, iy) }
+      if (it.kind === 'potion') {
+        ctx.fillStyle = '#ff9ec4'
+        ctx.beginPath(); ctx.arc(ix, iy, TS * .17, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = '#1b1020'
+        ctx.fillRect(ix - TS * .11, iy - TS * .035, TS * .22, TS * .07)
+        ctx.fillRect(ix - TS * .035, iy - TS * .11, TS * .07, TS * .22)
+      } else {
+        ctx.strokeStyle = '#ffd9a0'
+        ctx.lineWidth = Math.max(1.5, TS * .07)
+        ctx.beginPath()
+        ctx.moveTo(ix, iy - TS * .2); ctx.lineTo(ix + TS * .17, iy)
+        ctx.lineTo(ix, iy + TS * .2); ctx.lineTo(ix - TS * .17, iy)
+        ctx.closePath(); ctx.stroke()
+      }
     }
 
-    // 敌人
+    // 敌人：碎片=实心菱形，残影=空心环，铁墓=方框加十字
     for (var j = 0; j < S.enemies.length; j++) {
       var e = S.enemies[j]
       if (e.hp <= 0 || !S.vis[e.x + ',' + e.y]) continue
       var base = ENEMIES[e.type] || ENEMIES.shard
-      ctx.fillStyle = base.color
-      ctx.fillText(base.glyph, (e.x - camX) * TS + TS / 2, (e.y - camY) * TS + TS / 2)
+      var ex = (e.x - camX) * TS + TS / 2, ey = (e.y - camY) * TS + TS / 2
+      ctx.strokeStyle = base.color; ctx.fillStyle = base.color
+      ctx.lineWidth = Math.max(1.5, TS * .07)
+      if (e.type === 'tomb') {
+        var half = TS * .24
+        ctx.strokeRect(ex - half, ey - half, half * 2, half * 2)
+        ctx.beginPath()
+        ctx.moveTo(ex, ey - half * .55); ctx.lineTo(ex, ey + half * .55)
+        ctx.moveTo(ex - half * .55, ey); ctx.lineTo(ex + half * .55, ey)
+        ctx.stroke()
+      } else if (e.type === 'shade') {
+        ctx.beginPath(); ctx.arc(ex, ey, TS * .2, 0, Math.PI * 2); ctx.stroke()
+        ctx.beginPath(); ctx.arc(ex, ey, TS * .07, 0, Math.PI * 2); ctx.fill()
+      } else {
+        ctx.beginPath()
+        ctx.moveTo(ex, ey - TS * .2); ctx.lineTo(ex + TS * .17, ey)
+        ctx.lineTo(ex, ey + TS * .2); ctx.lineTo(ex - TS * .17, ey)
+        ctx.closePath(); ctx.fill()
+      }
     }
 
-    // 玩家
+    // 玩家：白色圆点 + 玫瑰描边（不依赖字体，任何设备都能显示）
     var pxx = (S.player.x - camX) * TS + TS / 2, pyy = (S.player.y - camY) * TS + TS / 2
-    ctx.fillStyle = 'rgba(255,158,196,.20)'
-    ctx.beginPath(); ctx.arc(pxx, pyy, TS * 0.46, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = 'rgba(255,158,196,.2)'
+    ctx.beginPath(); ctx.arc(pxx, pyy, TS * .46, 0, Math.PI * 2); ctx.fill()
     ctx.fillStyle = '#fff'
-    ctx.fillText('✦', pxx, pyy)
+    ctx.beginPath(); ctx.arc(pxx, pyy, TS * .27, 0, Math.PI * 2); ctx.fill()
+    ctx.strokeStyle = '#ff9ec4'
+    ctx.lineWidth = Math.max(1.5, TS * .07)
+    ctx.beginPath(); ctx.arc(pxx, pyy, TS * .27, 0, Math.PI * 2); ctx.stroke()
   }
 
   /* ---------------- 输入 ---------------- */
   var DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }
 
   function doDir(name) {
+    if (!running) { start(S ? S.hero.id : 'murasame'); return true }
     if (name === 'wait') return act(0, 0, true)
     var d = DIRS[name]
     if (!d) return false
@@ -769,6 +814,17 @@
     running = true
     fit(); render(); syncHud()
   }
+
+  /* ---------------- 按钮 ---------------- */
+  var btnNew = $('btn-new'), btnHelp = $('btn-help'), helpOv = $('ov-help'), helpClose = $('help-close')
+  function restart(heroId) {
+    var id = heroId || (S ? S.hero.id : 'murasame')
+    if (ovEnd) ovEnd.hidden = true
+    start(id)
+  }
+  if (btnNew) btnNew.addEventListener('click', function () { restart() })
+  if (btnHelp && helpOv) btnHelp.addEventListener('click', function () { helpOv.hidden = false })
+  if (helpClose && helpOv) helpClose.addEventListener('click', function () { helpOv.hidden = true })
 
   /* ---------------- 生命周期 ---------------- */
   function boot() {
