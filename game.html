@@ -38,17 +38,30 @@
   .mark{margin-left:auto;font-size:.7rem;letter-spacing:.34em;color:var(--rose);opacity:.85}
 
   h1{
-    margin:4px 0 2px;font-size:1.32rem;font-weight:600;letter-spacing:.04em;
+    margin:2px 0 0;font-size:1.06rem;font-weight:600;letter-spacing:.03em;
     font-family:"Songti SC","Noto Serif SC",STSong,serif;
   }
-  .sub{margin:0 0 12px;color:var(--dim);font-size:.78rem}
+  .sub{margin:0 0 6px;color:var(--dim);font-size:.7rem;opacity:.85}
+
+  .topbtns{
+    position:fixed;top:calc(env(safe-area-inset-top, 0px) + 8px);right:10px;
+    z-index:9999;display:flex;gap:6px
+  }
+  .topbtns button{
+    width:34px;height:34px;padding:0;border-radius:50%;
+    border:1px solid rgba(255,158,196,.35);background:rgba(20,14,30,.55);
+    color:#ffe9f2;font-size:15px;line-height:1;backdrop-filter:blur(4px);
+    display:grid;place-items:center;touch-action:manipulation
+  }
+  .topbtns button:active{background:rgba(255,158,196,.3)}
 
   /* HUD */
   .hud{
-    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-    padding:9px 11px;border:1px solid var(--line);border-radius:14px;
-    background:rgba(255,255,255,.03);margin-bottom:8px;
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:8px 10px;border:1px solid var(--line);border-radius:14px;
+    background:rgba(255,255,255,.03);margin-bottom:6px;
   }
+  .hud .team-strip{flex-basis:100%;margin:2px 0 0}
   .hpwrap{flex:1 1 130px;min-width:120px}
   .hpline{display:flex;justify-content:space-between;font-size:.7rem;color:var(--dim);margin-bottom:4px;font-variant-numeric:tabular-nums}
   .hpbar{height:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
@@ -286,6 +299,12 @@
     <span class="mark">CYRENE</span>
   </header>
 
+  <div class="topbtns">
+    <button type="button" id="btn-new" aria-label="重开">🔄</button>
+    <button type="button" id="btn-help" aria-label="说明">❓</button>
+    <button type="button" id="btn-sound" aria-label="声音开关">🔊</button>
+  </div>
+
   <h1 id="game-title">铁墓大乱斗</h1>
   <p class="sub">从灭霸开始 —— 回合制地牢，一层一层往下砸，直到铁墓先倒下。</p>
 
@@ -302,9 +321,8 @@
     <span class="stat">门 <b id="h-dir">—</b></span>
     <span class="relics" id="h-relics"></span>
     <span class="relics" id="h-talents"></span>
+    <div class="team-strip" id="team-strip" hidden></div>
   </div>
-
-  <div class="team-strip" id="team-strip" hidden></div>
   <div class="syn-panel" id="syn-panel" hidden></div>
   <div class="toast" id="toast" hidden></div>
 
@@ -408,7 +426,7 @@
 
     <div class="ov ov-global ov-tapclose" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>走到光门上会先弹出<b>招募面板</b>：三选一招募队友（最多 4 人，满员会替换最早那位）；卡片上有羁绊标签和「招募后激活哪些羁绊」的预判。队友踩着你的历史路径跟随，不会穿墙；他们凑齐会触发<b>羁绊</b>（左上角显示）。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
+      <p>在画面上滑动走一步（电脑用方向键/WASD），撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>走到光门上会先弹出<b>招募面板</b>：三选一招募队友（最多 4 人，满员会替换最早那位）；卡片上有羁绊标签和「招募后激活哪些羁绊」的预判。队友踩着你的历史路径跟随，不会穿墙；他们凑齐会触发<b>羁绊</b>（左上角显示）。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
       <p class="tap-hint">点任意位置也能关掉</p>
     </div>
@@ -423,26 +441,8 @@
 
   <div class="log" id="log"><p>选好角色，开始吧。</p></div>
 
-  <div class="ctrl">
-    <div class="dpad">
-      <span class="sp"></span>
-      <button type="button" data-dir="0,-1" aria-label="上">↑</button>
-      <span class="sp"></span>
-      <button type="button" data-dir="-1,0" aria-label="左">←</button>
-      <button type="button" class="wait" data-dir="wait" aria-label="原地等待">等</button>
-      <button type="button" data-dir="1,0" aria-label="右">→</button>
-      <span class="sp"></span>
-      <button type="button" data-dir="0,1" aria-label="下">↓</button>
-      <span class="sp"></span>
-    </div>
-    <div class="side">
-      <button type="button" id="btn-new">重开</button>
-      <button type="button" id="btn-help">说明</button>
-      <button type="button" id="btn-sound" aria-label="声音开关">🔊</button>
-    </div>
-  </div>
+  <p class="hint">在画面上滑动即可移动，撞到敌人就是攻击。</p>
 
-  <p class="hint">点方向键 / 键盘方向键 / 在画面上滑动都能走一步 · 撞到敌人就是攻击</p>
 </div>
 
 <script>
@@ -2176,6 +2176,10 @@
   }
 
   /* ---------------- 开局 ---------------- */
+  function refreshLog() {
+    if (logEl) logEl.innerHTML = ''
+  }
+
   function newRun(heroId, seed) {
     var hero = null
     for (var i = 0; i < HEROES.length; i++) if (HEROES[i].id === heroId) hero = HEROES[i]
@@ -2253,6 +2257,7 @@
       bonusXp: 0,
       floorHeal: 0
     }
+    refreshLog()
 
     var m = genMap(1, seed)
     S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
@@ -2263,7 +2268,7 @@
     S.team = []
     S.trail = [{ x: m.start.x, y: m.start.y }]
     computeSynergy()
-    log('你是「' + hero.name + '」。第 1 层，回廊还在往下延伸。')
+    refreshLog()
     SND.ambience('calm')
     SND.music('calm')
     computeFov()
@@ -2301,7 +2306,7 @@
     META.best = Math.max(META.best, S.floor)
     saveMeta()
     syncMetaBar()
-    log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + (S.floor % 5 === 0 ? '铁墓守着门。' : ''))
+    if (S.steps > 0) log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + (S.floor % 5 === 0 ? '铁墓守着门。' : ''))
     computeFov(); render(); syncHud()
     saveRun()
   }
@@ -2749,6 +2754,7 @@
   /* ---------------- 行动 ---------------- */
   function act(dx, dy, wait) {
     if (!S || S.over || !running || choosing || itemOpen || S.paused) return false
+    if (S.inputLockUntil && Date.now() < S.inputLockUntil) return false
     if (!wait) {
       var nx = S.player.x + dx, ny = S.player.y + dy
       if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return false
@@ -2799,6 +2805,7 @@
     enemiesTurn()
     if (S.over) return true
     computeFov(); render(); syncHud()
+    S.inputLockUntil = Date.now() + 110
     saveRun()
     return true
   }
@@ -2905,22 +2912,8 @@
     if (hDir) hDir.textContent = dirArrow()
     if (teamStrip) {
       teamStrip.innerHTML = ''
-      if (true) {
+      if (S.team && S.team.filter(function (m) { return !m.dead }).length) {
         teamStrip.hidden = false
-        var meChip = document.createElement('span')
-        meChip.className = 'tchip me'
-        var meEm = document.createElement('span')
-        meEm.className = 'tem'
-        meEm.textContent = S.hero.emoji || '👤'
-        var meNm = document.createElement('span')
-        meNm.textContent = S.hero.name + ' ' + Math.max(0, S.hp) + '/' + S.maxHp
-        var meBar = document.createElement('span')
-        meBar.className = 'tbar'
-        var meFill = document.createElement('i')
-        meFill.style.width = Math.max(0, Math.min(100, (S.hp / S.maxHp) * 100)) + '%'
-        meBar.appendChild(meFill)
-        meChip.appendChild(meEm); meChip.appendChild(meNm); meChip.appendChild(meBar)
-        teamStrip.appendChild(meChip)
         S.team.forEach(function (m) {
           var hh = heroById(m.heroId)
           var maxH = m.maxHp || (hh ? hh.hp : 10)
@@ -3497,26 +3490,40 @@
     else if (k === ' ' || k === '.') { e.preventDefault(); doDir('wait') }
   })
 
-  var buttons = document.querySelectorAll('[data-dir]')
-  Array.prototype.forEach.call(buttons, function (b) {
-    b.addEventListener('click', function () {
-      var v = b.getAttribute('data-dir')
-      if (v === 'wait') return doDir('wait')
-      var xy = v.split(',')
-      return act(Number(xy[0]), Number(xy[1]), false)
-    })
-  })
+  bindSwipe()
 
-  // 滑动
-  var touch = null
-  if (cv) {
-    cv.addEventListener('pointerdown', function (e) { touch = { x: e.clientX, y: e.clientY } })
-    cv.addEventListener('pointerup', function (e) {
-      if (!touch) return
-      var dx = e.clientX - touch.x, dy = e.clientY - touch.y
-      touch = null
-      if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return
-      if (Math.abs(dx) > Math.abs(dy)) doDir(dx > 0 ? 'right' : 'left')
+  // 滑动：touchstart / touchend，超过 30px 判定方向，一次一步
+  var swipeStart = null
+  var SWIPE_MIN = 30
+
+  function bindSwipe() {
+    if (!cv) return
+    cv.addEventListener('touchstart', function (e) {
+      if (!e.touches || !e.touches.length) return
+      swipeStart = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    }, { passive: true })
+
+    cv.addEventListener('touchend', function (e) {
+      if (!swipeStart) return
+      var t = (e.changedTouches && e.changedTouches[0]) || null
+      if (!t) { swipeStart = null; return }
+      var dx = t.clientX - swipeStart.x
+      var dy = t.clientY - swipeStart.y
+      swipeStart = null
+      if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return
+      if (Math.abs(dx) >= Math.abs(dy)) doDir(dx > 0 ? 'right' : 'left')
+      else doDir(dy > 0 ? 'down' : 'up')
+    }, { passive: true })
+
+    // 桌面端鼠标拖拽也能走
+    var mDown = null
+    cv.addEventListener('mousedown', function (e) { mDown = { x: e.clientX, y: e.clientY } })
+    cv.addEventListener('mouseup', function (e) {
+      if (!mDown) return
+      var dx = e.clientX - mDown.x, dy = e.clientY - mDown.y
+      mDown = null
+      if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return
+      if (Math.abs(dx) >= Math.abs(dy)) doDir(dx > 0 ? 'right' : 'left')
       else doDir(dy > 0 ? 'down' : 'up')
     })
   }
