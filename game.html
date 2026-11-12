@@ -1520,6 +1520,7 @@
     fx(spot.x, spot.y, hero.name, '#ffd9e6', -0.6)
     var go = recruitThenDescend
     recruitThenDescend = false
+    computeFov()
     syncHud()
     render()
     if (go) nextFloor()
@@ -2301,6 +2302,17 @@
     S.altar = m.altar
     S.trail = [{ x: m.start.x, y: m.start.y }]
     S.seen = {}; S.vis = {}
+    // 队友跟着一起下楼：先挪开旧坐标，再依次安排到玩家身边
+    for (var ti = 0; ti < S.team.length; ti++) {
+      if (!S.team[ti].dead && S.team[ti].hp > 0) { S.team[ti].x = -99; S.team[ti].y = -99 }
+    }
+    for (var tj = 0; tj < S.team.length; tj++) {
+      var tmj = S.team[tj]
+      if (tmj.dead || tmj.hp <= 0) continue
+      var spj = freeAdjacent(m.start.x, m.start.y)
+      tmj.x = spj.x
+      tmj.y = spj.y
+    }
     S.hp = Math.min(S.maxHp, S.hp + 2 + (S.floorHeal || 0))
     if (S.hero.id === 'firefly') { S.hp = Math.min(S.maxHp, S.hp + 1); log('流萤的微光护住了你，回 3 血。') }
     META.best = Math.max(META.best, S.floor)
@@ -3646,6 +3658,8 @@
     specialPos: function () { return S ? S.special : null },
     altarPos: function () { return S ? S.altar : null },
     openAltar: openAltar,
+    seenAt: function (x, y) { return !!(S && S.seen && S.seen[x + ',' + y]) },
+    visAt: function (x, y) { return !!(S && S.vis && S.vis[x + ',' + y]) },
     drink: function (n) { return healLowest(n) },
     hurt: function (n) { if (S) { S.hp = Math.max(1, S.hp - n) } },
     forceRecruit: function (id) { var h = heroById(id); if (h) recruit(h) },
