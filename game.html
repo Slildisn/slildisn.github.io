@@ -184,7 +184,7 @@
 
     <div class="ov" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。</p>
+      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>听说灭霸打 BOSS 的时候，会有点不一样的动静。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
     </div>
 
@@ -277,8 +277,8 @@
     ? window.requestAnimationFrame.bind(window)
     : function (f) { setTimeout(f, 40) }
   var animUntil = 0
-  function kickAnim() {
-    var until = Date.now() + 800
+  function kickAnim(ms) {
+    var until = Date.now() + (ms || 800)
     if (animUntil > Date.now()) { if (until > animUntil) animUntil = until; return }
     animUntil = until
     ;(function step() {
@@ -298,6 +298,72 @@
     if (!dx && !dy) return '到了'
     var v = (dy < 0 ? '↑' : dy > 0 ? '↓' : '') + (dx < 0 ? '←' : dx > 0 ? '→' : '')
     return v || '到了'
+  }
+
+  var DUST = []
+  function spawnDust(x, y, n) {
+    for (var i = 0; i < n; i++) {
+      DUST.push({
+        x: x + (Math.random() - 0.5) * 0.7,
+        y: y + (Math.random() - 0.5) * 0.7,
+        vx: (Math.random() - 0.5) * 1.6,
+        vy: -0.4 - Math.random() * 1.5,
+        size: 1.5 + Math.random() * 2.5,
+        t: Date.now() + Math.random() * 120,
+        life: 700 + Math.random() * 500,
+      })
+    }
+    if (DUST.length > 400) DUST.splice(0, DUST.length - 400)
+    kickAnim(1600)
+  }
+
+  function playSnap() {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext
+      if (!AC) return
+      if (!playSnap.ctx) playSnap.ctx = new AC()
+      var ac = playSnap.ctx
+      if (ac.state === 'suspended') ac.resume()
+      var t0 = ac.currentTime
+      for (var i = 0; i < 2; i++) {
+        var dur = 0.045
+        var buf = ac.createBuffer(1, Math.max(1, Math.floor(ac.sampleRate * dur)), ac.sampleRate)
+        var d = buf.getChannelData(0)
+        for (var n = 0; n < d.length; n++) d[n] = (Math.random() * 2 - 1) * Math.pow(1 - n / d.length, 7)
+        var src = ac.createBufferSource()
+        src.buffer = buf
+        var hp = ac.createBiquadFilter()
+        hp.type = 'highpass'
+        hp.frequency.value = 1600
+        var gain = ac.createGain()
+        gain.gain.value = 0.3
+        src.connect(hp); hp.connect(gain); gain.connect(ac.destination)
+        src.start(t0 + i * 0.085)
+      }
+    } catch (e) { /* 没声音也照常玩 */ }
+  }
+
+  // 灭霸专属：打响指，铁墓灰飞烟灭
+  function thanosSnap(boss) {
+    log('你抬起手，打了个响指。')
+    log('铁墓……灰飞烟灭。')
+    fx(boss.x, boss.y, '响指', '#fff2d5')
+    spawnDust(boss.x, boss.y, 60)
+    S.snapFlash = Date.now()
+    playSnap()
+    // 顺带带走一半小怪
+    var others = []
+    for (var i = 0; i < S.enemies.length; i++) {
+      var o = S.enemies[i]
+      if (o !== boss && o.hp > 0) others.push(o)
+    }
+    var half = Math.floor(others.length / 2)
+    for (var k = 0; k < half; k++) {
+      var t = others[k]
+      t.hp = 0
+      spawnDust(t.x, t.y, 18)
+      log('「' + t.name + '」也化成了灰。')
+    }
   }
 
   function rnd(n) { return Math.floor(Math.random() * n) }
@@ -623,6 +689,7 @@
       level: 1,
       xpNext: 6,
       pending: 0,
+      snapFlash: 0,
       talents: {},
       leech: 0,
       thorns: 0,
@@ -693,6 +760,7 @@
     if (S.pending > 0) setTimeout(openTalent, 90)
 
     if (e.type === 'tomb') {
+      if (S.hero.id === 'thanos') thanosSnap(e)
       S.hp = Math.min(S.maxHp, S.hp + 4)
       log('铁墓倒下，光门开了。')
       fx(e.x, e.y, '开门', '#ffd9a0')
@@ -1096,6 +1164,33 @@
       ctx.font = Math.round(TS * .62) + 'px -apple-system,"PingFang SC",sans-serif'
     }
 
+    // 灰烬粒子
+    if (DUST.length) {
+      var nowD = Date.now()
+      for (var di = DUST.length - 1; di >= 0; di--) {
+        var dp = DUST[di]
+        var ageD = nowD - dp.t
+        if (ageD < 0) continue
+        if (ageD > dp.life) { DUST.splice(di, 1); continue }
+        var kd = ageD / dp.life
+        var pxD = (dp.x - camX + dp.vx * kd * 1.6) * TS + TS / 2
+        var pyD = (dp.y - camY + dp.vy * kd * 1.6 + 0.9 * kd * kd) * TS + TS / 2
+        ctx.globalAlpha = (1 - kd) * 0.9
+        ctx.fillStyle = kd < 0.4 ? '#ffe9d6' : '#8d7f8c'
+        ctx.fillRect(pxD, pyD, dp.size, dp.size)
+        ctx.globalAlpha = 1
+      }
+    }
+
+    // 响指白闪
+    if (S.snapFlash) {
+      var ageS = Date.now() - S.snapFlash
+      if (ageS < 420) {
+        ctx.fillStyle = 'rgba(255,246,233,' + (0.55 * (1 - ageS / 420)) + ')'
+        ctx.fillRect(0, 0, cv.width, cv.height)
+      }
+    }
+
     // 飘字（伤害 / 经验 / 升级）
     if (FX.length) {
       var nowT = Date.now()
@@ -1212,6 +1307,7 @@
     act: act,
     dir: doDir,
     fxCount: function () { return FX.length },
+    dustCount: function () { return DUST.length },
     grant: function (id) {
       for (var i = 0; i < TALENTS.length; i++) {
         if (TALENTS[i].id === id) { TALENTS[i].apply(); S.talents[id] = (S.talents[id] || 0) + 1; return true }
