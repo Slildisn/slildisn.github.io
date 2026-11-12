@@ -131,6 +131,10 @@
     background:radial-gradient(700px 500px at 50% 0%, rgba(255,158,196,.14), transparent 70%), rgba(8,7,13,.94);
     backdrop-filter:blur(4px)
   }
+  .ov-tapclose{cursor:pointer}
+  .tap-hint{margin:2px 0 0;font-size:.66rem;color:#8f87a6;letter-spacing:.06em}
+  .ov-tapclose .btn,.ov-tapclose h2,.ov-tapclose p{cursor:pointer}
+
   /* 记忆升级 */
   .meta-bar{
     display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
@@ -306,10 +310,11 @@
       </div>
     </div>
 
-    <div class="ov" id="ov-help" hidden>
+    <div class="ov ov-global ov-tapclose" id="ov-help" hidden>
       <h2>怎么玩</h2>
       <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
+      <p class="tap-hint">点任意位置也能关掉</p>
     </div>
 
     <div class="ov" id="ov-end" hidden>
@@ -1877,6 +1882,10 @@
   if (sumContinue) sumContinue.addEventListener('click', continueRun)
   if (btnHelp && helpOv) btnHelp.addEventListener('click', function () { helpOv.hidden = false })
   if (helpClose && helpOv) helpClose.addEventListener('click', function () { helpOv.hidden = true })
+  if (helpOv) helpOv.addEventListener('click', function () { helpOv.hidden = true })
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && helpOv && !helpOv.hidden) helpOv.hidden = true
+  })
 
   /* ---------------- 生命周期 ---------------- */
   function boot() {
