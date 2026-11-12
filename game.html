@@ -312,7 +312,7 @@
 
     <div class="ov ov-global ov-tapclose" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
+      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
       <p class="tap-hint">点任意位置也能关掉</p>
     </div>
@@ -640,8 +640,106 @@
       } catch (e) { ambNodes = null }
     }
 
+    /* ---- BGM：程序化循环乐段（和弦垫 + 贝斯 + 琶音，BOSS 层换调加鼓点） ---- */
+    var mus = { gain: null, timer: null, nextT: 0, step: 0, mode: 'calm' }
+    var CALM_CHORDS = [
+      [220.0, 261.63, 329.63],
+      [174.61, 220.0, 261.63],
+      [196.0, 246.94, 293.66],
+      [164.81, 196.0, 246.94],
+    ]
+    var BOSS_CHORDS = [
+      [146.83, 174.61, 220.0],
+      [116.54, 146.83, 174.61],
+      [130.81, 155.56, 196.0],
+      [110.0, 138.59, 164.81],
+    ]
+
+    function musicInit() {
+      if (mus.gain || !ac) return
+      try {
+        mus.gain = ac.createGain()
+        mus.gain.gain.value = 0.0001
+        mus.gain.connect(master)
+      } catch (e) { mus.gain = null }
+    }
+
+    function voice(type, freq, t, dur, vol, attack) {
+      try {
+        var o = ac.createOscillator()
+        var g = ac.createGain()
+        o.type = type
+        o.frequency.setValueAtTime(freq, t)
+        var a = attack || 0.02
+        g.gain.setValueAtTime(0.0001, t)
+        g.gain.exponentialRampToValueAtTime(vol, t + a)
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+        o.connect(g); g.connect(mus.gain)
+        o.start(t); o.stop(t + dur + 0.05)
+      } catch (e) { /* ignore */ }
+    }
+
+    function pad(freq, t, dur, vol) {
+      voice('triangle', freq, t, dur, vol, 0.35)
+      voice('sine', freq * 1.005, t, dur, vol * 0.6, 0.4)
+    }
+
+    function kick(t) {
+      try {
+        var o = ac.createOscillator()
+        var g = ac.createGain()
+        o.type = 'sine'
+        o.frequency.setValueAtTime(90, t)
+        o.frequency.exponentialRampToValueAtTime(38, t + 0.22)
+        g.gain.setValueAtTime(0.16, t)
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28)
+        o.connect(g); g.connect(mus.gain)
+        o.start(t); o.stop(t + 0.3)
+      } catch (e) { /* ignore */ }
+    }
+
+    function scheduleMusic() {
+      if (!ac || !mus.gain) return
+      var boss = mus.mode === 'boss'
+      var beat = 60 / (boss ? 104 : 78) / 2
+      var chords = boss ? BOSS_CHORDS : CALM_CHORDS
+      var guard = 0
+      while (mus.nextT < ac.currentTime + 0.25 && guard++ < 32) {
+        var s16 = mus.step % 16
+        var t = mus.nextT
+        var chord = chords[(mus.step >> 3) % chords.length]
+
+        if (s16 === 0) {
+          for (var i = 0; i < chord.length; i++) pad(chord[i], t, beat * 14, boss ? 0.035 : 0.03)
+        }
+        if (s16 === 0 || s16 === 8) voice('sine', chord[0] / 2, t, beat * 3.2, 0.06, 0.01)
+        if (s16 % 2 === 0) {
+          var n = chord[(s16 / 2) % chord.length] * (s16 === 6 ? 2 : 1)
+          voice('triangle', n, t, beat * 1.6, boss ? 0.035 : 0.03, 0.008)
+        }
+        if (boss && (s16 === 0 || s16 === 6)) kick(t)
+        mus.step++
+        mus.nextT += beat
+      }
+    }
+
+    function music(kind) {
+      if (!ac) return
+      musicInit()
+      if (!mus.gain) return
+      mus.mode = kind === 'boss' ? 'boss' : 'calm'
+      if (!mus.timer) {
+        mus.nextT = ac.currentTime + 0.12
+        mus.step = 0
+        mus.timer = setInterval(function () { try { scheduleMusic() } catch (e) { /* ignore */ } }, 45)
+      }
+      var target = kind === 'boss' ? 0.15 : kind === 'none' ? 0.0001 : 0.11
+      try { mus.gain.gain.setTargetAtTime(target, ac.currentTime, 0.7) } catch (e) { /* ignore */ }
+    }
+
     return {
       unlock: unlock,
+      music: music,
       isMuted: function () { return muted },
       toggleMute: function () {
         muted = !muted
@@ -731,6 +829,7 @@
   ;(function () {
     function first() {
       SND.unlock()
+      SND.music('calm')
       var btn = document.getElementById('btn-sound')
       if (btn) btn.textContent = SND.isMuted() ? '🔇' : '🔊'
     }
@@ -1356,6 +1455,7 @@
     S.stairs = m.stairs
     log('你是「' + hero.name + '」。第 1 层，回廊还在往下延伸。')
     SND.ambience('calm')
+    SND.music('calm')
     computeFov()
     render()
     syncHud()
@@ -1368,8 +1468,10 @@
       log('铁墓的气息……先回满血。')
       SND.boss()
       SND.ambience('boss')
+      SND.music('boss')
     } else {
       SND.ambience('calm')
+      SND.music('calm')
     }
     var m = genMap(S.floor, S.seed + S.floor * 7919)
     S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
@@ -1593,6 +1695,7 @@
     running = false
     SND.death()
     SND.ambience('none')
+    SND.music('none')
     var gain = Math.max(2, S.floor * 2)
     META.shards += gain
     META.kills += (S.kills || 0)
