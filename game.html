@@ -355,7 +355,7 @@
   <div class="stage" id="stage">
     <canvas id="cv" width="480" height="352" aria-label="地牢画面"></canvas>
     <div class="ov ov-global ov-scroll" id="ov-select">
-      <h2>选一个同行的人</h2>
+      <h2 id="select-title">选一个同行的人</h2>
       <p>每个人带的记忆不一样：血、攻、视野、暴击都不同。</p>
       <div class="pick" id="pick"></div>
       <div class="meta-bar">
@@ -1838,23 +1838,29 @@
     SND.level && SND.level()
   }
 
+  var pendingCheat = null
+
   function runCheat(code) {
     var cmd = String(code || '').trim().toUpperCase()
     if (!cmd) return
-    if (!S && cmd !== 'MAX_FRAGMENTS') {
+    if (cmd === 'MAX_FRAGMENTS') {
+      META.shards += 999
+      saveMeta()
+      syncMetaBar()
+      renderMeta()
+      if (S) cheatLog('【警告：神秘力量已介入，记忆碎片 +999！】', true)
+      else toast('记忆碎片 +999')
+      return
+    }
+    if (!S) {
+      pendingCheat = cmd
+      toast('神谕已记下：选好角色后生效（' + cmd + '）')
       return
     }
     switch (cmd) {
       case 'GOD_MODE':
         S.god = true
         cheatLog('【警告：神秘力量已介入，GOD_MODE 已激活！】', true)
-        break
-      case 'MAX_FRAGMENTS':
-        META.shards += 999
-        saveMeta()
-        syncMetaBar()
-        renderMeta()
-        cheatLog('【警告：神秘力量已介入，记忆碎片 +999！】', true)
         break
       case 'GIVE_ME_GOLD':
         S.gold = (S.gold || 0) + 999
@@ -1898,7 +1904,7 @@
   }
 
   function bindCheatTitle() {
-    var title = document.getElementById('game-title')
+    var title = document.getElementById('select-title')
     if (!title) return
     title.addEventListener('click', function () {
       var now = Date.now()
@@ -1913,7 +1919,7 @@
     })
     document.addEventListener('click', function (e) {
       try {
-        if (!e.target || !e.target.closest || !e.target.closest('#game-title')) {
+        if (!e.target || !e.target.closest || !e.target.closest('#select-title')) {
           cheatClicks = 0
           cheatLast = 0
         }
@@ -3767,6 +3773,11 @@
     choosing = false
     newRun(heroId, seed)
     running = true
+    if (pendingCheat) {
+      var pc = pendingCheat
+      pendingCheat = null
+      runCheat(pc)
+    }
     fit(); render(); syncHud()
   }
 
