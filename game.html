@@ -241,6 +241,12 @@
   .talent:active{transform:translateY(1px)}
   .talent b{font-size:.9rem;font-weight:600;color:#fff;letter-spacing:.02em}
   .talent span{font-size:.74rem;color:#c9c1dc;line-height:1.55}
+  .syn-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+  .syn-tags i{font-style:normal;font-size:.62rem;padding:1px 7px;border-radius:99px;color:#ffe9f2;border:1px solid rgba(255,158,196,.4);background:rgba(255,158,196,.12)}
+  .syn-preview{margin-top:2px;font-size:.64rem;color:#9c93b4}
+  .syn-preview.up{color:#ffd9a0}
+  .syn-preview.down{color:#ff8a9c}
+  .syn-replace{font-size:.62rem;color:#ff9ec4}
 </style>
 </head>
 <body>
@@ -372,7 +378,7 @@
 
     <div class="ov ov-global ov-tapclose" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>走到光门上会先弹出<b>招募面板</b>：三选一招募队友（队伍最多 4 人），队友跟着你、自动打身边的敌人，也会被敌人打；他们凑在一起会触发<b>羁绊</b>（左上角显示）。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
+      <p>方向键走一步，撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>走到光门上会先弹出<b>招募面板</b>：三选一招募队友（最多 4 人，满员会替换最早那位）；卡片上有羁绊标签和「招募后激活哪些羁绊」的预判。队友踩着你的历史路径跟随，不会穿墙；他们凑齐会触发<b>羁绊</b>（左上角显示）。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
       <p class="tap-hint">点任意位置也能关掉</p>
     </div>
@@ -1268,15 +1274,64 @@
 
   var recruitThenDescend = false
 
+  function synCounts(ids) {
+    var counts = {}
+    for (var i = 0; i < ids.length; i++) counts[ids[i]] = (counts[ids[i]] || 0) + 1
+    var out = {}
+    for (var si = 0; si < SYNERGY.length; si++) {
+      var sy = SYNERGY[si]
+      var n = 0
+      for (var mi = 0; mi < sy.members.length; mi++) if (counts[sy.members[mi]]) n++
+      var tier = 0
+      for (var ti = 0; ti < sy.tiers.length; ti++) if (n >= sy.tiers[ti].n) tier = sy.tiers[ti].n
+      out[sy.id] = tier
+    }
+    return out
+  }
+
+  function heroSynergies(id) {
+    var out = []
+    for (var i = 0; i < SYNERGY.length; i++) {
+      if (SYNERGY[i].members.indexOf(id) >= 0) out.push(SYNERGY[i].name)
+    }
+    return out
+  }
+
+  // 招募预判：会激活/升级/失去哪些羁绊
+  function previewRecruit(hero) {
+    var alive = aliveTeam()
+    var baseIds = [S.hero.id]
+    for (var i = 0; i < alive.length; i++) baseIds.push(alive[i].heroId)
+    var base = synCounts(baseIds)
+
+    var replaced = alive.length >= 3 ? alive[0] : null
+    var nextIds = baseIds.slice()
+    if (replaced) {
+      var idx = nextIds.indexOf(replaced.heroId)
+      if (idx >= 0) nextIds.splice(idx, 1)
+    }
+    nextIds.push(hero.id)
+    var next = synCounts(nextIds)
+
+    var gains = [], losses = []
+    for (var si = 0; si < SYNERGY.length; si++) {
+      var sy = SYNERGY[si]
+      var b = base[sy.id] || 0, n = next[sy.id] || 0
+      if (n > b) gains.push('【' + sy.name + '】' + n + '/' + sy.members.length)
+      else if (n < b) losses.push('【' + sy.name + '】')
+    }
+    return { gains: gains, losses: losses, replaced: replaced }
+  }
+
   function openAltar(thenDescend) {
     if (!ovTeam || !teamList) return
     recruitThenDescend = !!thenDescend
     S.paused = true
     var pool = recruitPool()
     teamList.innerHTML = ''
-    if (!pool.length || S.team.filter(function (m) { return !m.dead }).length >= 3) {
+    if (!pool.length) {
       var msg = document.createElement('p')
-      msg.textContent = '队伍已经满了（最多 4 人）。'
+      msg.textContent = '祭坛上什么也没留下。'
       teamList.appendChild(msg)
       var ok = document.createElement('button')
       ok.type = 'button'
@@ -1287,22 +1342,69 @@
       ovTeam.hidden = false
       return
     }
+
     var picks = []
     var copy = pool.slice()
     while (picks.length < 3 && copy.length) picks.push(copy.splice(rnd(copy.length), 1)[0])
+
     picks.forEach(function (hero) {
+      var pv = previewRecruit(hero)
       var b = document.createElement('button')
       b.type = 'button'
       b.className = 'talent'
+
       var nb = document.createElement('b')
       nb.textContent = (hero.emoji || '') + ' ' + hero.name
+      b.appendChild(nb)
+
       var sp = document.createElement('span')
       sp.textContent = hero.desc + '（攻 ' + hero.atk + ' / 血 ' + hero.hp + '）'
-      b.appendChild(nb)
       b.appendChild(sp)
+
+      // 羁绊标签
+      var tags = document.createElement('div')
+      tags.className = 'syn-tags'
+      heroSynergies(hero.id).forEach(function (nm) {
+        var t = document.createElement('i')
+        t.textContent = '【' + nm + '】'
+        tags.appendChild(t)
+      })
+      if (tags.children.length) b.appendChild(tags)
+
+      // 满编提示
+      if (pv.replaced) {
+        var rh = heroById(pv.replaced.heroId)
+        var rp = document.createElement('div')
+        rp.className = 'syn-replace'
+        rp.textContent = '将替换：' + (rh ? rh.name : '队友')
+        b.appendChild(rp)
+      }
+
+      // 预判
+      var pve = document.createElement('div')
+      pve.className = 'syn-preview'
+      if (pv.gains.length) {
+        pve.classList.add('up')
+        pve.textContent = '招募后将激活/升级：' + pv.gains.join(' ')
+      } else if (pv.losses.length) {
+        pve.classList.add('down')
+        pve.textContent = '会失去：' + pv.losses.join(' ')
+      } else {
+        pve.textContent = '羁绊无变化'
+      }
+      b.appendChild(pve)
+
       b.addEventListener('click', function () { recruit(hero) })
       teamList.appendChild(b)
     })
+
+    var skip = document.createElement('button')
+    skip.type = 'button'
+    skip.className = 'btn ghost'
+    skip.textContent = '不招了，继续往下'
+    skip.addEventListener('click', function () { closeAltar(true) })
+    teamList.appendChild(skip)
+
     ovTeam.hidden = false
   }
 
@@ -1318,27 +1420,61 @@
   }
 
   function freeAdjacent(x, y) {
+    // 先看四周，再 BFS 找最近的可走空格（避开墙、玩家、队友、敌人）
     var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]
+    var free = function (nx, ny) {
+      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return false
+      if (S.grid[ny][nx] === WALL) return false
+      if (nx === S.player.x && ny === S.player.y) return false
+      if (enemyAt(nx, ny)) return false
+      for (var j = 0; j < S.team.length; j++) {
+        if (!S.team[j].dead && S.team[j].x === nx && S.team[j].y === ny) return false
+      }
+      return true
+    }
     for (var i = 0; i < dirs.length; i++) {
       var nx = x + dirs[i][0], ny = y + dirs[i][1]
-      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue
-      if (S.grid[ny][nx] === WALL) continue
-      if (nx === S.player.x && ny === S.player.y) continue
-      if (enemyAt(nx, ny)) continue
-      var blocked = false
-      for (var j = 0; j < S.team.length; j++) {
-        if (S.team[j].x === nx && S.team[j].y === ny) blocked = true
+      if (free(nx, ny)) return { x: nx, y: ny }
+    }
+    // BFS
+    var q = [[x, y]], seen = {}, prev = {}
+    seen[x + ',' + y] = true
+    while (q.length) {
+      var cur = q.shift()
+      for (var d = 0; d < 4; d++) {
+        var bx = cur[0] + dirs[d][0], by = cur[1] + dirs[d][1]
+        var key = bx + ',' + by
+        if (seen[key]) continue
+        if (bx < 0 || by < 0 || bx >= MAP_W || by >= MAP_H) continue
+        if (S.grid[by][bx] === WALL) continue
+        seen[key] = true
+        prev[key] = cur[0] + ',' + cur[1]
+        if (free(bx, by)) return { x: bx, y: by }
+        q.push([bx, by])
       }
-      if (blocked) continue
-      return { x: nx, y: ny }
     }
     return { x: x, y: y }
   }
 
   function recruit(hero) {
-    var spot = freeAdjacent(S.player.x, S.player.y)
     var bonus = (S.synHp || 0) + (S.teamHpBonus || 0)
+    var alive = S.team.filter(function (m) { return !m.dead })
+    var replaced = null
+    if (alive.length >= 3) {
+      // 满编：替换最早加入的那位
+      replaced = alive[0]
+      var idx = S.team.indexOf(replaced)
+      if (idx >= 0) S.team.splice(idx, 1)
+    }
+    var spot = replaced ? { x: replaced.x, y: replaced.y } : (S.trail && S.trail[0] ? S.trail[0] : null)
+    if (!spot || S.grid[spot.y][spot.x] === WALL || (spot.x === S.player.x && spot.y === S.player.y) || enemyAt(spot.x, spot.y)) {
+      spot = freeAdjacent(S.player.x, S.player.y)
+    }
     S.team.push({ heroId: hero.id, x: spot.x, y: spot.y, hp: hero.hp + bonus, maxHp: hero.hp + bonus, atk: hero.atk, dead: false })
+    if (replaced) {
+      var rh = heroById(replaced.heroId)
+      log('「' + (rh ? rh.name : '队友') + '」退出了队伍，「' + hero.name + '」补了上来。')
+    }
     computeSynergy()
     if (ovTeam) ovTeam.hidden = true
     S.paused = false
@@ -1962,6 +2098,7 @@
       turnCount: 0,
       gold: 0,
       team: [],
+      trail: [],
       syn: {}, synHp: 0, synCrit: 0, synDodge: 0, teamHpBonus: 0, elderDone: false, synStep: 0,
       altar: null,
       relics2: {},
@@ -1986,6 +2123,7 @@
     S.special = m.special
     S.altar = m.altar
     S.team = []
+    S.trail = [{ x: m.start.x, y: m.start.y }]
     computeSynergy()
     log('你是「' + hero.name + '」。第 1 层，回廊还在往下延伸。')
     SND.ambience('calm')
@@ -2018,6 +2156,7 @@
     S.stairs = m.stairs
     S.special = m.special
     S.altar = m.altar
+    S.trail = [{ x: m.start.x, y: m.start.y }]
     S.seen = {}; S.vis = {}
     S.hp = Math.min(S.maxHp, S.hp + 2 + (S.floorHeal || 0))
     if (S.hero.id === 'firefly') { S.hp = Math.min(S.maxHp, S.hp + 1); log('流萤的微光护住了你，回 3 血。') }
@@ -2294,9 +2433,14 @@
   }
 
   function teamTurn() {
-    for (var i = 0; i < S.team.length; i++) {
-      var m = S.team[i]
-      if (m.hp <= 0) continue
+    var alive = []
+    for (var i = 0; i < S.team.length; i++) if (!S.team[i].dead && S.team[i].hp > 0) alive.push(S.team[i])
+    var trail = S.trail || []
+
+    for (var k = 0; k < alive.length; k++) {
+      var m = alive[k]
+
+      // 先打相邻的敌人
       var target = null
       var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]]
       for (var d = 0; d < 4; d++) {
@@ -2312,27 +2456,43 @@
         if (target.hp <= 0) killEnemy(target)
         continue
       }
-      var pdx = S.player.x - m.x, pdy = S.player.y - m.y
-      if (Math.abs(pdx) + Math.abs(pdy) <= 1) continue
-      var sx = 0, sy = 0
-      if (Math.abs(pdx) >= Math.abs(pdy)) sx = pdx > 0 ? 1 : -1
-      else sy = pdy > 0 ? 1 : -1
-      var nx = m.x + sx, ny = m.y + sy
-      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue
-      if (S.grid[ny][nx] === WALL) {
-        if (sx) { sx = 0; sy = pdy > 0 ? 1 : -1 } else { sy = 0; sx = pdx > 0 ? 1 : -1 }
-        nx = m.x + sx; ny = m.y + sy
-        if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue
-        if (S.grid[ny][nx] === WALL) continue
+
+      // 队列跟随：第 k 个队友站在玩家 k+1 步之前的位置
+      var tgt = trail[k]
+      if (!tgt) continue
+      if (tgt.x === m.x && tgt.y === m.y) continue
+
+      // 目标格必须是空的：不站人、不撞墙
+      if (S.grid[tgt.y] && S.grid[tgt.y][tgt.x] === WALL) continue
+      if (tgt.x === S.player.x && tgt.y === S.player.y) continue
+      var occupied = false
+      for (var j = 0; j < S.team.length; j++) {
+        if (S.team[j] !== m && !S.team[j].dead && S.team[j].x === tgt.x && S.team[j].y === tgt.y) occupied = true
       }
+      if (occupied) continue
+
+      // 与目标相邻就直接迈过去；否则沿路径逐步靠近（不会穿墙）
+      var dx = tgt.x - m.x, dy = tgt.y - m.y
+      if (Math.abs(dx) + Math.abs(dy) === 1) {
+        m.x = tgt.x
+        m.y = tgt.y
+        continue
+      }
+      // 找出这一步该往哪走：优先走 trail 上前一格
+      var nx = m.x, ny = m.y
+      if (Math.abs(dx) >= Math.abs(dy)) nx += dx > 0 ? 1 : -1
+      else ny += dy > 0 ? 1 : -1
+      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue
+      if (S.grid[ny][nx] === WALL) continue
       if (nx === S.player.x && ny === S.player.y) continue
       if (enemyAt(nx, ny)) continue
-      var blocked = false
-      for (var j = 0; j < S.team.length; j++) {
-        if (j !== i && S.team[j].x === nx && S.team[j].y === ny) blocked = true
+      var blocked2 = false
+      for (var q = 0; q < S.team.length; q++) {
+        if (S.team[q] !== m && !S.team[q].dead && S.team[q].x === nx && S.team[q].y === ny) blocked2 = true
       }
-      if (blocked) continue
-      m.x = nx; m.y = ny
+      if (blocked2) continue
+      m.x = nx
+      m.y = ny
     }
   }
 
@@ -2460,6 +2620,10 @@
       } else if (S.grid[ny][nx] === WALL) {
         return false
       } else {
+        // 记录玩家移动前的坐标（历史路径队列）
+        if (!S.trail) S.trail = []
+        S.trail.unshift({ x: S.player.x, y: S.player.y })
+        if (S.trail.length > 40) S.trail.length = 40
         for (var sw = 0; sw < S.team.length; sw++) {
           if (S.team[sw].x === nx && S.team[sw].y === ny) {
             S.team[sw].x = S.player.x
@@ -2528,11 +2692,8 @@
         log('铁墓还挡在洞口。')
         return
       }
-      if (S.team.filter(function (m) { return !m.dead }).length + 1 < 4) {
-        openAltar(true)
-        return
-      }
-      return nextFloor(), 'floor'
+      openAltar(true)
+      return
     }
   }
 
@@ -2604,7 +2765,7 @@
     if (hDir) hDir.textContent = dirArrow()
     if (teamStrip) {
       teamStrip.innerHTML = ''
-      if (S.team && S.team.length) {
+      if (true) {
         teamStrip.hidden = false
         var meChip = document.createElement('span')
         meChip.className = 'tchip me'
