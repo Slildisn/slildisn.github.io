@@ -3133,24 +3133,59 @@
   }
 
   function enemiesTurn() {
+    if (S.grace && S.grace > 0) {
+      S.grace--
+      log('怨灵被记忆钉住，这一回合没有动作。')
+      return
+    }
     S.turnCount = (S.turnCount || 0) + 1
     for (var i = 0; i < S.enemies.length; i++) {
       var e = S.enemies[i]
       if (e.hp <= 0) continue
 
-      // 铁墓：每 3 个行动回合震地一次，全队受伤
+      // 铁墓：震击有冷却（首次 2 回合，之后每 3 回合一次），放之前有预警
       if (e.type === 'tomb') {
-        e.aoeTick = (e.aoeTick || 0) + 1
-        if (e.aoeTick % 3 === 0) {
+        if (e.aoeCd === undefined) e.aoeCd = 2
+        if (e.aoeCd <= 0) {
+          e.aoeCd = 3
+          var aoeDmg = Math.max(1, e.atk - 1)
+          S.aoeCount = (S.aoeCount || 0) + 1
           log('铁墓震地！全队受创。')
           shake(7, 380)
           SND.hit(true)
-          if (S.hp > 0) hurtPlayer(e.atk, e)
+
+          // 防暴毙：这一下会全员倒地时，强行保留 1 点血并给一个走位回合
+          var aliveNow = teamTargets()
+          var wouldWipe = false
+          if (S.hp <= aoeDmg && S.hp > 0) {
+            var allLow = true
+            for (var wc = 0; wc < aliveNow.length; wc++) {
+              var tgtC = aliveNow[wc]
+              if (tgtC.kind === 'member' && tgtC.m.hp > aoeDmg) allLow = false
+            }
+            if (allLow) wouldWipe = true
+          }
+          if (wouldWipe && !S.wipeSaved) {
+            S.wipeSaved = true
+            S.hp = 1
+            var aliveW = aliveTeam()
+            for (var ww = 0; ww < aliveW.length; ww++) aliveW[ww].hp = 1
+            S.grace = 1
+            fx(S.player.x, S.player.y, '锁血', '#ffd9a0', -0.6)
+            log('「全员保留 1 点血」——记忆强行钉住了你们，下一回合可以走位。')
+            SND.level()
+            syncHud(); render()
+            continue
+          }
+
+          if (S.hp > 0) hurtPlayer(aoeDmg, e)
           var aliveM = aliveTeam()
-          for (var am2 = 0; am2 < aliveM.length; am2++) damageCompanion(aliveM[am2], e.atk)
+          for (var am2 = 0; am2 < aliveM.length; am2++) damageCompanion(aliveM[am2], aoeDmg)
           if (S.over) return
           continue
         }
+        e.aoeCd--
+        if (e.aoeCd === 1) log('铁墓举起墓碑，下一击是震地！')
       }
 
       // 敌人随机挑一名队伍成员当目标
@@ -4200,7 +4235,7 @@
         shakeLeft: Math.max(0, (S.shakeUntil || 0) - Date.now()), shakeMag: S.shakeMag || 0,
         kills: S.kills || 0, steps: S.steps || 0, gold: S.gold || 0,
         relics2: Object.keys(S.relics2 || {}).length, syn: S.syn || {}, team: (S.team||[]).length, altar: S.altar ? 1 : 0, special: S.special ? S.special.kind : null, thornsNow: S.thorns || 0,
-        items: S.items.length, relics: Object.keys(S.relics), seed: S.seed
+        items: S.items.length, relics: Object.keys(S.relics), seed: S.seed, aoeCount: S.aoeCount || 0
       }
     }
   }
