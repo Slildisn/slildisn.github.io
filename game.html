@@ -23,7 +23,16 @@
     --line:rgba(255,255,255,.10);
   }
   *{box-sizing:border-box}
-  html,body{margin:0;min-height:100%}
+  html,body{margin:0;padding:0;min-height:100%;background:#0b0a12;overflow-x:hidden}
+  html{height:100%}
+  body{
+    min-height:100dvh;
+    padding-top:env(safe-area-inset-top, 0px);
+    padding-bottom:env(safe-area-inset-bottom, 0px);
+    padding-left:env(safe-area-inset-left, 0px);
+    padding-right:env(safe-area-inset-right, 0px);
+  }
+  #stage, .stage{background:#0b0a12}
   body{
     background:
       radial-gradient(1200px 700px at 50% -10%, rgba(255,158,196,.13), transparent 60%),
@@ -255,6 +264,25 @@
 
     .topbtns button { width: 30px; height: 30px; font-size: 13px; }
     .log { font-size: .68rem; }
+  }
+
+  /* 平板/横屏：最大化可视区域 */
+  @media (orientation: landscape) and (min-width: 700px) {
+    .wrap { max-width: min(1180px, 100%); padding-left: 12px; padding-right: 12px; }
+    h1 { font-size: 1.15rem; }
+    .hud { padding: 6px 10px; }
+    canvas {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: auto !important;
+      max-height: calc(100dvh - 150px);
+      object-fit: contain;
+      margin: 0 auto;
+      display: block;
+    }
+    .stage { display: flex; justify-content: center; }
+    #ov-select .pick { grid-template-columns: repeat(5, 1fr); max-height: calc(100dvh - 180px); }
+    .log { font-size: .72rem; }
   }
 
   @media (max-width: 420px) {
@@ -4088,13 +4116,21 @@
 
   function fit() {
     if (!cv) return
-    var w = stage ? stage.clientWidth : 480
-    if (!w || w < 60) w = 480
-    if (TS < 6) TS = 24
-    TS = Math.max(14, Math.floor(Math.min(w / VIEW_W, (w * 0.78) / VIEW_H)))
-    var cw = TS * VIEW_W, ch = TS * VIEW_H
-    cv.width = cw; cv.height = ch
-    cv.style.height = ch + 'px'
+    var vw = (typeof window !== 'undefined' && window.innerWidth) ? window.innerWidth : 0
+    var vh = (typeof window !== 'undefined' && window.innerHeight) ? window.innerHeight : 0
+    var w = stage ? stage.clientWidth : 0
+    if (!w || w < 80) w = vw ? vw - 20 : 0
+    if (!w || w < 80) w = 480
+    var maxH = vh ? Math.max(180, vh * 0.62) : 420
+    var tsW = w / VIEW_W
+    var tsH = maxH / VIEW_H
+    var tsRatio = (w * 0.78) / VIEW_H
+    TS = Math.max(10, Math.floor(Math.min(tsW, tsH, tsRatio) || 24))
+    if (!isFinite(TS) || TS < 8) TS = 24
+    cv.width = TS * VIEW_W
+    cv.height = TS * VIEW_H
+    cv.style.height = (TS * VIEW_H) + 'px'
+    cv.style.maxHeight = '100%'
   }
 
   function render() {
@@ -4863,6 +4899,8 @@
     }
     window.addEventListener('resize', function () { fit(); if (S) render() })
     window.addEventListener('orientationchange', function () { setTimeout(function () { fit(); if (S) render() }, 120) })
+    setTimeout(function () { fit(); if (S) render() }, 60)
+    setTimeout(function () { fit(); if (S) render() }, 400)
 
     // 沉浸式全屏：首次触摸/点击时尝试进入全屏（移动端/桌面通用）
     ;(function bindFullscreen() {
