@@ -1906,7 +1906,13 @@
 
   var pendingCheat = null
 
+  function cheatActive() {
+    return !!(window.__cheatSession || (S && S.cheatDirty))
+  }
+
   function afterCheat() {
+    window.__cheatSession = true   // 本次打开页面期间，任何存档写入一律拒绝
+    if (S && S.cheatDirty !== undefined) S.cheatDirty = true
     if (S) {
       S.cheatDirty = true
       syncHud()
@@ -2017,6 +2023,21 @@
       if (typeof location === 'undefined' || !location.search) return false
       return /[?&]debug=1(?:&|$)/.test(location.search)
     } catch (e) { return false }
+  }
+
+  function bindLifecycleGuard() {
+    function flush() {
+      try {
+        if (cheatActive()) return          // 作弊会话：跳过一切保存
+        if (!running || !S || S.over) return
+        saveRun()
+      } catch (e) { /* ignore */ }
+    }
+    window.addEventListener('pagehide', flush)
+    window.addEventListener('beforeunload', flush)
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') flush()
+    })
   }
 
   function bindCheatTrigger() {
@@ -2241,6 +2262,7 @@
   }
 
   function saveMeta() {
+    if (cheatActive()) return   // 作弊会话：绝不写 meta
     try {
       // 双保险：即使走到这里，也把只在内存里的字段剥掉再写
       var clean = {}
@@ -2519,7 +2541,7 @@
   var RUN_KEY = 'cyrene.rogue.run'
 
   function saveRun() {
-    if (S && S.cheatDirty) return   // 作弊局不写存档，刷新即回到真实存档
+    if (cheatActive()) return   // 作弊会话（含 PWA 生命周期保存）一律不写
     if (!S || S.over) { clearRun(); return }
     try {
       var snap = {}
@@ -3324,7 +3346,7 @@
       log('奶龙……')
       kickAnim(1800)
     }
-    if (!cheatRun && S.floor > bestFloor) {
+    if (!cheatRun && !cheatActive() && S.floor > bestFloor) {
       bestFloor = S.floor
       try { localStorage.setItem('cyrene.rogue.best', String(bestFloor)) } catch (e) { /* ignore */ }
     }
@@ -3340,7 +3362,9 @@
     S.over = true
     running = false
     bestFloor = 5
-    try { localStorage.setItem('cyrene.rogue.best', '5') } catch (e) { /* ignore */ }
+    if (!cheatActive()) {
+      try { localStorage.setItem('cyrene.rogue.best', '5') } catch (e) { /* ignore */ }
+    }
     if (ovEnd) {
       ovEnd.hidden = false
       endBig.textContent = '✦'
@@ -4043,6 +4067,7 @@
   /* ---------------- 生命周期 ---------------- */
   function boot() {
     bindCheatTrigger()
+    bindLifecycleGuard()
     refreshContinue()
     var sb0 = document.getElementById('btn-sound')
     if (sb0) sb0.textContent = SND.isMuted() ? '🔇' : '🔊'
