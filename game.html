@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>铁墓大乱斗：从灭霸开始 ｜ 昔涟 CYRENE</title>
 <meta name="description" content="昔涟同人站的小游戏《铁墓大乱斗：从灭霸开始》——回合制肉鸽地牢，14 位跨次元角色可选，逐层下降、拾取遗物与奇物、击败铁墓。纯前端、可离线安装。">
+<meta name="author" content="CYRENE_Original">
 <meta name="theme-color" content="#2a1b3d">
 <meta name="application-name" content="铁墓大乱斗">
 <meta name="mobile-web-app-capable" content="yes">
@@ -266,6 +267,20 @@
   @keyframes warnBlink{50%{opacity:.35}}
   @media (prefers-reduced-motion:reduce){#boss-warn span{animation:none}}
 
+  #fatal{
+    position:fixed;inset:0;z-index:2147483000;background:#000;
+    display:grid;place-content:center;justify-items:center;gap:18px;
+    text-align:center;padding:24px;touch-action:none
+  }
+  #fatal[hidden]{display:none}
+  .fatal-q{
+    font-size:min(44vw,220px);line-height:1;color:#fff;
+    animation:fatalBlink .42s steps(2,end) infinite;
+    text-shadow:0 0 30px rgba(255,40,60,.9)
+  }
+  @keyframes fatalBlink{50%{color:#ff2d55;transform:scale(.96)}}
+  .fatal-t{color:#ff2d55;font-weight:700;font-size:clamp(13px,4vw,20px);letter-spacing:.06em;line-height:1.6}
+
   /* 记忆升级 */
   .meta-bar{
     display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
@@ -448,6 +463,10 @@
   <div class="toast" id="toast" hidden></div>
   <div id="boss-bar" aria-hidden="true"></div>
   <div id="boss-warn"><span>⚠️ 警告：终极防线已触发！</span></div>
+  <div id="fatal" hidden>
+    <div class="fatal-q">❓</div>
+    <div class="fatal-t">FATAL ERROR: 核心记忆缺失，系统已自毁。</div>
+  </div>
 
   <div class="stage" id="stage">
     <canvas id="cv" width="480" height="352" aria-label="地牢画面"></canvas>
@@ -1154,6 +1173,12 @@
     for (var y = r.y; y < r.y + r.h; y++) for (var x = r.x; x < r.x + r.w; x++) g[y][x] = FLOOR
   }
 
+  // 数值映射（轻度混淆）：把关键数值藏进闭包表里
+  var NUM = (function () {
+    var t = [30, 4, 36, 2, 3, 60, 50, 1, 10, 2]
+    return function (i) { return t[i] | 0 }
+  })()
+
   function genMap(floor, seed) {
     var g = blankMap()
     var rooms = []
@@ -1215,23 +1240,23 @@
     var isBoss = isBoss10 || isBoss20 || isFinal
     var noStairs = isFinal
     if (isBoss10) {
-      var bhp = 30 + floor * 4
-      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: bhp, max: bhp, atk: 2 + ((floor / 4) | 0), name: '铁墓' })
+      var bhp = NUM(0) + floor * NUM(1)
+      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: bhp, max: bhp, atk: NUM(3) + ((floor / NUM(1)) | 0), name: '铁墓' })
     }
     if (isBoss20) {
-      var dhp = 36 + floor * 4
-      enemies.push({ type: 'dick', x: stairs.x, y: stairs.y, hp: dhp, max: dhp, atk: 3 + ((floor / 4) | 0), name: '迪克' })
+      var dhp = NUM(2) + floor * NUM(1)
+      enemies.push({ type: 'dick', x: stairs.x, y: stairs.y, hp: dhp, max: dhp, atk: NUM(4) + ((floor / NUM(1)) | 0), name: '迪克' })
     }
     if (isFinal) {
-      var thp = 60 + floor * 4
-      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: thp, max: thp, atk: 3 + ((floor / 3) | 0), name: '铁墓' })
+      var thp = NUM(5) + floor * NUM(1)
+      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: thp, max: thp, atk: NUM(4) + ((floor / NUM(4)) | 0), name: '铁墓' })
       // 迪克放在另一格，绝不与铁墓重叠
       for (var db = 0; db < 80; db++) {
         var dx2 = 1 + rnd(MAP_W - 2), dy2 = 1 + rnd(MAP_H - 2)
         if (!free(dx2, dy2)) continue
         if (dx2 === stairs.x && dy2 === stairs.y) continue
-        var dh2 = 50 + floor * 4
-        enemies.push({ type: 'dick', x: dx2, y: dy2, hp: dh2, max: dh2, atk: 3 + ((floor / 3) | 0), name: '迪克' })
+        var dh2 = NUM(6) + floor * NUM(1)
+        enemies.push({ type: 'dick', x: dx2, y: dy2, hp: dh2, max: dh2, atk: NUM(4) + ((floor / NUM(4)) | 0), name: '迪克' })
         break
       }
     }
@@ -1801,7 +1826,7 @@
     }
 
     // 星穹列车组：全队攻击
-    var wantAtk = next.train >= 3 ? 2 : next.train >= 2 ? 1 : 0
+    var wantAtk = next.train >= 3 ? NUM(9) : next.train >= 2 ? NUM(7) : 0
     if (wantAtk !== (S.synAtk || 0)) {
       var dAtk = wantAtk - (S.synAtk || 0)
       S.synAtk = wantAtk
@@ -1814,7 +1839,7 @@
     }
 
     var wantCrit = next.otaku >= 3 ? 0.30 : next.otaku >= 2 ? 0.15 : 0
-    if (next.train >= 3) wantCrit += 0.10
+    if (next.train >= 3) wantCrit += NUM(8) / 100
     if (wantCrit !== (S.synCrit || 0)) {
       S.crit += wantCrit - (S.synCrit || 0)
       S.synCrit = wantCrit
@@ -1998,6 +2023,95 @@
     if (S) S.paused = false
     render()
     syncHud()
+  }
+
+  /* ---------------- 防偷 / 反调试（?debug=1 全豁免） ---------------- */
+  var SAFE_MODE = (function () {
+    try { return /[?&]debug=1(?:&|$)/.test(location.search || '') } catch (e) { return false }
+  })()
+
+  var FATAL = { dead: false }
+
+  function fatalScreen(reason) {
+    if (SAFE_MODE || FATAL.dead) return
+    FATAL.dead = true
+    window.__fatalReason = reason || 'unknown'
+    try {
+      var el = document.getElementById('fatal')
+      if (el) el.hidden = false
+      // 清空画布
+      if (typeof ctx !== 'undefined' && ctx && cv) {
+        ctx.fillStyle = '#000'
+        ctx.fillRect(0, 0, cv.width, cv.height)
+      }
+      // 停掉一切输入
+      document.addEventListener('keydown', function (e) { e.preventDefault(); e.stopPropagation() }, true)
+      document.addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation() }, { capture: true, passive: false })
+      document.addEventListener('touchmove', function (e) { e.preventDefault(); e.stopPropagation() }, { capture: true, passive: false })
+      document.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation() }, { capture: true, passive: false })
+      document.addEventListener('click', function (e) { e.stopPropagation() }, true)
+    } catch (e) { /* ignore */ }
+  }
+
+  function consoleBanner() {
+    try {
+      var art = [
+        '  ██████╗ ██╗   ██╗██████╗ ███████╗███╗   ██╗███████╗',
+        ' ██╔════╝ ╚██╗ ██╔╝██╔══██╗██╔════╝████╗  ██║██╔════╝',
+        ' ██║       ╚████╔╝ ██████╔╝█████╗  ██╔██╗ ██║█████╗  ',
+        ' ██║        ╚██╔╝  ██╔══██╗██╔══╝  ██║╚██╗██║██╔══╝  ',
+        ' ╚██████╗    ██║   ██║  ██║███████╗██║ ╚████║███████╗',
+        '  ╚═════╝    ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚══════╝',
+      ].join('\n')
+      console.log('%c' + art, 'color:#ff2d55;font-weight:700;font-size:11px;line-height:1.05')
+      console.log('%c警告：这里是系统底层，请勿非法篡改代码！', 'color:#fff;background:#c40024;font-size:20px;font-weight:800;padding:8px 14px;border-radius:6px')
+    } catch (e) { /* ignore */ }
+  }
+
+  function isAllowedHost() {
+    try {
+      var h = location.hostname || ''
+      return h === 'slildisn.github.io' || h === 'localhost' || h === '127.0.0.1' || h === ''
+    } catch (e) { return true }
+  }
+
+  function authorMetaIntact() {
+    try {
+      var m = document.querySelector('meta[name="author"]')
+      return !!m && String(m.getAttribute('content')) === 'CYRENE_Original'
+    } catch (e) { return true }
+  }
+
+  function guardChecks() {
+    if (SAFE_MODE || FATAL.dead) return
+    if (!isAllowedHost()) return fatalScreen('host')
+    if (!authorMetaIntact()) return fatalScreen('meta')
+  }
+
+  function bindAntiDebug() {
+    if (SAFE_MODE) return
+    try {
+      document.addEventListener('contextmenu', function (e) { e.preventDefault() })
+      document.documentElement.style.webkitUserSelect = 'none'
+      document.documentElement.style.userSelect = 'none'
+      document.body.style.webkitUserSelect = 'none'
+      document.body.style.userSelect = 'none'
+    } catch (e) { /* ignore */ }
+
+    document.addEventListener('keydown', function (e) {
+      if (SAFE_MODE) return
+      var k = (e.key || '').toLowerCase()
+      if (k === 'f12' ||
+          ((e.ctrlKey || e.metaKey) && e.shiftKey && (k === 'i' || k === 'j' || k === 'c')) ||
+          ((e.ctrlKey || e.metaKey) && (k === 'u' || k === 's'))) {
+        e.preventDefault()
+        fatalScreen('devtools')
+      }
+    }, true)
+
+    // 周期性检查域名与版权标记
+    setInterval(guardChecks, 4000)
+    setTimeout(guardChecks, 1200)
   }
 
   /* ---------------- 隐藏作弊码 ---------------- */
@@ -3439,6 +3553,7 @@
 
   /* ---------------- 行动 ---------------- */
   function act(dx, dy, wait) {
+    if (FATAL.dead) return false
     if (!S || S.over || !running || choosing || itemOpen || S.paused) return false
     if (S.inputLockUntil && Date.now() < S.inputLockUntil) return false
     if (!wait) {
@@ -3708,7 +3823,7 @@
   }
 
   function render() {
-    if (!ctx || !S) return
+    if (FATAL.dead || !ctx || !S) return
     try {
       renderImpl()
     } catch (err) {
@@ -4432,6 +4547,8 @@
   function boot() {
     bindCheatTrigger()
     bindLifecycleGuard()
+    bindAntiDebug()
+    consoleBanner()
     refreshContinue()
     var sb0 = document.getElementById('btn-sound')
     if (sb0) sb0.textContent = SND.isMuted() ? '🔇' : '🔊'
