@@ -1179,7 +1179,61 @@
     return function (i) { return t[i] | 0 }
   })()
 
+  // BOSS 层专用：只有外圈边界墙，内部全空的大平层
+  function bossArena(floor, seed) {
+    var g = []
+    for (var ay = 0; ay < MAP_H; ay++) {
+      var row = []
+      for (var ax = 0; ax < MAP_W; ax++) {
+        var edge = (ax === 0 || ay === 0 || ax === MAP_W - 1 || ay === MAP_H - 1)
+        row.push(edge ? WALL : FLOOR)
+      }
+      g.push(row)
+    }
+    var start = { x: 3, y: MAP_H - 4 }        // 玩家：左下
+    var stairs = { x: MAP_W - 4, y: 3 }      // BOSS：右上
+    var items = []
+    // 放几瓶药水，方便走位补给
+    var spots = [[8, MAP_H - 12], [MAP_W - 9, 8], [Math.floor(MAP_W / 2), Math.floor(MAP_H / 2)], [6, 6], [MAP_W - 8, MAP_H - 8]]
+    for (var i = 0; i < spots.length; i++) {
+      var sx = Math.max(2, Math.min(MAP_W - 3, spots[i][0]))
+      var sy = Math.max(2, Math.min(MAP_H - 3, spots[i][1]))
+      items.push({ x: sx, y: sy, kind: 'potion' })
+    }
+
+    var enemies = []
+    var isFinal = floor === 30
+    if (floor === 10) {
+      var thp1 = NUM(0) + floor * NUM(1)
+      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: thp1, max: thp1, atk: NUM(3) + ((floor / NUM(1)) | 0), name: '铁墓' })
+    } else if (floor === 20) {
+      var dhp1 = NUM(2) + floor * NUM(1)
+      enemies.push({ type: 'dick', x: stairs.x, y: stairs.y, hp: dhp1, max: dhp1, atk: NUM(4) + ((floor / NUM(1)) | 0), name: '迪克' })
+    } else if (isFinal) {
+      var thp2 = NUM(5) + floor * NUM(1)
+      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: thp2, max: thp2, atk: NUM(4) + ((floor / NUM(4)) | 0), name: '铁墓' })
+      var dhp2 = NUM(6) + floor * NUM(1)
+      enemies.push({ type: 'dick', x: stairs.x - 3, y: stairs.y + 1, hp: dhp2, max: dhp2, atk: NUM(4) + ((floor / NUM(4)) | 0), name: '迪克' })
+    }
+
+    return {
+      grid: g,
+      rooms: [{ cx: Math.floor(MAP_W / 2), cy: Math.floor(MAP_H / 2), x: 1, y: 1, w: MAP_W - 2, h: MAP_H - 2 }],
+      start: start,
+      stairs: stairs,
+      items: items,
+      enemies: enemies,
+      floor: floor,
+      seed: seed,
+      special: null,
+      altar: null,
+      noStairs: isFinal,
+      arena: true,
+    }
+  }
+
   function genMap(floor, seed) {
+    if (floor === 10 || floor === 20 || floor === 30) return bossArena(floor, seed)
     var g = blankMap()
     var rooms = []
     var tries = 0
@@ -3474,7 +3528,7 @@
       if (e.type === 'tomb') {
         if (e.aoeCd === undefined) e.aoeCd = 2
         if (e.aoeCd <= 0) {
-          e.aoeCd = 2
+          e.aoeCd = 3
           var aoeDmg = Math.max(1, e.atk - 1)
           S.aoeCount = (S.aoeCount || 0) + 1
           log('铁墓震地！全队受创。')
