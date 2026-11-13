@@ -1399,8 +1399,48 @@
     { id: 'heart', name: '冷藏的心脏', icon: '🫀', desc: '冰袋还没化，是谁把它放进来的？', effect: '每次击杀回 2 血，药水效果 -50%', apply: function () { S.leech += 2; S.potionMul = Math.max(0.4, S.potionMul - 0.5) } },
     { id: 'eye', name: '无眼的护符', icon: '👁️', desc: '它没有眼睛，所以看得比你清楚。', effect: '视野 +3，攻击 -1', apply: function () { S.vision += 3; S.atk = Math.max(1, S.atk - 1) } },
     { id: 'tooth', name: '会说话的牙齿', icon: '🦷', desc: '它一直在小声讲你听不懂的笑话。', effect: '击杀经验 +2，最大生命 -2', apply: function () { S.bonusXp = (S.bonusXp || 0) + 2; S.maxHp = Math.max(4, S.maxHp - 2); S.hp = Math.min(S.hp, S.maxHp) } },
-    { id: 'coin', name: '生锈的硬币', icon: '🪙', desc: '正反面都是楼下的地板。', effect: '每次下楼多回 2 血，闪避 -10%', apply: function () { S.floorHeal = (S.floorHeal || 0) + 2; S.dodge = Math.max(0, S.dodge - 0.1) } }
+    { id: 'coin', name: '生锈的硬币', icon: '🪙', desc: '正反面都是楼下的地板。', effect: '每次下楼多回 2 血，闪避 -10%', apply: function () { S.floorHeal = (S.floorHeal || 0) + 2; S.dodge = Math.max(0, S.dodge - 0.1) } },
+    { id: 'skate', name: '怪盗的滑板鞋', icon: '👟', desc: '踩上去没有声音，连影子都追不上。', effect: '每次移动后 15% 概率不消耗回合（敌人不动，可连走两步）', apply: function () { S.skate = true } },
+    { id: 'scarecrow', name: '替身稻草人', icon: '🎃', desc: '它替你挨了一下，然后碎在风里。', effect: '全队免死一次：致命伤保留 1 血并传送回本层起点，用后碎裂', apply: function () { S.scarecrow = true } },
+    { id: 'gauntlet', name: '盗版无限手套', icon: '🧤', desc: '宝石是塑料的，但打人真的很疼。', effect: '全队攻击 +5；每次攻击 5% 概率反噬自己 1 血', apply: function () { S.atk += 5; for (var gi = 0; gi < S.team.length; gi++) if (!S.team[gi].dead) S.team[gi].atk += 5; S.gauntlet = true } },
+    { id: 'greed', name: '贪婪之壶', icon: '🏺', desc: '壶口一直在小声念：更多、更多。', effect: '本局金币翻倍；每走 10 步全队 -1 血（最低留 1）', apply: function () { S.goldMul = (S.goldMul || 1) * 2; S.greed = true } },
+    { id: 'dogfood', name: '狂暴狗粮', icon: '🍖', desc: '闻一下就想拆家。', effect: '全队攻击 +10、暴击 +20%；队友每回合 35% 概率发呆', apply: function () { S.atk += 10; S.crit += 0.2; for (var di2 = 0; di2 < S.team.length; di2++) if (!S.team[di2].dead) S.team[di2].atk += 10; S.dogfood = true } },
+    { id: 'gacha', name: '命运扭蛋机', icon: '🎰', desc: '投一枚硬币，换一段命运。', effect: '拾取时随机：+999 金币 / 永久攻击 +5 / 全队血量归 1 / 当场刷出一只 BOSS', apply: function () { gachaRoll() } }
   ]
+
+  function gainGold(n) {
+    var mul = (S && S.goldMul) ? S.goldMul : 1
+    S.gold = (S.gold || 0) + Math.round(n * mul)
+    return Math.round(n * mul)
+  }
+
+  function gachaRoll() {
+    var roll = Math.floor(Math.random() * 4)
+    if (roll === 0) {
+      gainGold(999)
+      log('扭蛋机吐出一大把金币：+999！')
+    } else if (roll === 1) {
+      S.atk += 5
+      log('扭蛋机里滚出一颗糖：永久攻击 +5！')
+    } else if (roll === 2) {
+      S.hp = 1
+      var aliveG = aliveTeam()
+      for (var g4 = 0; g4 < aliveG.length; g4++) aliveG[g4].hp = 1
+      log('扭蛋机发出一声坏笑：全队血量被扣到 1 点。')
+    } else {
+      var dirsG = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]
+      for (var gd = 0; gd < dirsG.length; gd++) {
+        var gx = S.player.x + dirsG[gd][0], gy = S.player.y + dirsG[gd][1]
+        if (gx < 0 || gy < 0 || gx >= MAP_W || gy >= MAP_H) continue
+        if (S.grid[gy][gx] === WALL || enemyAt(gx, gy)) continue
+        var gh = 30 + S.floor * 4
+        S.enemies.push({ type: 'tomb', x: gx, y: gy, hp: gh, max: gh, atk: 2 + ((S.floor / 4) | 0), name: '扭蛋 BOSS' })
+        log('扭蛋机吐出一只 BOSS！它就在你身旁。')
+        break
+      }
+    }
+    syncHud(); render()
+  }
 
   function trinketById(id) {
     for (var i = 0; i < TRINKETS.length; i++) if (TRINKETS[i].id === id) return TRINKETS[i]
@@ -2192,7 +2232,7 @@
         afterCheat()
         break
       case 'GIVE_ME_GOLD':
-        S.gold = (S.gold || 0) + 999
+        gainGold(999)
         cheatLog('【警告：神秘力量已介入，金币 +999！】', true)
         afterCheat()
         break
@@ -2955,6 +2995,7 @@
     var m = genMap(1, seed)
     S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
     S.player.x = m.start.x; S.player.y = m.start.y
+    S.floorStart = { x: m.start.x, y: m.start.y }
     S.stairs = m.stairs
     S.special = m.special
     S.noStairs = !!m.noStairs
@@ -2972,7 +3013,7 @@
 
   function nextFloor() {
     S.floor++
-    S.gold += 3
+    gainGold(3)
     if (S.relics2.lantern) {
       S.atk += S.relics2.lantern
       log('猎魂灯亮了：攻击 +' + S.relics2.lantern + '。')
@@ -2992,6 +3033,7 @@
     if (S.floor === 30) setTimeout(showBossWarn, 60)
     S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
     S.player.x = m.start.x; S.player.y = m.start.y
+    S.floorStart = { x: m.start.x, y: m.start.y }
     S.stairs = m.stairs
     S.special = m.special
     S.noStairs = !!m.noStairs
@@ -3041,7 +3083,7 @@
 
     // 掉落：药水多，遗物少
     if ((S.syn && S.syn.chaos) >= 4 && rnd(100) < 20) {
-      S.gold = (S.gold || 0) + 3
+      gainGold(3)
       log('混沌的余兴：额外掉出 3 金币。')
     }
     if (rnd(100) < 45) {
@@ -3085,7 +3127,7 @@
         }
       } else {
         // 10 / 20 层：丰厚奖励
-        S.gold = (S.gold || 0) + 40
+        gainGold(40)
         var tk = pick(TRINKETS).id
         S.trinkets[tk] = true
         var tobj = trinketById(tk)
@@ -3131,6 +3173,11 @@
     }
     e.hp -= dmg
     log((crit ? '暴击！' : '') + '你击中「' + e.name + '」' + dmg + ' 点。')
+    if (S.gauntlet && Math.random() < 0.05) {
+      S.hp = Math.max(1, S.hp - 1)
+      fx(S.player.x, S.player.y, '反噬 -1', '#ff4d5e', -0.5)
+      log('盗版手套反噬了一下：你受到 1 点伤害。')
+    }
     fx(e.x, e.y, (crit ? '暴击 -' : '-') + dmg, crit ? '#ffb347' : '#ff4d5e', -0.45, (rnd(3) - 1) * 0.22)
     SND.hit(crit)
     e.hitAt = Date.now()
@@ -3159,6 +3206,15 @@
     dmg += (S.extraHurt || 0)
     var reduce = (S.hero.id === 'pig' ? 1 : 0) + (S.dmgReduce || 0)
     dmg = Math.max(1, dmg - reduce)
+    if (S.scarecrow && S.hp - dmg <= 0) {
+      S.hp = 1
+      delete S.trinkets.scarecrow
+      S.scarecrow = false
+      if (S.floorStart) { S.player.x = S.floorStart.x; S.player.y = S.floorStart.y }
+      computeFov(); render()
+      log('稻草人碎了：你被拽回本层起点，保留 1 点血。')
+      return
+    }
     S.hp -= dmg
     log('你受到 ' + dmg + ' 点伤害。')
     fx(S.player.x, S.player.y, '-' + dmg, '#ff4d5e', -0.4)
@@ -3288,6 +3344,15 @@
     if (!m || m.hp <= 0) return
     if (S.god) { fx(m.x, m.y, '0', '#d7b3ff', -0.4); return }
     if ((S.syn && S.syn.chaos) >= 2 && Math.random() < 0.1) { log('队友免疫了这次伤害。'); return }
+    if (S.scarecrow && m.hp - dmg <= 0) {
+      m.hp = 1
+      delete S.trinkets.scarecrow
+      S.scarecrow = false
+      if (S.floorStart) { m.x = S.floorStart.x; m.y = S.floorStart.y }
+      render()
+      log('稻草人碎了：队友被拽回本层起点，保留 1 点血。')
+      return
+    }
     m.hp -= dmg
     m.hitAt = Date.now()
     fx(m.x, m.y, '-' + dmg, '#ff8fb0', -0.4)
@@ -3385,6 +3450,7 @@
 
     // 严格贴队列：队友 i 的坐标必须等于 pathHistory[i]（没路可走就不动）
     for (var k = 0; k < alive.length; k++) {
+      if (S.dogfood && Math.random() < 0.35) continue   // 吃撑了，原地发呆
       var tgt = (S.pathHistory || [])[k]
       if (!tgt) continue
       if (S.grid[tgt.y] && S.grid[tgt.y][tgt.x] === WALL) continue
@@ -3630,11 +3696,24 @@
           }
         }
         if (S.watch && S.steps % 10 === 0) watchPulse()
+        if (S.greed && S.steps % 10 === 0) {
+          S.hp = Math.max(1, S.hp - 1)
+          var aliveGr = aliveTeam()
+          for (var g5 = 0; g5 < aliveGr.length; g5++) aliveGr[g5].hp = Math.max(1, aliveGr[g5].hp - 1)
+          log('贪婪之壶发作：全队 -1 血（不会致死）。')
+          fx(S.player.x, S.player.y, '-1', '#ff9ec4', -0.4)
+        }
       }
     }
     S.turns++
     teamTurn()
     if (S.over) return true
+    if (S.skate && Math.random() < 0.15) {
+      log('滑板鞋带起一阵风，敌人没反应过来。')
+      fx(S.player.x, S.player.y, '再走一步', '#9fd8ff', -0.5)
+      computeFov(); render(); syncHud()
+      return true
+    }
     enemiesTurn()
     if (S.over) return true
     computeFov(); render(); syncHud()
@@ -4614,6 +4693,8 @@
     specialPos: function () { return S ? S.special : null },
     altarPos: function () { return S ? S.altar : null },
     openAltar: openAltar,
+    hasTrinket: function (id) { return !!(S && S.trinkets && S.trinkets[id]) },
+    pickTrinket: pickTrinket,
     tryRender: function () { try { render(); return null } catch (e) { return e && e.stack ? e.stack : String(e) } },
     killBossType: function (t) {
       if (!S) return false
