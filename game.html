@@ -2126,8 +2126,24 @@
   }
 
   /* ---------------- 防偷 / 反调试（?debug=1 全豁免） ---------------- */
+  function isShellEnv() {
+    try {
+      var p = String((location && location.protocol) || '').toLowerCase()
+      if (p === 'file:' || p === 'content:' || p === 'capacitor:' || p === 'ionic:' || p === 'app:') return true
+      var ua = String((navigator && navigator.userAgent) || '')
+      // 安卓 WebView 壳（Chrome 正常 UA 不含 "; wv)"）
+      if (ua.indexOf('; wv)') >= 0) return true
+      if (ua.indexOf(';wv)') >= 0) return true
+      if (/TombBrawl|tomb-brawl/i.test(ua)) return true
+      return false
+    } catch (e) { return false }
+  }
+
   var SAFE_MODE = (function () {
-    try { return /[?&]debug=1(?:&|$)/.test(location.search || '') } catch (e) { return false }
+    try {
+      if (isShellEnv()) return true
+      return /[?&]debug=1(?:&|$)/.test(location.search || '')
+    } catch (e) { return false }
   })()
 
   var FATAL = { dead: false }
@@ -2182,8 +2198,15 @@
 
   function isAllowedHost() {
     try {
-      var h = location.hostname || ''
-      return h === 'slildisn.github.io' || h === 'localhost' || h === '127.0.0.1' || h === ''
+      var p = String((location && location.protocol) || '').toLowerCase()
+      if (p === 'file:' || p === 'content:' || p === 'capacitor:' || p === 'ionic:' || p === 'app:') return true
+      var h = String((location && location.hostname) || '').toLowerCase()
+      if (!h) return true
+      if (h === 'slildisn.github.io' || h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0') return true
+      if (h.length > 10 && h.slice(-10) === '.localhost') return true
+      if (h === 'appassets.androidplatform.net') return true
+      if (isShellEnv()) return true
+      return false
     } catch (e) { return true }
   }
 
@@ -4754,6 +4777,15 @@
 
   /* ---------------- 生命周期 ---------------- */
   function boot() {
+    try {
+      bootInner()
+    } catch (e) {
+      try { console.error('[boot]', e) } catch (err) { /* ignore */ }
+      try { if (ovSelect) ovSelect.hidden = false; if (pickEl) buildPicker() } catch (err2) { /* ignore */ }
+    }
+  }
+
+  function bootInner() {
     if (!SAFE_MODE && !isAllowedHost()) { fatalScreen('host'); return }
     bindCheatTrigger()
     bindLifecycleGuard()
