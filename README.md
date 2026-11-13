@@ -2,6 +2,9 @@
 
 # 🕯️ 铁墓大乱斗 (Iron Tomb Brawl) - Demo 版
 
+[![下载安卓 APK](https://img.shields.io/badge/%F0%9F%93%A5%20%E4%B8%8B%E8%BD%BD-APK%20V1.0-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/Slildisn/slildisn.github.io/releases/latest)
+[![Release v1.0.0](https://img.shields.io/badge/Release-v1.0.0-8A2BE2?style=for-the-badge&logo=github)](https://github.com/Slildisn/slildisn.github.io/releases/tag/v1.0.0)
+
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-Installable-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
 ![AI-Generated](https://img.shields.io/badge/AI--Generated-100%25-ff69b4?style=for-the-badge)
