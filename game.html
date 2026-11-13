@@ -2032,13 +2032,25 @@
 
   var FATAL = { dead: false }
 
+  var FATAL_TEXT = {
+    host: 'FATAL ERROR: 未经授权的部署环境，代码已被锁定。',
+    meta: 'FATAL ERROR: 核心记忆缺失，系统已自毁。',
+    devtools: 'FATAL ERROR: 核心记忆缺失，系统已自毁。',
+  }
+
   function fatalScreen(reason) {
     if (SAFE_MODE || FATAL.dead) return
+    if (!FATAL.locked) {
+      // 进到这一步说明环境未授权/被篡改：直接锁死
+      FATAL.locked = true
+    }
     FATAL.dead = true
     window.__fatalReason = reason || 'unknown'
     try {
       var el = document.getElementById('fatal')
       if (el) el.hidden = false
+      var tx = document.querySelector('#fatal .fatal-t')
+      if (tx) tx.textContent = FATAL_TEXT[reason] || FATAL_TEXT.meta
       // 清空画布
       if (typeof ctx !== 'undefined' && ctx && cv) {
         ctx.fillStyle = '#000'
@@ -2113,6 +2125,12 @@
     setInterval(guardChecks, 4000)
     setTimeout(guardChecks, 1200)
   }
+
+  // —— 最严格的域名锁定：脚本初始化阶段立即执行 ——
+  ;(function initHostLock() {
+    if (SAFE_MODE) return
+    if (!isAllowedHost()) fatalScreen('host')
+  })()
 
   /* ---------------- 隐藏作弊码 ---------------- */
   var cheatClicks = 0
@@ -4545,6 +4563,7 @@
 
   /* ---------------- 生命周期 ---------------- */
   function boot() {
+    if (!SAFE_MODE && !isAllowedHost()) { fatalScreen('host'); return }
     bindCheatTrigger()
     bindLifecycleGuard()
     bindAntiDebug()
