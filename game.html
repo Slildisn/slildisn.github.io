@@ -278,20 +278,53 @@
   /* 平板/横屏：最大化可视区域 */
   @media (orientation: landscape) and (min-width: 700px) {
     .wrap { max-width: min(1180px, 100%); padding-left: 12px; padding-right: 12px; }
-    h1 { font-size: 1.15rem; }
-    .hud { padding: 6px 10px; }
+    h1 { font-size: 1.1rem; margin: 0; }
+    .sub { display: none; }
+    .hud { padding: 6px 10px; margin-bottom: 4px; }
     canvas {
       width: auto !important;
       height: auto !important;
       max-width: 100% !important;
-      max-height: calc(100dvh - 150px);
+      max-height: calc(100dvh - 120px);
       margin: 0 auto;
       display: block;
     }
     .stage { display: flex; justify-content: center; }
-    #ov-select .pick { grid-template-columns: repeat(5, 1fr); max-height: calc(100dvh - 180px); }
+
+    /* 横屏顶部收紧：安全区 + 小留白，别留大块紫色空白 */
+    #ov-select.ov-scroll,
+    .ov-scroll {
+      padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important;
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
+    }
+    #ov-select h2 { margin: 0; font-size: .96rem; }
+    #ov-select > p { margin: 0 0 4px; font-size: .7rem; }
+
+    /* 选人列表：固定 3 列、整体居中、绝不横向溢出错位 */
+    #ov-select .pick {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: min(720px, 100%);
+      max-width: 100%;
+      margin: 0 auto;
+      justify-content: center;
+      justify-items: stretch;
+      overflow-x: hidden;
+      overflow-y: auto;
+      max-height: calc(100dvh - 150px);
+      padding: 2px 6px 6px;
+    }
+    #ov-select .pick button {
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+    }
+    #ov-select .pick button b,
+    #ov-select .pick button i,
+    #ov-select .pick button .card-syn { max-width: 100%; overflow-wrap: anywhere; }
+
     .log { font-size: .72rem; }
   }
+}
 
   @media (max-width: 420px) {
     h1 { font-size: .9rem !important; }
