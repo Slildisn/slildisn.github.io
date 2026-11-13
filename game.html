@@ -1190,16 +1190,10 @@
       }
       g.push(row)
     }
-    var start = { x: 3, y: MAP_H - 4 }        // 玩家：左下
-    var stairs = { x: MAP_W - 4, y: 3 }      // BOSS：右上
-    var items = []
-    // 放几瓶药水，方便走位补给
-    var spots = [[8, MAP_H - 12], [MAP_W - 9, 8], [Math.floor(MAP_W / 2), Math.floor(MAP_H / 2)], [6, 6], [MAP_W - 8, MAP_H - 8]]
-    for (var i = 0; i < spots.length; i++) {
-      var sx = Math.max(2, Math.min(MAP_W - 3, spots[i][0]))
-      var sy = Math.max(2, Math.min(MAP_H - 3, spots[i][1]))
-      items.push({ x: sx, y: sy, kind: 'potion' })
-    }
+    var midX = Math.floor(MAP_W / 2)
+    var start = { x: midX, y: MAP_H - 3 }    // 玩家：正下方
+    var stairs = { x: midX, y: 2 }           // BOSS：正上方
+    var items = []                            // 内部绝对空无一物
 
     var enemies = []
     var isFinal = floor === 30
@@ -1213,7 +1207,7 @@
       var thp2 = NUM(5) + floor * NUM(1)
       enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: thp2, max: thp2, atk: NUM(4) + ((floor / NUM(4)) | 0), name: '铁墓' })
       var dhp2 = NUM(6) + floor * NUM(1)
-      enemies.push({ type: 'dick', x: stairs.x - 3, y: stairs.y + 1, hp: dhp2, max: dhp2, atk: NUM(4) + ((floor / NUM(4)) | 0), name: '迪克' })
+      enemies.push({ type: 'dick', x: midX + 4, y: 4, hp: dhp2, max: dhp2, atk: NUM(4) + ((floor / NUM(4)) | 0), name: '迪克' })
     }
 
     return {
@@ -1409,6 +1403,17 @@
 
   function computeFov() {
     if (!S || !S.grid || !S.player) return
+    if (S.arena) {
+      var allVis = {}
+      for (var ay = 0; ay < MAP_H; ay++) {
+        for (var ax = 0; ax < MAP_W; ax++) {
+          allVis[ax + ',' + ay] = true
+          S.seen[ax + ',' + ay] = true
+        }
+      }
+      S.vis = allVis
+      return
+    }
     var p = S.player, r = S.vision
     if (!r || isNaN(r) || r < 1) r = 6
     var vis = {}
@@ -2963,6 +2968,7 @@
 
   /* ---------------- 开局 ---------------- */
   function refreshLog() {
+    if (S) S.logs = []
     if (logEl) logEl.innerHTML = ''
   }
 
@@ -3053,6 +3059,7 @@
     S.stairs = m.stairs
     S.special = m.special
     S.noStairs = !!m.noStairs
+    S.arena = !!m.arena
     S.altar = m.altar
     S.team = []
     S.pathHistory = []
@@ -3081,7 +3088,13 @@
     } else {
       SND.ambience('calm')
       SND.music('calm')
-      if (S.floor % 5 === 0) log('这一层有休息室，去补一口。')
+      if (S.floor % 5 === 0 && S.floor !== 0) {
+        if (S.floor === 10 || S.floor === 20 || S.floor === 30) {
+          // BOSS 大平层：不提示休息室
+        } else {
+          log('这一层有休息室，去补一口。')
+        }
+      }
     }
     var m = genMap(S.floor, S.seed + S.floor * 7919)
     if (S.floor === 30) setTimeout(showBossWarn, 60)
@@ -3091,6 +3104,7 @@
     S.stairs = m.stairs
     S.special = m.special
     S.noStairs = !!m.noStairs
+    S.arena = !!m.arena
     S.altar = m.altar
     S.pathHistory = []
     S.seen = {}; S.vis = {}
@@ -3100,6 +3114,7 @@
     META.best = Math.max(META.best, S.floor)
     saveMeta()
     syncMetaBar()
+    if (S.floor === 10 || S.floor === 20 || S.floor === 30) refreshLog()
     if (S.steps > 0) log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + ((S.floor === 10 || S.floor === 20 || S.floor === 30) ? (S.floor === 30 ? '双 BOSS 守在这里。' : 'BOSS 守着门。') : ''))
     computeFov(); render(); syncHud()
     saveRun()
