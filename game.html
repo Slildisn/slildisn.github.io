@@ -267,6 +267,7 @@
   @keyframes warnBlink{50%{opacity:.35}}
   @media (prefers-reduced-motion:reduce){#boss-warn span{animation:none}}
 
+  #ov-end{z-index:120}
   #fatal{
     position:fixed;inset:0;z-index:2147483000;background:#000;
     display:grid;place-content:center;justify-items:center;gap:18px;
@@ -3862,6 +3863,34 @@
     render()
   }
 
+  function backToMenu() {
+    try {
+      running = false
+      var wasCheat = !!(S && S.cheatDirty)
+      if (S) S.over = true
+      if (!wasCheat) clearRun()
+      S = null
+      if (ovEnd) ovEnd.hidden = true
+      if (ovTalent) ovTalent.hidden = true
+      if (ovItem) ovItem.hidden = true
+      if (ovChest) ovChest.hidden = true
+      if (ovShop) ovShop.hidden = true
+      if (ovTeam) ovTeam.hidden = true
+      if ($('ov-stats')) $('ov-stats').hidden = true
+      if ($('ov-help')) $('ov-help').hidden = true
+      if ($('ov-cheat')) $('ov-cheat').hidden = true
+      if ($('ov-meta')) $('ov-meta').hidden = true
+      if ($('boss-warn')) $('boss-warn').classList.remove('on')
+      if ($('boss-bar')) { $('boss-bar').classList.remove('on'); $('boss-bar').innerHTML = '' }
+      if (ctx && cv) { ctx.fillStyle = '#0a0910'; ctx.fillRect(0, 0, cv.width, cv.height) }
+      if (ovSelect) ovSelect.hidden = false
+      buildPicker()
+      syncMetaBar()
+      refreshContinue()
+      refreshLog()
+    } catch (e) { /* ignore */ }
+  }
+
   function win() {
     S.over = true
     running = false
@@ -4675,6 +4704,20 @@
     if (e.key === 'Enter') { e.preventDefault(); submitCheat() }
     else if (e.key === 'Escape') { e.preventDefault(); closeCheat() }
   })
+  if (endAgain) {
+    var lastEndTap = 0
+    endAgain.addEventListener('click', function () {
+      if (Date.now() - lastEndTap < 600) return
+      lastEndTap = Date.now()
+      backToMenu()
+    })
+    endAgain.addEventListener('touchend', function (e) {
+      e.preventDefault()
+      if (Date.now() - lastEndTap < 600) return
+      lastEndTap = Date.now()
+      backToMenu()
+    }, { passive: false })
+  }
   if ($('btn-stats')) $('btn-stats').addEventListener('click', openStats)
   if ($('stats-close')) $('stats-close').addEventListener('click', closeStats)
   if ($('stats-x')) $('stats-x').addEventListener('click', closeStats)
