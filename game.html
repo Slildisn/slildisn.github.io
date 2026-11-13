@@ -242,8 +242,9 @@
     font-size:.72rem;letter-spacing:.14em;color:#ffd9f0;margin-bottom:3px;
     text-shadow:0 0 12px rgba(255,60,140,.8)
   }
+  .boss-row{margin-bottom:4px}
   .boss-hp{
-    height:14px;border-radius:99px;overflow:hidden;
+    height:12px;border-radius:99px;overflow:hidden;
     background:rgba(24,8,24,.85);border:1px solid rgba(255,90,150,.65);
     box-shadow:0 0 22px rgba(255,40,120,.55)
   }
@@ -445,11 +446,8 @@
     <div class="syn-panel" id="syn-panel" hidden></div>
   </div>
   <div class="toast" id="toast" hidden></div>
-  <div id="boss-bar" aria-hidden="true">
-    <div class="boss-name">⚠ 终极迪克 <span id="boss-hp-num"></span></div>
-    <div class="boss-hp"><i id="boss-hp-fill" style="width:100%"></i></div>
-  </div>
-  <div id="boss-warn"><span>⚠️ SYSTEM HACKED: 终极迪克已苏醒</span></div>
+  <div id="boss-bar" aria-hidden="true"></div>
+  <div id="boss-warn"><span>⚠️ 警告：终极防线已触发！</span></div>
 
   <div class="stage" id="stage">
     <canvas id="cv" width="480" height="352" aria-label="地牢画面"></canvas>
@@ -587,7 +585,7 @@
 
     <div class="ov ov-global ov-tapclose" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>在画面上滑动走一步（电脑用方向键/WASD），撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 10 层有一只铁墓守着门，它每锤 30% 落空。<br>5、15、25…这类中间层会有<b>休息室</b>，踩上去全队回 6 血。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>走到光门上会先弹出<b>招募面板</b>：三选一招募队友（最多 5 人，满员会替换最早那位）；卡片上有羁绊标签和「招募后激活哪些羁绊」的预判。队友踩着你的历史路径跟随，不会穿墙；他们凑齐会触发<b>羁绊</b>（左上角显示）。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
+      <p>在画面上滑动走一步（电脑用方向键/WASD），撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>第 <b>10 层</b> 是铁墓（每 3 回合全屏震击）；第 <b>20 层</b> 是迪克（每 2 回合召唤代码或侵蚀攻击）；第 <b>30 层</b> 是双 BOSS 终局，没有楼梯，两个都倒下才算通关。<br>5、15、25…这类中间层会有<b>休息室</b>，踩上去全队回 6 血。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>走到光门上会先弹出<b>招募面板</b>：三选一招募队友（最多 5 人，满员会替换最早那位）；卡片上有羁绊标签和「招募后激活哪些羁绊」的预判。队友踩着你的历史路径跟随，不会穿墙；他们凑齐会触发<b>羁绊</b>（左上角显示）。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
       <p class="tap-hint">点任意位置也能关掉</p>
     </div>
@@ -641,7 +639,9 @@
     ghost: { id: 'ghost', name: '游魂', glyph: '◌', color: '#d7c6ff', hp: 9, atk: 2, chase: 7, slow: true },
     archer: { id: 'archer', name: '暗箭手', glyph: '➶', color: '#9fb4ff', hp: 4, atk: 2, chase: 0, ranged: true, range: 6 },
     bomber: { id: 'bomber', name: '自爆虫', glyph: '✸', color: '#c8f25a', hp: 2, atk: 5, chase: 9, fast: true, suicide: true },
-    tomb: { id: 'tomb', name: '铁墓', glyph: '☗', color: '#ffd9a0', hp: 24, atk: 4, chase: 99 }
+    tomb: { id: 'tomb', name: '铁墓', glyph: '☗', color: '#ffd9a0', hp: 24, atk: 4, chase: 99 },
+    dick: { id: 'dick', name: '迪克', glyph: '⌗', color: '#7dff9e', hp: 30, atk: 4, chase: 99 },
+    code: { id: 'code', name: '代码', glyph: '⌁', color: '#9dffc4', hp: 3, atk: 1, chase: 4 }
   }
 
   /* ---------------- DOM ---------------- */
@@ -718,6 +718,7 @@
 
   function dirArrow() {
     if (!S) return '—'
+    if (S.noStairs) return '终点'
     var dx = S.stairs.x - S.player.x, dy = S.stairs.y - S.player.y
     if (!dx && !dy) return '到了'
     var v = (dy < 0 ? '↑' : dy > 0 ? '↓' : '') + (dx < 0 ? '←' : dx > 0 ? '→' : '')
@@ -1200,10 +1201,31 @@
       return true
     }
 
-    var isBoss = floor % 20 === 0
-    if (isBoss) {
-      var bhp = 24 + floor * 4
-      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: bhp, max: bhp, atk: 2 + ((floor / 4) | 0), name: '终极迪克' })
+    var isBoss10 = floor === 10
+    var isBoss20 = floor === 20
+    var isFinal = floor === 30
+    var isBoss = isBoss10 || isBoss20 || isFinal
+    var noStairs = isFinal
+    if (isBoss10) {
+      var bhp = 30 + floor * 4
+      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: bhp, max: bhp, atk: 2 + ((floor / 4) | 0), name: '铁墓' })
+    }
+    if (isBoss20) {
+      var dhp = 36 + floor * 4
+      enemies.push({ type: 'dick', x: stairs.x, y: stairs.y, hp: dhp, max: dhp, atk: 3 + ((floor / 4) | 0), name: '迪克' })
+    }
+    if (isFinal) {
+      var thp = 60 + floor * 4
+      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: thp, max: thp, atk: 3 + ((floor / 3) | 0), name: '铁墓' })
+      // 迪克放在另一格，绝不与铁墓重叠
+      for (var db = 0; db < 80; db++) {
+        var dx2 = 1 + rnd(MAP_W - 2), dy2 = 1 + rnd(MAP_H - 2)
+        if (!free(dx2, dy2)) continue
+        if (dx2 === stairs.x && dy2 === stairs.y) continue
+        var dh2 = 50 + floor * 4
+        enemies.push({ type: 'dick', x: dx2, y: dy2, hp: dh2, max: dh2, atk: 3 + ((floor / 3) | 0), name: '迪克' })
+        break
+      }
     }
 
     var mates = S ? S.team.filter(function (m) { return !m.dead }).length : 0
@@ -1265,8 +1287,8 @@
 
     // 层间：宝箱 / 商店；5 的倍数但不是 BOSS 层 → 休息室
     var special = null
-    var isRestFloor = floor % 5 === 0 && floor % 20 !== 0
-    if (floor % 20 !== 0 && rooms.length > 1) {
+    var isRestFloor = floor % 5 === 0 && floor !== 10 && floor !== 20 && floor !== 30
+    if (!isBoss && rooms.length > 1) {
       var sr = rooms[1 + rnd(rooms.length - 1)]
       for (var sp2 = 0; sp2 < 40; sp2++) {
         var sx2 = sr.x + (sr.w > 2 ? 1 + rnd(sr.w - 2) : 0)
@@ -1279,7 +1301,7 @@
       }
     }
 
-    return { grid: g, rooms: rooms, start: start, stairs: stairs, items: items, enemies: enemies, floor: floor, seed: seed, special: special, altar: null }
+    return { grid: g, rooms: rooms, start: start, stairs: stairs, items: items, enemies: enemies, floor: floor, seed: seed, special: special, altar: null, noStairs: noStairs }
   }
 
   /* ---------------- 视野 ---------------- */
@@ -2043,6 +2065,20 @@
         cheatLog('【警告：神秘力量已介入，攻击力 +9999！】', true)
         afterCheat()
         break
+      case 'GOTO_10':
+      case 'GOTO_20':
+      case 'GOTO_30':
+        var tg = cmd === 'GOTO_10' ? 10 : cmd === 'GOTO_20' ? 20 : 30
+        if (S.floor >= tg) {
+          cheatLog('【警告：已经在第 ' + S.floor + ' 层了。】', true)
+          break
+        }
+        var g3 = 0
+        while (S.floor < tg && g3++ < 40) nextFloor()
+        computeFov()
+        cheatLog('【警告：神秘力量已介入，已抵达第 ' + tg + ' 层！】', true)
+        afterCheat()
+        break
       case 'GOTO_5':
         if (S.floor >= 5) {
           cheatLog('【警告：已经在第 5 层或更深处了。】', true)
@@ -2757,6 +2793,7 @@
       altar: null,
       relics2: {},
       special: null,
+      noStairs: false,
       shopOffers: [],
       shakeMag: 0,
       shakeUntil: 0,
@@ -2776,6 +2813,7 @@
     S.player.x = m.start.x; S.player.y = m.start.y
     S.stairs = m.stairs
     S.special = m.special
+    S.noStairs = !!m.noStairs
     S.altar = m.altar
     S.team = []
     S.pathHistory = []
@@ -2795,9 +2833,9 @@
       S.atk += S.relics2.lantern
       log('猎魂灯亮了：攻击 +' + S.relics2.lantern + '。')
     }
-    if (S.floor % 20 === 0) {
+    if (S.floor === 10 || S.floor === 20 || S.floor === 30) {
       S.hp = S.maxHp
-      log('系统被入侵了……先回满血。')
+      log(S.floor === 10 ? '铁墓的气息……先回满血。' : S.floor === 20 ? '系统被入侵了……先回满血。' : '终极防线就在前面……先回满血。')
       SND.boss()
       SND.ambience('boss')
       SND.music('boss')
@@ -2807,11 +2845,12 @@
       if (S.floor % 5 === 0) log('这一层有休息室，去补一口。')
     }
     var m = genMap(S.floor, S.seed + S.floor * 7919)
-    if (S.floor % 20 === 0) setTimeout(showBossWarn, 60)
+    if (S.floor === 30) setTimeout(showBossWarn, 60)
     S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
     S.player.x = m.start.x; S.player.y = m.start.y
     S.stairs = m.stairs
     S.special = m.special
+    S.noStairs = !!m.noStairs
     S.altar = m.altar
     S.pathHistory = []
     S.seen = {}; S.vis = {}
@@ -2821,7 +2860,7 @@
     META.best = Math.max(META.best, S.floor)
     saveMeta()
     syncMetaBar()
-    if (S.steps > 0) log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + (S.floor % 20 === 0 ? '终极迪克守着门。' : ''))
+    if (S.steps > 0) log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + ((S.floor === 10 || S.floor === 20 || S.floor === 30) ? (S.floor === 30 ? '双 BOSS 守在这里。' : 'BOSS 守着门。') : ''))
     computeFov(); render(); syncHud()
     saveRun()
   }
@@ -2876,17 +2915,45 @@
 
     if (S.pending > 0) setTimeout(openTalent, 90)
 
-    if (e.type === 'tomb') {
-      if (S.floor === 20) showSummary(true)
-      if (S.hero.id === 'thanos') thanosSnap(e)
-      if (S.hero.id === 'murasame') murasameCut(e)
-      S.hp = Math.min(S.maxHp, S.hp + 4)
-      log('铁墓倒下，光门开了。')
-      fx(e.x, e.y, '开门', '#ffd9a0')
-      if (S.player.x === S.stairs.x && S.player.y === S.stairs.y) {
-        var r = nextFloor()
-        if (S.pending > 0) setTimeout(openTalent, 120)
-        return (r === 'floor' || true) ? 'floor' : 'floor'
+    if (e.type === 'tomb' || e.type === 'dick') {
+      if (e.type === 'tomb') {
+        if (S.hero.id === 'thanos') thanosSnap(e)
+        if (S.hero.id === 'murasame') murasameCut(e)
+        S.hp = Math.min(S.maxHp, S.hp + 4)
+      }
+      var otherBoss = null
+      for (var ob = 0; ob < S.enemies.length; ob++) {
+        var oe = S.enemies[ob]
+        if (oe !== e && oe.hp > 0 && (oe.type === 'tomb' || oe.type === 'dick')) otherBoss = oe
+      }
+
+      if (S.floor === 30) {
+        if (otherBoss) {
+          otherBoss.enraged = true
+          otherBoss.atk *= 2
+          log('另一个 BOSS 狂暴了：攻击翻倍、行动更快！')
+          fx(otherBoss.x, otherBoss.y, '狂暴', '#ff4d5e', -0.6)
+          shake(6, 320)
+        } else {
+          log('终极防线被击穿了……')
+          SND.level()
+          setTimeout(function () { win() }, 500)
+        }
+      } else {
+        // 10 / 20 层：丰厚奖励
+        S.gold = (S.gold || 0) + 40
+        var tk = pick(TRINKETS).id
+        S.trinkets[tk] = true
+        var tobj = trinketById(tk)
+        S.hp = Math.min(S.maxHp, S.hp + 6)
+        log((e.type === 'tomb' ? '铁墓' : '迪克') + '倒下，光门开了。掉落 40 金币与奇物「' + (tobj ? tobj.name : tk) + '」。')
+        fx(e.x, e.y, '开门', '#ffd9a0')
+        SND.level()
+        if (S.player.x === S.stairs.x && S.player.y === S.stairs.y) {
+          var r = nextFloor()
+          if (S.pending > 0) setTimeout(openTalent, 120)
+          return 'floor'
+        }
       }
     }
   }
@@ -3197,7 +3264,7 @@
       if (e.type === 'tomb') {
         if (e.aoeCd === undefined) e.aoeCd = 2
         if (e.aoeCd <= 0) {
-          e.aoeCd = 3
+          e.aoeCd = 2
           var aoeDmg = Math.max(1, e.atk - 1)
           S.aoeCount = (S.aoeCount || 0) + 1
           log('铁墓震地！全队受创。')
@@ -3236,6 +3303,29 @@
         }
         e.aoeCd--
         if (e.aoeCd === 1) log('铁墓举起墓碑，下一击是震地！')
+      }
+
+      // 迪克：每 2 个行动回合，召唤代码小怪或施加负面
+      if (e.type === 'dick') {
+        e.sum = (e.sum || 0) + 1
+        if (e.sum % 2 === 0) {
+          if (Math.random() < 0.55) {
+            var dirs8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]
+            for (var sd = 0; sd < dirs8.length; sd++) {
+              var sx3 = e.x + dirs8[sd][0], sy3 = e.y + dirs8[sd][1]
+              if (sx3 < 0 || sy3 < 0 || sx3 >= MAP_W || sy3 >= MAP_H) continue
+              if (S.grid[sy3][sx3] === WALL) continue
+              if (enemyAt(sx3, sy3)) continue
+              S.enemies.push({ type: 'code', x: sx3, y: sy3, hp: 3 + (S.floor | 0), max: 3 + (S.floor | 0), atk: 1 + ((S.floor / 5) | 0), name: '代码' })
+              log('迪克敲下一串代码，代码小怪爬了出来。')
+              break
+            }
+          } else {
+            S.atk = Math.max(1, S.atk - 1)
+            log('代码侵蚀：你的攻击 -1。')
+          }
+          continue
+        }
       }
 
       // 敌人随机挑一名队伍成员当目标
@@ -3314,6 +3404,14 @@
       }
       if (enemyAt(nx, ny)) continue
       e.x = nx; e.y = ny
+      if (e.enraged) {
+        var nx2 = e.x + stepX, ny2 = e.y + stepY
+        if (nx2 >= 0 && ny2 >= 0 && nx2 < MAP_W && ny2 < MAP_H &&
+            S.grid[ny2][nx2] !== WALL && !enemyAt(nx2, ny2) &&
+            !(nx2 === tgt.x && ny2 === tgt.y)) {
+          e.x = nx2; e.y = ny2
+        }
+      }
     }
   }
 
@@ -3425,8 +3523,8 @@
       else if (spKind === 'rest') restTeam()
       else openShop()
     }
-    if (x === S.stairs.x && y === S.stairs.y) {
-      if (S.enemies.some(function (e) { return e.hp > 0 && e.type === 'tomb' })) {
+    if (!S.noStairs && x === S.stairs.x && y === S.stairs.y) {
+      if (S.enemies.some(function (e) { return e.hp > 0 && (e.type === 'tomb' || e.type === 'dick') })) {
         log('铁墓还挡在洞口。')
         return
       }
@@ -3481,8 +3579,8 @@
     if (ovEnd) {
       ovEnd.hidden = false
       endBig.textContent = '✦'
-      endTitle.textContent = '铁墓归位'
-      endDesc.textContent = '五层回廊走完，' + S.hero.name + '把这段记忆带回去了。'
+      endTitle.textContent = '终极防线击穿'
+      endDesc.textContent = '三十层的双 BOSS 全部倒下，' + S.hero.name + '把这段记忆带回去了。'
       endAgain.textContent = '再走一遍'
     }
     render()
@@ -3507,23 +3605,28 @@
   }
 
   function syncBossBar() {
-    var bar = $('boss-bar'), fill = $('boss-hp-fill'), num = $('boss-hp-num')
+    var bar = $('boss-bar')
     if (!bar) return
-    var boss = null
+    var list = []
     if (S && S.enemies) {
       for (var i = 0; i < S.enemies.length; i++) {
         var e = S.enemies[i]
-        if (e.type === 'tomb' && e.hp > 0) { boss = e; break }
+        if ((e.type === 'tomb' || e.type === 'dick') && e.hp > 0) list.push(e)
       }
     }
-    if (boss) {
-      bar.classList.add('on')
-      var pct = Math.max(0, Math.min(100, (boss.hp / boss.max) * 100))
-      if (fill) fill.style.width = pct + '%'
-      if (num) num.textContent = Math.max(0, Math.ceil(boss.hp)) + ' / ' + boss.max
-    } else {
-      bar.classList.remove('on')
+    if (!list.length) { bar.classList.remove('on'); bar.innerHTML = ''; return }
+    bar.classList.add('on')
+    var html = ''
+    for (var j = 0; j < list.length; j++) {
+      var b = list[j]
+      var pct = Math.max(0, Math.min(100, (b.hp / b.max) * 100))
+      var nm = (b.type === 'dick' ? '迪克' : '铁墓') + (b.enraged ? ' · 狂暴' : '')
+      html += '<div class="boss-row">'
+        + '<div class="boss-name">⚠ ' + nm + ' <span>' + Math.max(0, Math.ceil(b.hp)) + ' / ' + b.max + '</span></div>'
+        + '<div class="boss-hp"><i style="width:' + pct + '%"></i></div>'
+        + '</div>'
     }
+    bar.innerHTML = html
   }
 
   function showBossWarn() {
@@ -3736,45 +3839,53 @@
       var ex = (e.x - camX) * TS + TS / 2, ey = (e.y - camY) * TS + TS / 2
       var pulse = 0.5 + 0.5 * Math.sin(Date.now() / 320 + e.x * 0.7 + e.y)
 
-      if (e.type === 'tomb') {
+      if (e.type === 'tomb' || e.type === 'dick') {
         var tnow = Date.now() / 260
         var blink = 0.5 + 0.5 * Math.sin(tnow)
-        var green = Math.floor(tnow) % 2 === 0
-        var ringCol = green ? 'rgba(110,255,150,' : 'rgba(255,60,90,'
+        var isDick = e.type === 'dick'
+        var baseCol = e.enraged
+          ? 'rgba(255,60,90,'
+          : (isDick ? 'rgba(110,255,150,' : 'rgba(255,190,90,')
         var R1 = TS * 0.92
 
-        // 外圈光晕
         ctx.save()
-        ctx.strokeStyle = ringCol + (0.25 + 0.35 * blink) + ')'
+        ctx.strokeStyle = baseCol + (0.25 + 0.4 * blink) + ')'
         ctx.lineWidth = Math.max(3, TS * 0.14)
         ctx.beginPath(); ctx.arc(ex, ey, R1, 0, Math.PI * 2); ctx.stroke()
-        ctx.strokeStyle = ringCol + (0.12 + 0.18 * blink) + ')'
+        ctx.strokeStyle = baseCol + (0.12 + 0.2 * blink) + ')'
         ctx.lineWidth = Math.max(1, TS * 0.05)
         ctx.beginPath(); ctx.arc(ex, ey, R1 + TS * 0.24, 0, Math.PI * 2); ctx.stroke()
 
-        // 头像（2 倍大小）
-        if (BOSS_IMG && BOSS_IMG.complete && BOSS_IMG.naturalWidth) {
+        if (isDick && BOSS_IMG && BOSS_IMG.complete && BOSS_IMG.naturalWidth) {
           ctx.beginPath(); ctx.arc(ex, ey, TS * 0.82, 0, Math.PI * 2); ctx.clip()
           ctx.drawImage(BOSS_IMG, ex - TS * 0.85, ey - TS * 0.85, TS * 1.7, TS * 1.7)
-        } else {
+        } else if (isDick) {
           ctx.fillStyle = '#141018'
           ctx.beginPath(); ctx.arc(ex, ey, TS * 0.8, 0, Math.PI * 2); ctx.fill()
-          ctx.strokeStyle = '#7dff9e'
-          ctx.lineWidth = Math.max(2, TS * 0.08)
-          ctx.beginPath(); ctx.arc(ex, ey, TS * 0.8, 0, Math.PI * 2); ctx.stroke()
-          ctx.fillStyle = '#fff'
-          ctx.font = 'bold ' + Math.round(TS * 0.6) + 'px monospace'
+          ctx.fillStyle = '#7dff9e'
+          ctx.font = 'bold ' + Math.round(TS * 0.65) + 'px monospace'
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
           ctx.fillText('D', ex, ey + TS * 0.04)
+        } else {
+          // 铁墓：金色巨块
+          var hb = TS * 0.62
+          ctx.fillStyle = 'rgba(30,20,10,.85)'
+          ctx.fillRect(ex - hb, ey - hb, hb * 2, hb * 2)
+          ctx.strokeStyle = e.enraged ? '#ff4d5e' : '#ffd9a0'
+          ctx.lineWidth = Math.max(2, TS * 0.09)
+          ctx.strokeRect(ex - hb, ey - hb, hb * 2, hb * 2)
+          ctx.beginPath()
+          ctx.moveTo(ex, ey - hb * .6); ctx.lineTo(ex, ey + hb * .6)
+          ctx.moveTo(ex - hb * .6, ey); ctx.lineTo(ex + hb * .6, ey)
+          ctx.stroke()
         }
         ctx.restore()
 
-        // 名字
-        ctx.fillStyle = ringCol + '0.95)'
-        ctx.font = 'bold ' + Math.max(9, Math.round(TS * 0.34)) + 'px -apple-system,"PingFang SC",sans-serif'
+        ctx.fillStyle = baseCol + '0.95)'
+        ctx.font = 'bold ' + Math.max(9, Math.round(TS * 0.32)) + 'px -apple-system,"PingFang SC",sans-serif'
         ctx.textAlign = 'center'; ctx.textBaseline = 'top'
-        ctx.fillText('终极迪克', ex, ey + R1 + TS * 0.06)
-      } else if (e.type === 'archer') {
+        ctx.fillText((isDick ? '迪克' : '铁墓') + (e.enraged ? '·狂暴' : ''), ex, ey + R1 + TS * 0.06)
+      } else if (e.type === 'archer') {      } else if (e.type === 'archer') {
         // 暗箭手：瘦长身影 + 弓
         ctx.fillStyle = 'rgba(159,180,255,' + (0.10 + 0.08 * pulse) + ')'
         ctx.beginPath(); ctx.arc(ex, ey, TS * .4, 0, Math.PI * 2); ctx.fill()
@@ -4330,6 +4441,15 @@
     specialPos: function () { return S ? S.special : null },
     altarPos: function () { return S ? S.altar : null },
     openAltar: openAltar,
+    killBossType: function (t) {
+      if (!S) return false
+      for (var i = 0; i < S.enemies.length; i++) {
+        var e = S.enemies[i]
+        if (e.type === t && e.hp > 0) { e.hp = 0; killEnemy(e); return true }
+      }
+      return false
+    },
+    enemiesInfo: function () { return S ? S.enemies.filter(function (e) { return e.hp > 0 }).map(function (e) { return { type: e.type, name: e.name, x: e.x, y: e.y, hp: e.hp, atk: e.atk, enraged: !!e.enraged } }) : [] },
     pathHistory: function () { return (S && S.pathHistory ? S.pathHistory : []).slice() },
     wallAt: function (x, y) { return !!(S && S.grid[y] && S.grid[y][x] === 1) },
     seenAt: function (x, y) { return !!(S && S.seen && S.seen[x + ',' + y]) },
