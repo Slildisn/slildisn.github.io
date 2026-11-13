@@ -550,7 +550,7 @@
 
     <div class="ov ov-global ov-tapclose" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>在画面上滑动走一步（电脑用方向键/WASD），撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 5 层有一只铁墓守着门，它每锤 30% 落空。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>走到光门上会先弹出<b>招募面板</b>：三选一招募队友（最多 5 人，满员会替换最早那位）；卡片上有羁绊标签和「招募后激活哪些羁绊」的预判。队友踩着你的历史路径跟随，不会穿墙；他们凑齐会触发<b>羁绊</b>（左上角显示）。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
+      <p>在画面上滑动走一步（电脑用方向键/WASD），撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>每 10 层有一只铁墓守着门，它每锤 30% 落空。<br>5、15、25…这类中间层会有<b>休息室</b>，踩上去全队回 6 血。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>走到光门上会先弹出<b>招募面板</b>：三选一招募队友（最多 5 人，满员会替换最早那位）；卡片上有羁绊标签和「招募后激活哪些羁绊」的预判。队友踩着你的历史路径跟随，不会穿墙；他们凑齐会触发<b>羁绊</b>（左上角显示）。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
       <p class="tap-hint">点任意位置也能关掉</p>
     </div>
@@ -1155,10 +1155,10 @@
       return true
     }
 
-    var isBoss = floor % 5 === 0
+    var isBoss = floor % 10 === 0
     if (isBoss) {
-      var bhp = 8 + floor * 3
-      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: bhp, max: bhp, atk: 1 + ((floor / 2) | 0), name: '铁墓' })
+      var bhp = 8 + floor * 2
+      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: bhp, max: bhp, atk: 1 + ((floor / 3) | 0), name: '铁墓' })
     }
 
     var mates = S ? S.team.filter(function (m) { return !m.dead }).length : 0
@@ -1218,15 +1218,18 @@
       }
     }
 
-    // 层间：宝箱或商店（BOSS 层不给，铁墓本身就是奖励）
+    // 层间：宝箱 / 商店；5 的倍数但不是 BOSS 层 → 休息室
     var special = null
-    if (floor % 5 !== 0 && rooms.length > 1) {
+    var isRestFloor = floor % 5 === 0 && floor % 10 !== 0
+    if (floor % 10 !== 0 && rooms.length > 1) {
       var sr = rooms[1 + rnd(rooms.length - 1)]
       for (var sp2 = 0; sp2 < 40; sp2++) {
         var sx2 = sr.x + (sr.w > 2 ? 1 + rnd(sr.w - 2) : 0)
         var sy2 = sr.y + (sr.h > 2 ? 1 + rnd(sr.h - 2) : 0)
         if (!free(sx2, sy2)) continue
-        special = { kind: rnd(100) < 58 ? 'chest' : 'shop', x: sx2, y: sy2 }
+        special = isRestFloor
+          ? { kind: 'rest', x: sx2, y: sy2 }
+          : { kind: rnd(100) < 58 ? 'chest' : 'shop', x: sx2, y: sy2 }
         break
       }
     }
@@ -2747,7 +2750,7 @@
       S.atk += S.relics2.lantern
       log('猎魂灯亮了：攻击 +' + S.relics2.lantern + '。')
     }
-    if (S.floor % 5 === 0) {
+    if (S.floor % 10 === 0) {
       S.hp = S.maxHp
       log('铁墓的气息……先回满血。')
       SND.boss()
@@ -2756,6 +2759,7 @@
     } else {
       SND.ambience('calm')
       SND.music('calm')
+      if (S.floor % 5 === 0) log('这一层有休息室，去补一口。')
     }
     var m = genMap(S.floor, S.seed + S.floor * 7919)
     S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
@@ -2771,7 +2775,7 @@
     META.best = Math.max(META.best, S.floor)
     saveMeta()
     syncMetaBar()
-    if (S.steps > 0) log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + (S.floor % 5 === 0 ? '铁墓守着门。' : ''))
+    if (S.steps > 0) log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + (S.floor % 10 === 0 ? '铁墓守着门。' : ''))
     computeFov(); render(); syncHud()
     saveRun()
   }
@@ -2827,7 +2831,7 @@
     if (S.pending > 0) setTimeout(openTalent, 90)
 
     if (e.type === 'tomb') {
-      if (S.floor === 5) showSummary(true)
+      if (S.floor === 10) showSummary(true)
       if (S.hero.id === 'thanos') thanosSnap(e)
       if (S.hero.id === 'murasame') murasameCut(e)
       S.hp = Math.min(S.maxHp, S.hp + 4)
@@ -3372,6 +3376,7 @@
       var spKind = S.special.kind
       S.special = null
       if (spKind === 'chest') openChest()
+      else if (spKind === 'rest') restTeam()
       else openShop()
     }
     if (x === S.stairs.x && y === S.stairs.y) {
@@ -3434,6 +3439,24 @@
       endDesc.textContent = '五层回廊走完，' + S.hero.name + '把这段记忆带回去了。'
       endAgain.textContent = '再走一遍'
     }
+    render()
+  }
+
+  function restTeam() {
+    var heal = 6
+    var hpBefore = S.hp
+    S.hp = Math.min(S.maxHp, S.hp + heal)
+    var gained = S.hp - hpBefore
+    var alive = aliveTeam()
+    for (var i = 0; i < alive.length; i++) {
+      alive[i].hp = Math.min(alive[i].maxHp, alive[i].hp + heal)
+    }
+    SND.chime()
+    fx(S.player.x, S.player.y, '补给 +' + heal, '#9fffc4', -0.6)
+    log('休息室的微光把整队补了一口：+' + heal + ' 血。')
+    S.hp = Math.min(S.maxHp, S.hp)
+    computeFov()
+    syncHud()
     render()
   }
 
@@ -3552,7 +3575,17 @@
         var spx = (S.special.x - camX) * TS + TS / 2
         var spy = (S.special.y - camY) * TS + TS / 2
         var spPulse = 0.5 + 0.5 * Math.sin(Date.now() / 420)
-        if (S.special.kind === 'chest') {
+        if (S.special.kind === 'rest') {
+          ctx.fillStyle = 'rgba(120,255,190,' + (0.12 + 0.10 * spPulse) + ')'
+          ctx.beginPath(); ctx.arc(spx, spy, TS * .44, 0, Math.PI * 2); ctx.fill()
+          ctx.fillStyle = '#7ee8b0'
+          ctx.fillRect(spx - TS * .2, spy - TS * .06, TS * .4, TS * .16)
+          ctx.fillStyle = '#c9ffdf'
+          ctx.fillRect(spx - TS * .2, spy - TS * .2, TS * .4, TS * .1)
+          ctx.fillStyle = '#7ee8b0'
+          ctx.fillRect(spx - TS * .05, spy - TS * .18, TS * .1, TS * .1)
+          ctx.fillRect(spx - TS * .05, spy - TS * .06, TS * .1, TS * .16)
+        } else if (S.special.kind === 'chest') {
           ctx.fillStyle = 'rgba(255,217,160,' + (0.10 + 0.10 * spPulse) + ')'
           ctx.beginPath(); ctx.arc(spx, spy, TS * .42, 0, Math.PI * 2); ctx.fill()
           ctx.fillStyle = '#d9a24a'
