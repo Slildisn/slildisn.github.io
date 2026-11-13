@@ -75,10 +75,13 @@
 
   /* HUD */
   .hud{
-    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;
     padding:8px 10px;border:1px solid var(--line);border-radius:14px;
     background:rgba(255,255,255,.03);margin-bottom:6px;
   }
+  .hud .hpwrap{flex:1 1 100%;min-width:0;margin-bottom:2px}
+  .hud .stat{flex:0 0 auto;white-space:nowrap}
+  .hud .relics{flex:1 1 auto;min-width:0}
   .hud .team-strip{flex-basis:100%;margin:2px 0 0}
   .hud .syn-panel{flex-basis:100%;margin:2px 0 0}
   .hpwrap{flex:1 1 130px;min-width:120px}
@@ -98,7 +101,15 @@
     position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;
     background:#0a0910;box-shadow:0 20px 50px -30px rgba(255,120,170,.55);
   }
-  canvas{display:block;width:100%;height:auto;touch-action:none}
+  canvas{
+    display:block;
+    width:auto;height:auto;      /* 绝不固定某一维：靠内在比例缩放 */
+    max-width:100%;
+    margin:0 auto;               /* 居中，两侧留黑边也认 */
+    touch-action:none;
+    image-rendering:auto
+  }
+  .stage{display:flex;justify-content:center;align-items:flex-start}
   body.ov-open, body.ov-open .stage{touch-action:auto}
   body{overscroll-behavior-y:contain}
   html,body{overscroll-behavior:none}
@@ -242,14 +253,12 @@
     .tchip { font-size: .58rem; padding: 2px 6px; }
     .tchip .tbar { width: 22px; }
 
-    /* 地图画布：等比缩放、居中、完整可见 */
-    .stage { display: flex; justify-content: center; align-items: flex-start; }
+    /* 地图画布：等比缩放、居中、完整可见（只限上限，不拉伸） */
     canvas {
-      width: 100% !important;
-      max-width: 100% !important;
-      height: auto !important;
+      width:auto !important;
+      height:auto !important;
+      max-width:100% !important;
       max-height: calc(100dvh - 240px);
-      object-fit: contain;
       margin: 0 auto;
       display: block;
     }
@@ -272,11 +281,10 @@
     h1 { font-size: 1.15rem; }
     .hud { padding: 6px 10px; }
     canvas {
-      width: 100% !important;
-      max-width: 100% !important;
+      width: auto !important;
       height: auto !important;
+      max-width: 100% !important;
       max-height: calc(100dvh - 150px);
-      object-fit: contain;
       margin: 0 auto;
       display: block;
     }
@@ -4129,8 +4137,8 @@
     if (!isFinite(TS) || TS < 8) TS = 24
     cv.width = TS * VIEW_W
     cv.height = TS * VIEW_H
-    cv.style.height = (TS * VIEW_H) + 'px'
-    cv.style.maxHeight = '100%'
+    cv.style.width = ''
+    cv.style.height = ''
   }
 
   function render() {
