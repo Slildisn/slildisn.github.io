@@ -233,6 +233,38 @@
   .toast.show{opacity:1;transform:translate(-50%,0)}
   .toast[hidden]{display:none}
 
+  #boss-bar{
+    position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:50%;transform:translateX(-50%);
+    width:min(92vw,540px);z-index:9998;display:none;text-align:center
+  }
+  #boss-bar.on{display:block}
+  .boss-name{
+    font-size:.72rem;letter-spacing:.14em;color:#ffd9f0;margin-bottom:3px;
+    text-shadow:0 0 12px rgba(255,60,140,.8)
+  }
+  .boss-hp{
+    height:14px;border-radius:99px;overflow:hidden;
+    background:rgba(24,8,24,.85);border:1px solid rgba(255,90,150,.65);
+    box-shadow:0 0 22px rgba(255,40,120,.55)
+  }
+  .boss-hp i{
+    display:block;height:100%;width:100%;transition:width .2s linear;
+    background:linear-gradient(90deg,#7b0f3a,#ff2d6f 45%,#b020f0)
+  }
+  #boss-warn{
+    position:fixed;inset:0;z-index:9999;display:none;place-items:center;pointer-events:none;
+    padding:24px;text-align:center
+  }
+  #boss-warn.on{display:grid}
+  #boss-warn span{
+    color:#ff2d55;font-weight:800;letter-spacing:.06em;line-height:1.5;
+    font-size:clamp(15px,4.6vw,28px);
+    text-shadow:0 0 16px rgba(255,0,60,.9),0 0 44px rgba(255,0,60,.55);
+    animation:warnBlink .55s steps(2,end) infinite
+  }
+  @keyframes warnBlink{50%{opacity:.35}}
+  @media (prefers-reduced-motion:reduce){#boss-warn span{animation:none}}
+
   /* 记忆升级 */
   .meta-bar{
     display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
@@ -413,6 +445,11 @@
     <div class="syn-panel" id="syn-panel" hidden></div>
   </div>
   <div class="toast" id="toast" hidden></div>
+  <div id="boss-bar" aria-hidden="true">
+    <div class="boss-name">⚠ 终极迪克 <span id="boss-hp-num"></span></div>
+    <div class="boss-hp"><i id="boss-hp-fill" style="width:100%"></i></div>
+  </div>
+  <div id="boss-warn"><span>⚠️ SYSTEM HACKED: 终极迪克已苏醒</span></div>
 
   <div class="stage" id="stage">
     <canvas id="cv" width="480" height="352" aria-label="地牢画面"></canvas>
@@ -625,6 +662,14 @@
   var ovSummary = $('ov-summary'), sumKicker = $('sum-kicker'), sumTitle = $('sum-title')
   var sumFloor = $('sum-floor'), sumKills = $('sum-kills'), sumTime = $('sum-time')
   var sumTalents = $('sum-talents'), sumItems = $('sum-items'), sumAgain = $('sum-again'), sumContinue = $('sum-continue')
+  var BOSS_IMG = null
+  try {
+    if (typeof Image !== 'undefined') {
+      BOSS_IMG = new Image()
+      BOSS_IMG.src = './assets/boss-dick.png'
+    }
+  } catch (e) { BOSS_IMG = null }
+
   var ovSelect = $('ov-select'), pickEl = $('pick'), seedLine = $('seed-line')
   var seedInput = $('seed-input')
 
@@ -1155,10 +1200,10 @@
       return true
     }
 
-    var isBoss = floor % 10 === 0
+    var isBoss = floor % 20 === 0
     if (isBoss) {
-      var bhp = 8 + floor * 2
-      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: bhp, max: bhp, atk: 1 + ((floor / 3) | 0), name: '铁墓' })
+      var bhp = 24 + floor * 4
+      enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: bhp, max: bhp, atk: 2 + ((floor / 4) | 0), name: '终极迪克' })
     }
 
     var mates = S ? S.team.filter(function (m) { return !m.dead }).length : 0
@@ -1220,8 +1265,8 @@
 
     // 层间：宝箱 / 商店；5 的倍数但不是 BOSS 层 → 休息室
     var special = null
-    var isRestFloor = floor % 5 === 0 && floor % 10 !== 0
-    if (floor % 10 !== 0 && rooms.length > 1) {
+    var isRestFloor = floor % 5 === 0 && floor % 20 !== 0
+    if (floor % 20 !== 0 && rooms.length > 1) {
       var sr = rooms[1 + rnd(rooms.length - 1)]
       for (var sp2 = 0; sp2 < 40; sp2++) {
         var sx2 = sr.x + (sr.w > 2 ? 1 + rnd(sr.w - 2) : 0)
@@ -2750,9 +2795,9 @@
       S.atk += S.relics2.lantern
       log('猎魂灯亮了：攻击 +' + S.relics2.lantern + '。')
     }
-    if (S.floor % 10 === 0) {
+    if (S.floor % 20 === 0) {
       S.hp = S.maxHp
-      log('铁墓的气息……先回满血。')
+      log('系统被入侵了……先回满血。')
       SND.boss()
       SND.ambience('boss')
       SND.music('boss')
@@ -2762,6 +2807,7 @@
       if (S.floor % 5 === 0) log('这一层有休息室，去补一口。')
     }
     var m = genMap(S.floor, S.seed + S.floor * 7919)
+    if (S.floor % 20 === 0) setTimeout(showBossWarn, 60)
     S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
     S.player.x = m.start.x; S.player.y = m.start.y
     S.stairs = m.stairs
@@ -2775,7 +2821,7 @@
     META.best = Math.max(META.best, S.floor)
     saveMeta()
     syncMetaBar()
-    if (S.steps > 0) log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + (S.floor % 10 === 0 ? '铁墓守着门。' : ''))
+    if (S.steps > 0) log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + (S.floor % 20 === 0 ? '终极迪克守着门。' : ''))
     computeFov(); render(); syncHud()
     saveRun()
   }
@@ -2831,7 +2877,7 @@
     if (S.pending > 0) setTimeout(openTalent, 90)
 
     if (e.type === 'tomb') {
-      if (S.floor === 10) showSummary(true)
+      if (S.floor === 20) showSummary(true)
       if (S.hero.id === 'thanos') thanosSnap(e)
       if (S.hero.id === 'murasame') murasameCut(e)
       S.hp = Math.min(S.maxHp, S.hp + 4)
@@ -3460,8 +3506,37 @@
     render()
   }
 
+  function syncBossBar() {
+    var bar = $('boss-bar'), fill = $('boss-hp-fill'), num = $('boss-hp-num')
+    if (!bar) return
+    var boss = null
+    if (S && S.enemies) {
+      for (var i = 0; i < S.enemies.length; i++) {
+        var e = S.enemies[i]
+        if (e.type === 'tomb' && e.hp > 0) { boss = e; break }
+      }
+    }
+    if (boss) {
+      bar.classList.add('on')
+      var pct = Math.max(0, Math.min(100, (boss.hp / boss.max) * 100))
+      if (fill) fill.style.width = pct + '%'
+      if (num) num.textContent = Math.max(0, Math.ceil(boss.hp)) + ' / ' + boss.max
+    } else {
+      bar.classList.remove('on')
+    }
+  }
+
+  function showBossWarn() {
+    var w = $('boss-warn')
+    if (!w) return
+    w.classList.add('on')
+    clearTimeout(showBossWarn._t)
+    showBossWarn._t = setTimeout(function () { w.classList.remove('on') }, 3000)
+  }
+
   function syncHud() {
     if (!S) return
+    setTimeout(syncBossBar, 0)
     if (hName) hName.textContent = (S.hero.emoji && emojiOk(S.hero.emoji) ? S.hero.emoji + ' ' : '') + S.hero.name
     if (hHp) hHp.textContent = S.hp + ' / ' + S.maxHp
     if (hFill) hFill.style.width = Math.max(0, Math.min(100, (S.hp / S.maxHp) * 100)) + '%'
@@ -3662,14 +3737,43 @@
       var pulse = 0.5 + 0.5 * Math.sin(Date.now() / 320 + e.x * 0.7 + e.y)
 
       if (e.type === 'tomb') {
-        ctx.strokeStyle = base.color
-        ctx.lineWidth = Math.max(1.5, TS * .07)
-        var half = TS * .24
-        ctx.strokeRect(ex - half, ey - half, half * 2, half * 2)
-        ctx.beginPath()
-        ctx.moveTo(ex, ey - half * .55); ctx.lineTo(ex, ey + half * .55)
-        ctx.moveTo(ex - half * .55, ey); ctx.lineTo(ex + half * .55, ey)
-        ctx.stroke()
+        var tnow = Date.now() / 260
+        var blink = 0.5 + 0.5 * Math.sin(tnow)
+        var green = Math.floor(tnow) % 2 === 0
+        var ringCol = green ? 'rgba(110,255,150,' : 'rgba(255,60,90,'
+        var R1 = TS * 0.92
+
+        // 外圈光晕
+        ctx.save()
+        ctx.strokeStyle = ringCol + (0.25 + 0.35 * blink) + ')'
+        ctx.lineWidth = Math.max(3, TS * 0.14)
+        ctx.beginPath(); ctx.arc(ex, ey, R1, 0, Math.PI * 2); ctx.stroke()
+        ctx.strokeStyle = ringCol + (0.12 + 0.18 * blink) + ')'
+        ctx.lineWidth = Math.max(1, TS * 0.05)
+        ctx.beginPath(); ctx.arc(ex, ey, R1 + TS * 0.24, 0, Math.PI * 2); ctx.stroke()
+
+        // 头像（2 倍大小）
+        if (BOSS_IMG && BOSS_IMG.complete && BOSS_IMG.naturalWidth) {
+          ctx.beginPath(); ctx.arc(ex, ey, TS * 0.82, 0, Math.PI * 2); ctx.clip()
+          ctx.drawImage(BOSS_IMG, ex - TS * 0.85, ey - TS * 0.85, TS * 1.7, TS * 1.7)
+        } else {
+          ctx.fillStyle = '#141018'
+          ctx.beginPath(); ctx.arc(ex, ey, TS * 0.8, 0, Math.PI * 2); ctx.fill()
+          ctx.strokeStyle = '#7dff9e'
+          ctx.lineWidth = Math.max(2, TS * 0.08)
+          ctx.beginPath(); ctx.arc(ex, ey, TS * 0.8, 0, Math.PI * 2); ctx.stroke()
+          ctx.fillStyle = '#fff'
+          ctx.font = 'bold ' + Math.round(TS * 0.6) + 'px monospace'
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+          ctx.fillText('D', ex, ey + TS * 0.04)
+        }
+        ctx.restore()
+
+        // 名字
+        ctx.fillStyle = ringCol + '0.95)'
+        ctx.font = 'bold ' + Math.max(9, Math.round(TS * 0.34)) + 'px -apple-system,"PingFang SC",sans-serif'
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top'
+        ctx.fillText('终极迪克', ex, ey + R1 + TS * 0.06)
       } else if (e.type === 'archer') {
         // 暗箭手：瘦长身影 + 弓
         ctx.fillStyle = 'rgba(159,180,255,' + (0.10 + 0.08 * pulse) + ')'
