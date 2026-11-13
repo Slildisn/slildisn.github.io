@@ -666,6 +666,7 @@
   try {
     if (typeof Image !== 'undefined') {
       BOSS_IMG = new Image()
+      BOSS_IMG.onerror = function () { BOSS_IMG = null }
       BOSS_IMG.src = './assets/boss-dick.png'
     }
   } catch (e) { BOSS_IMG = null }
@@ -1187,6 +1188,13 @@
     if (!rooms.length) return { grid: g, rooms: [{ cx: 2, cy: 2, x: 1, y: 1, w: 3, h: 3 }], start: { x: 2, y: 2 } }
 
     var start = { x: rooms[0].cx, y: rooms[0].cy }
+    // 兜底：把起点周围 3 格挖成地板，保证一进场就能看到东西
+    for (var cy0 = start.y - 3; cy0 <= start.y + 3; cy0++) {
+      for (var cx0 = start.x - 3; cx0 <= start.x + 3; cx0++) {
+        if (cx0 < 1 || cy0 < 1 || cx0 >= MAP_W - 1 || cy0 >= MAP_H - 1) continue
+        g[cy0][cx0] = FLOOR
+      }
+    }
     var last = rooms[rooms.length - 1]
     var stairs = { x: last.cx, y: last.cy }
 
@@ -1321,7 +1329,9 @@
   }
 
   function computeFov() {
+    if (!S || !S.grid || !S.player) return
     var p = S.player, r = S.vision
+    if (!r || isNaN(r) || r < 1) r = 6
     var vis = {}
     for (var y = Math.max(0, p.y - r); y <= Math.min(MAP_H - 1, p.y + r); y++) {
       for (var x = Math.max(0, p.x - r); x <= Math.min(MAP_W - 1, p.x + r); x++) {
@@ -2074,8 +2084,10 @@
           break
         }
         var g3 = 0
-        while (S.floor < tg && g3++ < 40) nextFloor()
-        computeFov()
+        while (S.floor < tg && g3++ < 40) {
+          try { nextFloor() } catch (e) { break }
+        }
+        computeFov(); render(); syncHud()
         cheatLog('【警告：神秘力量已介入，已抵达第 ' + tg + ' 层！】', true)
         afterCheat()
         break
@@ -3687,7 +3699,8 @@
   function fit() {
     if (!cv) return
     var w = stage ? stage.clientWidth : 480
-    if (!w) w = 480
+    if (!w || w < 60) w = 480
+    if (TS < 6) TS = 24
     TS = Math.max(14, Math.floor(Math.min(w / VIEW_W, (w * 0.78) / VIEW_H)))
     var cw = TS * VIEW_W, ch = TS * VIEW_H
     cv.width = cw; cv.height = ch
@@ -3695,6 +3708,28 @@
   }
 
   function render() {
+    if (!ctx || !S) return
+    try {
+      renderImpl()
+    } catch (err) {
+      if (!render._errShown) {
+        render._errShown = true
+        try { console.error('[render]', err) } catch (e) { /* ignore */ }
+        if (typeof log === 'function' && S) log('渲染异常：' + (err && err.message ? err.message : err))
+      }
+      // 兜底：至少把背景与玩家画出来，避免整屏死黑
+      try {
+        ctx.fillStyle = '#0a0910'
+        ctx.fillRect(0, 0, cv.width, cv.height)
+        ctx.fillStyle = '#ff4d5e'
+        ctx.font = '12px -apple-system,sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText('渲染异常，已记录日志', cv.width / 2, cv.height / 2)
+      } catch (e) { /* ignore */ }
+    }
+  }
+
+  function renderImpl() {
     if (!ctx || !S) return
     var camX = clamp(S.player.x - ((VIEW_W / 2) | 0), 0, MAP_W - VIEW_W)
     var camY = clamp(S.player.y - ((VIEW_H / 2) | 0), 0, MAP_H - VIEW_H)
@@ -3857,8 +3892,10 @@
         ctx.beginPath(); ctx.arc(ex, ey, R1 + TS * 0.24, 0, Math.PI * 2); ctx.stroke()
 
         if (isDick && BOSS_IMG && BOSS_IMG.complete && BOSS_IMG.naturalWidth) {
-          ctx.beginPath(); ctx.arc(ex, ey, TS * 0.82, 0, Math.PI * 2); ctx.clip()
-          ctx.drawImage(BOSS_IMG, ex - TS * 0.85, ey - TS * 0.85, TS * 1.7, TS * 1.7)
+          try {
+            ctx.beginPath(); ctx.arc(ex, ey, TS * 0.82, 0, Math.PI * 2); ctx.clip()
+            ctx.drawImage(BOSS_IMG, ex - TS * 0.85, ey - TS * 0.85, TS * 1.7, TS * 1.7)
+          } catch (e) { /* 图片绘制失败就保留光圈 */ }
         } else if (isDick) {
           ctx.fillStyle = '#141018'
           ctx.beginPath(); ctx.arc(ex, ey, TS * 0.8, 0, Math.PI * 2); ctx.fill()
@@ -4441,6 +4478,7 @@
     specialPos: function () { return S ? S.special : null },
     altarPos: function () { return S ? S.altar : null },
     openAltar: openAltar,
+    tryRender: function () { try { render(); return null } catch (e) { return e && e.stack ? e.stack : String(e) } },
     killBossType: function (t) {
       if (!S) return false
       for (var i = 0; i < S.enemies.length; i++) {
