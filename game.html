@@ -161,6 +161,16 @@
   .pick button i{font-style:normal;font-size:.6rem;color:var(--dim);text-align:center;line-height:1.35}
   .pick button:active{background:rgba(255,158,196,.18)}
   .seed{font-size:.66rem;color:#6f6885;letter-spacing:.06em}
+  .seed-row{display:flex;align-items:center;gap:8px;width:100%;max-width:420px;margin-top:6px}
+  .seed-row label{font-size:.72rem;color:#c9c1dc;letter-spacing:.1em;flex:0 0 auto}
+  #seed-input{
+    flex:1 1 auto;min-width:0;padding:8px 10px;border-radius:10px;
+    border:1px solid rgba(255,158,196,.28);background:rgba(10,9,16,.6);
+    color:#fff;font-size:.85rem;font-family:ui-monospace,Menlo,monospace;
+    text-align:center;letter-spacing:.08em;outline:none
+  }
+  #seed-input::placeholder{color:#5f596f;letter-spacing:0}
+  .seed-row .btn{padding:7px 10px;font-size:.7rem;flex:0 0 auto}
 
   /* 天赋三选一 */
   .ov-global{
@@ -415,6 +425,11 @@
         <span class="shards">◈ <b id="meta-shards">0</b> 碎片</span>
         <button type="button" id="meta-open">记忆升级</button>
       </div>
+      <div class="seed-row">
+        <label for="seed-input">种子</label>
+        <input id="seed-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="9" placeholder="留空=随机" autocomplete="off" spellcheck="false" />
+        <button type="button" class="btn ghost" id="seed-random">随机</button>
+      </div>
       <p class="seed" id="seed-line">种子 —</p>
       <button class="btn ghost" id="cont-run" type="button" hidden>继续上次</button>
     </div>
@@ -611,6 +626,18 @@
   var sumFloor = $('sum-floor'), sumKills = $('sum-kills'), sumTime = $('sum-time')
   var sumTalents = $('sum-talents'), sumItems = $('sum-items'), sumAgain = $('sum-again'), sumContinue = $('sum-continue')
   var ovSelect = $('ov-select'), pickEl = $('pick'), seedLine = $('seed-line')
+  var seedInput = $('seed-input')
+
+  var LAST_SEED_KEY = 'cyrene.rogue.seed'
+
+  function readSeed() {
+    if (!seedInput) return 0
+    var raw = String(seedInput.value || '').replace(/[^0-9]/g, '')
+    if (!raw) return 0
+    var n = Number(raw)
+    if (!isFinite(n) || n <= 0) return 0
+    return Math.min(999999999, Math.floor(n))
+  }
   var ovEnd = $('ov-end'), endBig = $('end-big'), endTitle = $('end-title'), endDesc = $('end-desc'), endAgain = $('end-again')
   var bestEl = null
 
@@ -4000,7 +4027,7 @@
           }
           b.appendChild(tags)
         }
-        b.addEventListener('click', function () { start(h.id) })
+        b.addEventListener('click', function () { start(h.id, readSeed()) })
       }
       pickEl.appendChild(b)
     })
@@ -4020,6 +4047,10 @@
     choosing = false
     newRun(heroId, seed)
     running = true
+    if (seedLine && S) seedLine.textContent = '种子 ' + S.seed
+    if (S && S.seed && !cheatActive()) {
+      try { localStorage.setItem(LAST_SEED_KEY, String(S.seed)) } catch (e) { /* ignore */ }
+    }
     if (pendingCheat) {
       var pc = pendingCheat
       pendingCheat = null
@@ -4053,6 +4084,19 @@
   })
   if ($('cont-run')) $('cont-run').addEventListener('click', continueSaved)
   if (shopClose) shopClose.addEventListener('click', closeShop)
+  if ($('seed-random') && seedInput) {
+    $('seed-random').addEventListener('click', function () {
+      seedInput.value = ''
+      seedLine && (seedLine.textContent = '种子 随机')
+      try { seedInput.blur() } catch (e) { /* ignore */ }
+    })
+  }
+  if (seedInput) {
+    try {
+      var lastSeed = localStorage.getItem(LAST_SEED_KEY)
+      if (lastSeed && seedLine) seedLine.textContent = '上次种子 ' + lastSeed + '（留空=随机）'
+    } catch (e) { /* ignore */ }
+  }
   if ($('meta-open')) $('meta-open').addEventListener('click', openMeta)
   if ($('meta-close')) $('meta-close').addEventListener('click', closeMeta)
   if (sumAgain) sumAgain.addEventListener('click', restartRun)
@@ -4156,7 +4200,7 @@
         shakeLeft: Math.max(0, (S.shakeUntil || 0) - Date.now()), shakeMag: S.shakeMag || 0,
         kills: S.kills || 0, steps: S.steps || 0, gold: S.gold || 0,
         relics2: Object.keys(S.relics2 || {}).length, syn: S.syn || {}, team: (S.team||[]).length, altar: S.altar ? 1 : 0, special: S.special ? S.special.kind : null, thornsNow: S.thorns || 0,
-        items: S.items.length, relics: Object.keys(S.relics)
+        items: S.items.length, relics: Object.keys(S.relics), seed: S.seed
       }
     }
   }
