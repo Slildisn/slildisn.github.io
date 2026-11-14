@@ -429,12 +429,15 @@
     color:#efe9f7;padding:6px 2px;font-size:.62rem;min-width:0;overflow:hidden
   }
   .duo-grid button.sel{border-color:#ffd9a0;background:rgba(255,217,160,.18);box-shadow:0 0 0 1px #ffd9a0 inset}
+  body.dual-on{padding-bottom:74px}
   body.dual-on .topbtns{
     top:auto;
-    bottom:calc(env(safe-area-inset-bottom, 0px) + 8px);
-    left:50%;right:auto;
-    transform:translateX(-50%)
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 4px);
+    right:8px;left:auto;
+    transform:none;
+    gap:4px
   }
+  body.dual-on .topbtns button{width:26px;height:26px;font-size:12px}
 
   /* ---- 赛博朋克霓虹主题（双人） ---- */
   body.dual-on .hud,
@@ -467,7 +470,7 @@
     border-radius:12px !important;
     padding:5px 10px !important
   }
-  body.dual-on .log{margin-top:4px !important;max-height:40px !important}
+  body.dual-on .log{margin-top:4px !important;margin-bottom:4px !important;max-height:40px !important;overflow-y:auto}
   body.dual-on #dual-stats{color:#e9d5ff;font-size:.56rem}
   body.dual-on .hint{color:#b98ce0}
 
@@ -504,9 +507,9 @@
   body.dual-on #p2-hud[hidden]{
     display:flex !important;
     position:fixed;
-    top:calc(env(safe-area-inset-top, 0px) + 4px);
+    top:calc(env(safe-area-inset-top, 0px) + 12px);
     width:calc(50vw - 12px);
-    height:44px;
+    height:58px;
     max-width:none;
     margin:0;
     padding:5px 10px;
@@ -564,7 +567,7 @@
   /* 日志与底部提示/按钮不再互压 */
   body.dual-on .log{max-height:56px;overflow-y:auto;margin:2px 0 0}
   body.dual-on .hint{padding:2px 8px 0;margin-bottom:2px;font-size:.6rem}
-  body.dual-on canvas{max-height:calc(100dvh - 110px) !important;margin:auto}
+  body.dual-on canvas{max-height:calc(100dvh - 150px) !important;margin:auto;display:block}
   body.dual-on #boss-bar{top:auto;bottom:calc(env(safe-area-inset-bottom, 0px) + 54px)}
 
   /* 双人：让地图吃掉剩余空间，压缩日志/提示/顶栏 */
@@ -576,7 +579,7 @@
   body.dual-on .hud .hpline{font-size:.62rem}
   body.dual-on .log{max-height:42px;overflow-y:auto;font-size:.6rem;margin:2px 0 0}
   body.dual-on .log p{line-height:1.45}
-  body.dual-on .hint{font-size:.56rem;padding:1px 8px 0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.dual-on .hint{font-size:.56rem;padding:2px 118px 0 8px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   body.dual-on #p2-hud{padding:2px 8px;font-size:.6rem}
   body.dual-on .topbtns{bottom:calc(env(safe-area-inset-bottom, 0px) + 2px)}
   #p2-hud{
@@ -5546,6 +5549,7 @@
     S.__vh = vert ? 10 : 9
     if (vert) {
       var halfH = Math.floor(cv.height / 2)
+      if (halfH * 2 !== cv.height) { cv.height = halfH * 2 }
       ctx.fillStyle = '#0a0910'; ctx.fillRect(0, 0, cv.width, cv.height)
       S.__cam = { x: S.player.x, y: S.player.y }
       ctx.save(); ctx.beginPath(); ctx.rect(0, 0, cv.width, halfH); ctx.clip()
