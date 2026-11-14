@@ -2157,10 +2157,11 @@
 
   function recruit(hero) {
     var bonus = (S.synHp || 0) + (S.teamHpBonus || 0)
-    var alive = S.team.filter(function (m) { return !m.dead })
+    var ownerForCap = S.dual ? (recruitOwner === 'p2' ? 'p2' : 'p1') : 'p1'
+    var alive = S.team.filter(function (m) { return !m.dead && (!S.dual || (m.owner || 'p1') === ownerForCap) })
     var replaced = null
-    if (alive.length >= 4) {
-      // 满编：替换最早加入的那位
+    if (alive.length >= 5) {
+      // 该玩家的队伍满 5 人：替换自己最早加入的那位
       replaced = alive[0]
       var idx = S.team.indexOf(replaced)
       if (idx >= 0) S.team.splice(idx, 1)
@@ -2218,7 +2219,7 @@
   function computeSynergy() {
     if (!S) return
     var ids = [S.hero.id]
-    var alive = aliveTeam()
+    var alive = S.dual ? teamOf('p1') : aliveTeam()
     for (var i = 0; i < alive.length; i++) ids.push(alive[i].heroId)
     var counts = {}
     for (var k = 0; k < ids.length; k++) counts[ids[k]] = (counts[ids[k]] || 0) + 1
@@ -3744,6 +3745,10 @@
     }
   }
 
+  function teamOf(owner) {
+    return (S && S.team ? S.team : []).filter(function (m) { return !m.dead && m.hp > 0 && (!S.dual || (m.owner || 'p1') === owner) })
+  }
+
   function aliveTeam() {
     var out = []
     for (var i = 0; i < S.team.length; i++) if (S.team[i].hp > 0 && !S.team[i].dead) out.push(S.team[i])
@@ -4159,7 +4164,7 @@
         if (!S.pathHistory) S.pathHistory = []
     S.pathHistory2 = []
         S.pathHistory.unshift({ x: S.player.x, y: S.player.y })
-        var capTrail = S.team.filter(function (m) { return !m.dead && m.hp > 0 }).length
+        var capTrail = teamOf('p1').length
         // 去掉与玩家新位置重复/冲突的节点，避免队友被塞到玩家脚下
         var clean = []
         for (var hi = 0; hi < S.pathHistory.length; hi++) {
@@ -4454,9 +4459,9 @@
     if (hDir) hDir.textContent = dirArrow()
     if (teamStrip) {
       teamStrip.innerHTML = ''
-      if (S.team && S.team.filter(function (m) { return !m.dead }).length) {
+      if (teamOf(S.dual ? 'p1' : 'p1').length) {
         teamStrip.hidden = false
-        S.team.forEach(function (m) {
+        teamOf('p1').forEach(function (m) {
           var hh = heroById(m.heroId)
           var maxH = m.maxHp || (hh ? hh.hp : 10)
           var chip = document.createElement('span')
@@ -5311,8 +5316,30 @@
     return { x: fromX, y: fromY }
   }
 
+  function computeP2Synergy() {
+    if (!S || !S.dual || !S.p2) return { atk: 0, crit: 0, dodge: 0, hp: 0, tiers: {} }
+    var counts = {}
+    counts[S.p2.hero.id] = 1
+    var mates = teamOf('p2')
+    for (var i = 0; i < mates.length; i++) counts[mates[i].heroId] = (counts[mates[i].heroId] || 0) + 1
+    var out = { atk: 0, crit: 0, dodge: 0, hp: 0, tiers: {} }
+    for (var si = 0; si < SYNERGY.length; si++) {
+      var sy = SYNERGY[si], n = 0
+      for (var mi = 0; mi < sy.members.length; mi++) if (counts[sy.members[mi]]) n++
+      var tier = 0
+      for (var ti = 0; ti < sy.tiers.length; ti++) if (n >= sy.tiers[ti].n) tier = sy.tiers[ti].n
+      out.tiers[sy.id] = tier
+      if (sy.id === 'chaos') { if (tier >= 2) out.hp += 5; if (tier >= 4) out.hp += 10 }
+      if (sy.id === 'otaku') out.crit += tier >= 3 ? 0.30 : tier >= 2 ? 0.15 : 0
+      if (sy.id === 'abyss') out.dodge += tier >= 2 ? 0.15 : 0
+      if (sy.id === 'train') out.atk += tier >= 3 ? 2 : tier >= 2 ? 1 : 0
+    }
+    return out
+  }
+
   function applyP2Synergy() {
     if (!S || !S.dual || !S.p2) return
+    var syn2 = computeP2Synergy()
     var h = S.p2.hero
     var up = META.up || {}
     var baseHp = h.hp + (up.hp || 0)
@@ -5324,13 +5351,14 @@
       baseHp = Math.round(baseHp * 1.2)
       baseCrit += 0.1
     }
-    var newMax = baseHp + (S.synHp || 0)
+    var newMax = baseHp + syn2.hp
     var delta = newMax - (S.p2.maxHp || baseHp)
     S.p2.maxHp = newMax
     S.p2.hp = Math.max(1, Math.min(newMax, (S.p2.hp || newMax) + delta))
-    S.p2.atk = baseAtk + (S.synAtk || 0)
-    S.p2.crit = Math.min(0.9, baseCrit + (S.synCrit || 0))
-    S.p2.dodge = Math.min(0.75, baseDodge + (S.synDodge || 0))
+    S.p2.syn = syn2.tiers
+    S.p2.atk = baseAtk + syn2.atk
+    S.p2.crit = Math.min(0.9, baseCrit + syn2.crit)
+    S.p2.dodge = Math.min(0.75, baseDodge + syn2.dodge)
     syncHud()
   }
 
@@ -5408,7 +5436,7 @@
       if (!S.pathHistory2) S.pathHistory2 = []
       S.pathHistory2 = S.pathHistory2
       S.pathHistory2.unshift({ x: p.x, y: p.y })
-      var cap2 = aliveTeam().length
+      var cap2 = teamOf('p2').length
       if (S.pathHistory2.length > cap2) S.pathHistory2.length = cap2
       p.x = nx; p.y = ny
       stepOn(nx, ny, 'p2')
@@ -5721,6 +5749,8 @@
     specialPos: function () { return S ? S.special : null },
     altarPos: function () { return S ? S.altar : null },
     openAltar: openAltar,
+    recruitAs: function (who, id) { recruitOwner = who; var h = heroById(id); if (h) recruit(h) },
+    p2syn: function () { return S && S.p2 ? (S.p2.syn || null) : null },
     p2LevelUp: function () { if (S && S.p2) { S.p2.pending = 1; openTalent('p2') } },
     p1LevelUp: function () { if (S) { S.pending = 1; openTalent('p1') } },
     dropItem: function (kind, id, x, y) { if (S) S.items.push({ x: x, y: y, kind: kind, trinket: id, relic: id }) },
@@ -5747,7 +5777,7 @@
     hurt: function (n) { if (S) { S.hp = Math.max(1, S.hp - n) } },
     forceRecruit: function (id) { var h = heroById(id); if (h) recruit(h) },
     synergy: function () { return S ? S.syn : null },
-    teamHp: function () { return S ? S.team.map(function (m) { return { id: m.heroId, hp: m.hp, max: m.maxHp, dead: !!m.dead, x: m.x, y: m.y } }) : [] },
+    teamHp: function () { return S ? S.team.map(function (m) { return { id: m.heroId, hp: m.hp, max: m.maxHp, dead: !!m.dead, x: m.x, y: m.y, owner: m.owner || 'p1' } }) : [] },
     hurtTeam: function (n) { if (S && S.team[0]) damageCompanion(S.team[0], n) },
     team: function () { return S ? S.team.map(function (m) { return { id: m.heroId, x: m.x, y: m.y, hp: m.hp, maxHp: m.maxHp, atk: m.atk } }) : [] },
     clearEnemies: function () { if (S) S.enemies.forEach(function (e) { e.hp = 0 }) },
