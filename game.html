@@ -429,15 +429,17 @@
     color:#efe9f7;padding:6px 2px;font-size:.62rem;min-width:0;overflow:hidden
   }
   .duo-grid button.sel{border-color:#ffd9a0;background:rgba(255,217,160,.18);box-shadow:0 0 0 1px #ffd9a0 inset}
-  body.dual-on{padding-bottom:74px}
+  body.dual-on{padding-bottom:86px}
   body.dual-on .topbtns{
     top:auto;
-    bottom:calc(env(safe-area-inset-bottom, 0px) + 4px);
-    right:8px;left:auto;
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 52px);
+    right:4px;left:auto;
     transform:none;
+    flex-direction:column;
     gap:4px
   }
-  body.dual-on .topbtns button{width:26px;height:26px;font-size:12px}
+  body.dual-on .topbtns button{width:24px;height:24px;font-size:11px}
+  body.dual-on .log{margin-right:34px !important}
 
   /* ---- 赛博朋克霓虹主题（双人） ---- */
   body.dual-on .hud,
@@ -470,8 +472,19 @@
     border-radius:12px !important;
     padding:5px 10px !important
   }
-  body.dual-on .log{margin-top:4px !important;margin-bottom:4px !important;max-height:40px !important;overflow-y:auto}
-  body.dual-on #dual-stats{color:#e9d5ff;font-size:.56rem}
+  body.dual-on .log{
+    margin:4px 34px 4px 0 !important;
+    max-height:46px !important;
+    padding:4px 8px 8px !important;
+    overflow-y:auto !important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    scroll-behavior:smooth;
+    font-size:.58rem;
+    line-height:1.4
+  }
+  body.dual-on .log p{margin:0}
+  body.dual-on #dual-stats{color:#e9d5ff;font-size:.5rem;padding:4px 6px !important;gap:4px}
   body.dual-on .hint{color:#b98ce0}
 
   /* 双人：顶部只留名字+血条，其余全部下移 */
@@ -493,7 +506,7 @@
     border-bottom:1px solid rgba(255,158,196,.12)
   }
   #dual-stats[hidden]{display:none}
-  #dual-stats .ds-side{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #dual-stats .ds-side{flex:1 1 0;min-width:0;white-space:nowrap;overflow:visible;text-overflow:clip;letter-spacing:-.01em}
   #dual-stats .ds-right{text-align:right}
 
   /* 双人：顶部左右镜像 HUD（同一套模板） */
@@ -567,7 +580,7 @@
   /* 日志与底部提示/按钮不再互压 */
   body.dual-on .log{max-height:56px;overflow-y:auto;margin:2px 0 0}
   body.dual-on .hint{padding:2px 8px 0;margin-bottom:2px;font-size:.6rem}
-  body.dual-on canvas{max-height:calc(100dvh - 150px) !important;margin:auto;display:block}
+  body.dual-on canvas{max-height:calc(100dvh - 190px) !important;margin:auto;display:block}
   body.dual-on #boss-bar{top:auto;bottom:calc(env(safe-area-inset-bottom, 0px) + 54px)}
 
   /* 双人：让地图吃掉剩余空间，压缩日志/提示/顶栏 */
@@ -579,7 +592,7 @@
   body.dual-on .hud .hpline{font-size:.62rem}
   body.dual-on .log{max-height:42px;overflow-y:auto;font-size:.6rem;margin:2px 0 0}
   body.dual-on .log p{line-height:1.45}
-  body.dual-on .hint{font-size:.56rem;padding:2px 118px 0 8px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.dual-on .hint{font-size:.54rem;padding:2px 8px 0;margin:0 34px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   body.dual-on #p2-hud{padding:2px 8px;font-size:.6rem}
   body.dual-on .topbtns{bottom:calc(env(safe-area-inset-bottom, 0px) + 2px)}
   #p2-hud{
@@ -4617,7 +4630,7 @@
     var w = stage ? stage.clientWidth : 0
     if (!w || w < 80) w = vw ? vw - 20 : 0
     if (!w || w < 80) w = 480
-    var reserve = (S && S.dual) ? 120 : 0
+    var reserve = (S && S.dual) ? 175 : 0
     var maxH = vh
       ? Math.max(180, (S && S.dual) ? (vh - reserve) : vh * 0.62)
       : 420
