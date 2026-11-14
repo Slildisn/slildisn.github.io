@@ -429,6 +429,13 @@
     color:#efe9f7;padding:6px 2px;font-size:.62rem;min-width:0;overflow:hidden
   }
   .duo-grid button.sel{border-color:#ffd9a0;background:rgba(255,217,160,.18);box-shadow:0 0 0 1px #ffd9a0 inset}
+  body.dual-on .topbtns{
+    top:auto;
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 10px);
+    left:50%;right:auto;
+    transform:translateX(-50%)
+  }
+  body.dual-on #boss-bar{top:auto;bottom:calc(env(safe-area-inset-bottom, 0px) + 54px)}
   #p2-hud{
     position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:10px;z-index:9997;
     display:flex;gap:8px;align-items:center;padding:4px 10px;border-radius:12px;
@@ -4267,13 +4274,15 @@
     if (!w || w < 80) w = 480
     var maxH = vh ? Math.max(180, vh * 0.62) : 420
     var halves = (S && S.dual) ? 2 : 1
-    var tsW = (w / halves) / VIEW_W
-    var tsH = maxH / VIEW_H
-    var tsRatio = ((w / halves) * 0.78) / VIEW_H
+    var vw = halves === 2 ? 11 : VIEW_W
+    var vh = halves === 2 ? 9 : VIEW_H
+    var tsW = (w / halves) / vw
+    var tsH = maxH / vh
+    var tsRatio = ((w / halves) * 0.78) / vh
     TS = Math.max(8, Math.floor(Math.min(tsW, tsH, tsRatio) || 24))
     if (!isFinite(TS) || TS < 8) TS = 24
-    cv.width = TS * VIEW_W * halves
-    cv.height = TS * VIEW_H
+    cv.width = TS * vw * halves
+    cv.height = TS * vh
     cv.style.width = ''
     cv.style.height = ''
   }
@@ -4309,8 +4318,10 @@
   function renderImpl() {
     if (!ctx || !S) return
     var camSrc = S.__cam || S.player
-    var camX = clamp(camSrc.x - ((VIEW_W / 2) | 0), 0, MAP_W - VIEW_W)
-    var camY = clamp(S.player.y - ((VIEW_H / 2) | 0), 0, MAP_H - VIEW_H)
+    var vw = S.__vw || VIEW_W
+    var vh = S.__vh || VIEW_H
+    var camX = clamp(camSrc.x - ((vw / 2) | 0), 0, MAP_W - vw)
+    var camY = clamp(camSrc.y - ((vh / 2) | 0), 0, MAP_H - vh)
     ctx.fillStyle = '#0a0910'
     ctx.fillRect(0, 0, cv.width, cv.height)
 
@@ -4334,8 +4345,8 @@
     ctx.textBaseline = 'middle'
     ctx.font = Math.round(TS * 0.62) + 'px -apple-system,"PingFang SC",sans-serif'
 
-    for (var vy = 0; vy < VIEW_H; vy++) {
-      for (var vx = 0; vx < VIEW_W; vx++) {
+    for (var vy = 0; vy < vh; vy++) {
+      for (var vx = 0; vx < vw; vx++) {
         var x = camX + vx, y = camY + vy
         if (x >= MAP_W || y >= MAP_H) continue
         var key = x + ',' + y
@@ -4956,13 +4967,21 @@
 
   function openDuo() {
     if (!ovDuo) return
+    if ((window.innerHeight || 0) > (window.innerWidth || 0)) {
+      try { toast('为了最佳视野，双人模式建议横屏游玩') } catch (e) { /* ignore */ }
+    }
     duoSel1 = null; duoSel2 = null
     buildDuo()
     if (ovSelect) ovSelect.hidden = true
     ovDuo.hidden = false
     var btn = $('duo-open')
     if (btn) btn.textContent = '👥 双人模式：选 P1 / P2'
-    try { toast('双人模式已开启：左栏选 P1，右栏选 P2，然后点「双人出击」') } catch (e) { /* ignore */ }
+    var portraitNow = (window.innerHeight || 0) > (window.innerWidth || 0)
+    try {
+      toast(portraitNow
+        ? '为了最佳视野，双人模式建议横屏游玩（左栏选 P1，右栏选 P2）'
+        : '双人模式已开启：左栏选 P1，右栏选 P2，然后点「双人出击」')
+    } catch (e) { /* ignore */ }
   }
 
   function closeDuo() {
@@ -4995,22 +5014,37 @@
     syncHud()
   }
 
+  function findOpenTile(fromX, fromY, dirX) {
+    for (var d = 3; d <= 10; d++) {
+      var x = fromX + dirX * d
+      if (x < 1 || x >= MAP_W - 1) break
+      if (S.grid[fromY] && S.grid[fromY][x] !== WALL) return { x: x, y: fromY }
+    }
+    for (var d2 = 1; d2 <= 4; d2++) {
+      for (var sy = -d2; sy <= d2; sy++) {
+        var x2 = fromX + dirX * d2, y2 = fromY + sy
+        if (x2 < 1 || y2 < 1 || x2 >= MAP_W - 1 || y2 >= MAP_H - 1) continue
+        if (S.grid[y2] && S.grid[y2][x2] !== WALL) return { x: x2, y: y2 }
+      }
+    }
+    return { x: fromX, y: fromY }
+  }
+
   function setupP2(id2) {
     var h = heroById(id2)
     if (!h || !S) return
     var up = META.up || {}
     var hp = h.hp + (up.hp || 0)
-    var spot = null
-    var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]
-    for (var i = 0; i < dirs.length; i++) {
-      var nx = S.player.x + dirs[i][0], ny = S.player.y + dirs[i][1]
-      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue
-      if (S.grid[ny][nx] === WALL) continue
-      if (nx === S.player.x && ny === S.player.y) continue
-      spot = { x: nx, y: ny }
-      break
+    // P1 站左边、P2 站右边，拉开距离
+    var baseX = S.player.x, baseY = S.player.y
+    var p1Spot = findOpenTile(baseX, baseY, -1)
+    S.player.x = p1Spot.x
+    S.player.y = p1Spot.y
+    var p2Spot = findOpenTile(baseX, baseY, 1)
+    if (p2Spot.x === S.player.x && p2Spot.y === S.player.y) {
+      p2Spot = { x: Math.min(MAP_W - 2, S.player.x + 1), y: S.player.y }
     }
-    if (!spot) spot = { x: S.player.x, y: S.player.y }
+    var spot = p2Spot
     S.dual = true
     S.p2 = {
       hero: h,
@@ -5025,6 +5059,9 @@
     }
     applyP2Synergy()
     if (p2Hud) p2Hud.hidden = false
+    try { document.body.classList.add('dual-on') } catch (e) { /* ignore */ }
+    var hint = document.querySelector('.hint')
+    if (hint) hint.textContent = 'P1 滑动左半屏 / P2 滑动右半屏'
     fit(); render(); syncHud()
   }
 
@@ -5086,6 +5123,8 @@
   }
 
   function dualRender() {
+    S.__vw = 11
+    S.__vh = 9
     var halfW = Math.floor(cv.width / 2)
     ctx.fillStyle = '#0a0910'
     ctx.fillRect(0, 0, cv.width, cv.height)
@@ -5104,6 +5143,8 @@
     ctx.restore()
 
     S.__cam = null
+    S.__vw = null
+    S.__vh = null
     ctx.strokeStyle = 'rgba(255,158,196,.55)'
     ctx.lineWidth = 2
     ctx.beginPath(); ctx.moveTo(halfW, 0); ctx.lineTo(halfW, cv.height); ctx.stroke()
@@ -5166,6 +5207,9 @@
     newRun(heroId, seed)
     running = true
     if (p2Hud) p2Hud.hidden = true
+    try { document.body.classList.remove('dual-on') } catch (e) { /* ignore */ }
+    var hintEl = document.querySelector('.hint')
+    if (hintEl) hintEl.textContent = '在画面上滑动即可移动，撞到敌人就是攻击。'
     if (seedLine && S) seedLine.textContent = '种子 ' + S.seed
     if (S && S.seed && !cheatActive()) {
       try { localStorage.setItem(LAST_SEED_KEY, String(S.seed)) } catch (e) { /* ignore */ }
