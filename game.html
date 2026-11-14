@@ -3469,7 +3469,21 @@
     S.pathHistory = []
     S.pathHistory2 = []
     S.seen = {}; S.vis = {}
+    if (S.dual && S.p2) {
+      var spawn2 = findOpenTile(S.player.x, S.player.y, 1)
+      if (spawn2.x === S.player.x && spawn2.y === S.player.y) spawn2 = findOpenTile(S.player.x, S.player.y, -1)
+      if (S.grid[spawn2.y] && S.grid[spawn2.y][spawn2.x] !== WALL) { S.p2.x = spawn2.x; S.p2.y = spawn2.y }
+      S.p2.hp = Math.max(1, Math.min(S.p2.maxHp, S.p2.hp))
+    }
     seedTrail(S.team.filter(function (m) { return !m.dead && m.hp > 0 }).length)
+    if (S.dual && S.p2) {
+      for (var pf = 0; pf < S.team.length; pf++) {
+        var fm = S.team[pf]
+        if (fm.dead || fm.hp <= 0 || fm.owner !== 'p2') continue
+        var fsp = findOpenTile(S.p2.x, S.p2.y, 1)
+        fm.x = fsp.x; fm.y = fsp.y
+      }
+    }
     S.hp = Math.min(S.maxHp, S.hp + 2 + (S.floorHeal || 0))
     if (S.hero.id === 'firefly') { S.hp = Math.min(S.maxHp, S.hp + 1); log('流萤的微光护住了你，回 3 血。') }
     META.best = Math.max(META.best, S.floor)
@@ -4137,6 +4151,7 @@
   function act(dx, dy, wait) {
     if (FATAL.dead) return false
     if (!S || S.over || !running || choosing || itemOpen || S.paused) return false
+    escapeWall('p1')
     if (S.inputLockUntil && Date.now() < S.inputLockUntil) return false
     if (!wait) {
       var nx = S.player.x + dx, ny = S.player.y + dy
@@ -4221,6 +4236,27 @@
     computeFov(); render(); syncHud()
     S.inputLockUntil = Date.now() + 110
     saveRun()
+    return true
+  }
+
+  function escapeWall(who) {
+    if (!S) return false
+    var p = who === 'p2' ? S.p2 : S.player
+    if (!p) return false
+    if (S.grid[p.y] && S.grid[p.y][p.x] !== WALL) return false
+    // 先找最近的空地（扫描全图）
+    var best = null, bd = 9999
+    for (var y = 1; y < MAP_H - 1; y++) {
+      for (var x = 1; x < MAP_W - 1; x++) {
+        if (S.grid[y][x] === WALL) continue
+        var d = Math.abs(x - p.x) + Math.abs(y - p.y)
+        if (d < bd) { bd = d; best = { x: x, y: y } }
+      }
+    }
+    if (!best) return false
+    p.x = best.x; p.y = best.y
+    log('【' + (who === 'p2' ? (S.p2.hero ? S.p2.hero.name : 'P2') : S.hero.name) + '】被挤出墙外，已传送到最近的空地。')
+    computeFov(); render(); syncHud()
     return true
   }
 
@@ -5418,6 +5454,7 @@
   function act2(dx, dy) {
     if (FATAL.dead) return false
     if (!S || !S.dual || !S.p2 || S.over || !running || choosing || itemOpen || S.paused) return false
+    escapeWall('p2')
     if (S.inputLockUntil && Date.now() < S.inputLockUntil) return false
     var p = S.p2
     S.__lastActor = 'p2'
