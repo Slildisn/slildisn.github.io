@@ -514,6 +514,7 @@
     background:rgba(255,255,255,.16);
     overflow:hidden
   }
+  #p2-mates{font-size:.58rem;line-height:1.1;color:#cfe0ff;max-width:100%;overflow:hidden;white-space:nowrap}
   body.dual-on .hud .hpfill,
   body.dual-on #p2-hud .hpfill{
     height:100%;
@@ -723,6 +724,7 @@
   <div id="p2-hud" hidden>
     <div class="p2-line"><span class="p2-name">P2</span><span class="p2-hp">— / —</span></div>
     <div class="hpbar"><div class="hpfill" id="p2-fill" style="width:100%"></div></div>
+    <div class="p2-mates" id="p2-mates"></div>
   </div>
   <div id="boss-bar" aria-hidden="true"></div>
   <div id="boss-warn"><span>⚠️ 警告：终极防线已触发！</span></div>
@@ -2151,6 +2153,8 @@
     return { x: x, y: y }
   }
 
+  var recruitOwner = 'p1'
+
   function recruit(hero) {
     var bonus = (S.synHp || 0) + (S.teamHpBonus || 0)
     var alive = S.team.filter(function (m) { return !m.dead })
@@ -2161,8 +2165,23 @@
       var idx = S.team.indexOf(replaced)
       if (idx >= 0) S.team.splice(idx, 1)
     }
-    S.team.push({ heroId: hero.id, x: -99, y: -99, hp: hero.hp + bonus, maxHp: hero.hp + bonus, atk: hero.atk, dead: false })
+    var owner = S.dual ? (recruitOwner === 'p2' ? 'p2' : 'p1') : 'p1'
+    S.team.push({ heroId: hero.id, x: -99, y: -99, hp: hero.hp + bonus, maxHp: hero.hp + bonus, atk: hero.atk, dead: false, owner: owner })
     seedTrail(S.team.filter(function (m) { return !m.dead && m.hp > 0 }).length)
+    if (S.dual && S.p2) {
+      for (var oi = 0; oi < S.team.length; oi++) {
+        var om = S.team[oi]
+        if (om.dead || om.hp <= 0 || om.owner !== 'p2') continue
+        var osp = findOpenTile(S.p2.x, S.p2.y, 1)
+        om.x = osp.x; om.y = osp.y
+      }
+    }
+    // 归属 P2 的队友贴到 P2 身边
+    if (S.dual && S.p2 && owner === 'p2') {
+      var nm = S.team[S.team.length - 1]
+      var sp2 = findOpenTile(S.p2.x, S.p2.y, 1)
+      nm.x = sp2.x; nm.y = sp2.y
+    }
     if (replaced) {
       var rh = heroById(replaced.heroId)
       log('「' + (rh ? rh.name : '队友') + '」退出了队伍，「' + hero.name + '」补了上来。')
@@ -3910,8 +3929,13 @@
       var mm = alive[k]
       var d1 = Math.abs(mm.x - p1.x) + Math.abs(mm.y - p1.y)
       var d2 = p2 ? Math.abs(mm.x - p2.x) + Math.abs(mm.y - p2.y) : 99999
+      var wantP2 = false
+      if (p2) {
+        if (mm.owner === 'p2') wantP2 = true
+        else if (mm.owner !== 'p1' && d2 < d1) wantP2 = true
+      }
       var tgt
-      if (p2 && d2 < d1) {
+      if (wantP2) {
         tgt = trail2[used2++]
       } else {
         tgt = trail1[used1++]
@@ -4149,6 +4173,7 @@
         S.pathHistory = clean
         if (S.pathHistory.length > capTrail) S.pathHistory.length = capTrail
         S.player.x = nx; S.player.y = ny
+        S.__lastActor = 'p1'
         var landed = stepOn(nx, ny, 'p1')
         if (landed === 'floor') return true
         if (S.over) return true
@@ -4279,6 +4304,7 @@
         log('铁墓还挡在洞口。')
         return
       }
+      recruitOwner = (S.dual && typeof S.__lastActor === 'string') ? S.__lastActor : 'p1'
       openAltar(true)
       return
     }
@@ -4472,6 +4498,18 @@
         var atkEl = p2Hud.querySelector('.p2-atk')
         if (nmEl) nmEl.textContent = (S.p2.hero.emoji || '') + S.p2.hero.name
         if (hpEl) hpEl.textContent = Math.max(0, S.p2.hp) + ' / ' + S.p2.maxHp
+        var matesEl = $('p2-mates')
+        if (matesEl) {
+          var mmHtml = ''
+          for (var mi = 0; mi < S.team.length; mi++) {
+            var tm = S.team[mi]
+            if (tm.dead || tm.hp <= 0 || tm.owner !== 'p2') continue
+            var mh = heroById(tm.heroId)
+            mmHtml += (mh ? mh.emoji : '👤') + Math.max(0, tm.hp) + ' '
+          }
+          matesEl.textContent = mmHtml
+          matesEl.style.display = mmHtml ? 'block' : 'none'
+        }
         var fill2 = $('p2-fill')
         if (fill2) fill2.style.width = Math.max(0, Math.min(100, (S.p2.hp / S.p2.maxHp) * 100)) + '%'
       } else {
@@ -5354,6 +5392,7 @@
     if (!S || !S.dual || !S.p2 || S.over || !running || choosing || itemOpen || S.paused) return false
     if (S.inputLockUntil && Date.now() < S.inputLockUntil) return false
     var p = S.p2
+    S.__lastActor = 'p2'
     var nx = p.x + dx, ny = p.y + dy
     if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return false
     if (S.grid[ny][nx] === WALL) return false
@@ -5367,11 +5406,20 @@
       hitEnemyWith(p, e)
     } else {
       if (!S.pathHistory2) S.pathHistory2 = []
+      S.pathHistory2 = S.pathHistory2
       S.pathHistory2.unshift({ x: p.x, y: p.y })
       var cap2 = aliveTeam().length
       if (S.pathHistory2.length > cap2) S.pathHistory2.length = cap2
       p.x = nx; p.y = ny
       stepOn(nx, ny, 'p2')
+      if (!S.noStairs && nx === S.stairs.x && ny === S.stairs.y &&
+          !S.enemies.some(function (en) { return en.hp > 0 && (en.type === 'tomb' || en.type === 'dick') })) {
+        recruitOwner = 'p2'
+        openAltar(true)
+        S.inputLockUntil = Date.now() + 110
+        render(); syncHud()
+        return true
+      }
     }
     S.inputLockUntil = Date.now() + 110
     computeFov()
