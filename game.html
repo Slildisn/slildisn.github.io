@@ -436,6 +436,41 @@
     transform:translateX(-50%)
   }
 
+  /* ---- 赛博朋克霓虹主题（双人） ---- */
+  body.dual-on .hud,
+  body.dual-on #p2-hud,
+  body.dual-on #p2-hud[hidden]{
+    background:linear-gradient(180deg, rgba(58,20,92,.78), rgba(20,8,36,.9)) !important;
+    border:1px solid rgba(199,125,255,.65) !important;
+    border-radius:14px !important;
+    box-shadow:0 0 16px rgba(199,125,255,.5), inset 0 0 14px rgba(123,44,191,.35) !important;
+    height:58px !important
+  }
+  body.dual-on .hud .hpline span,
+  body.dual-on #p2-hud .p2-line span{color:#f3e8ff !important;text-shadow:0 0 6px rgba(199,125,255,.7)}
+  body.dual-on .hud .hpline,
+  body.dual-on #p2-hud .p2-line{font-size:.62rem;color:#f3e8ff}
+  body.dual-on .hud .hpfill,
+  body.dual-on #p2-hud .hpfill{background:linear-gradient(90deg,#ff2d6f,#ff6fa8) !important;box-shadow:0 0 8px rgba(255,45,111,.7)}
+  body.dual-on .hud .hpbar,
+  body.dual-on #p2-hud .hpbar{background:rgba(255,255,255,.12)}
+  body.dual-on .hud-sub{font-size:.56rem;color:#c77dff;line-height:1;text-shadow:0 0 6px rgba(199,125,255,.6)}
+  body.dual-on #p2-hud .hud-sub{text-align:right}
+  body.dual-on #p2-mates,#p2-mates{color:#c77dff}
+
+  /* 底部整体面板 */
+  body.dual-on #dual-stats,
+  body.dual-on .log{
+    background:linear-gradient(180deg, rgba(44,18,74,.88), rgba(16,7,28,.94)) !important;
+    border:1px solid rgba(199,125,255,.45) !important;
+    box-shadow:0 0 14px rgba(123,44,191,.4), inset 0 0 10px rgba(199,125,255,.12) !important;
+    border-radius:12px !important;
+    padding:5px 10px !important
+  }
+  body.dual-on .log{margin-top:4px !important;max-height:40px !important}
+  body.dual-on #dual-stats{color:#e9d5ff;font-size:.56rem}
+  body.dual-on .hint{color:#b98ce0}
+
   /* 双人：顶部只留名字+血条，其余全部下移 */
   body.dual-on .hud .stat,
   body.dual-on .hud .relics,
@@ -708,6 +743,7 @@
     <div class="hpwrap">
       <div class="hpline"><span id="h-name">—</span><span id="h-hp">— / —</span></div>
       <div class="hpbar"><div class="hpfill" id="h-fill" style="width:100%"></div></div>
+      <div class="hud-sub"><span id="h-atk-mini">⚔ —</span></div>
     </div>
     <span class="stat">攻 <b id="h-atk">0</b></span>
     <span class="stat">Lv <b id="h-lv">1</b></span>
@@ -724,6 +760,7 @@
   <div id="p2-hud" hidden>
     <div class="p2-line"><span class="p2-name">P2</span><span class="p2-hp">— / —</span></div>
     <div class="hpbar"><div class="hpfill" id="p2-fill" style="width:100%"></div></div>
+    <div class="hud-sub"><span id="p2-atk-mini">⚔ —</span></div>
     <div class="p2-mates" id="p2-mates"></div>
   </div>
   <div id="boss-bar" aria-hidden="true"></div>
@@ -4490,6 +4527,8 @@
     if (hHp) hHp.textContent = S.hp + ' / ' + S.maxHp
     if (hFill) hFill.style.width = Math.max(0, Math.min(100, (S.hp / S.maxHp) * 100)) + '%'
     if (hAtk) hAtk.textContent = String(S.atk)
+    if ($('h-atk-mini')) $('h-atk-mini').textContent = '⚔ ' + S.atk
+    if ($('p2-atk-mini') && S.p2) $('p2-atk-mini').textContent = '⚔ ' + S.p2.atk
     if (hTalents) { hTalents.innerHTML = ''; hTalents.hidden = true }
     if (hFloor) hFloor.textContent = String(S.floor)
     if (hDir) hDir.textContent = dirArrow()
@@ -4663,12 +4702,12 @@
         var px = vx * TS, py = vy * TS
         var t = S.grid[y][x]
         if (t === WALL) {
-          ctx.fillStyle = vis ? '#2a2040' : '#191327'
+          ctx.fillStyle = vis ? '#33204f' : '#1c1430'
           ctx.fillRect(px, py, TS, TS)
         } else {
-          ctx.fillStyle = vis ? '#151021' : '#100c19'
+          ctx.fillStyle = vis ? '#1c1230' : '#120d1d'
           ctx.fillRect(px, py, TS, TS)
-          ctx.fillStyle = vis ? '#2b2340' : '#1a1528'
+          ctx.fillStyle = vis ? '#4a2f7a' : '#241a38'
           ctx.fillRect(px + TS / 2 - 1, py + TS / 2 - 1, 2, 2)
         }
         if (!vis) {
@@ -5516,8 +5555,15 @@
       ctx.fillStyle = '#0a0910'; ctx.fillRect(0, halfH, cv.width, cv.height - halfH)
       ctx.translate(0, halfH); renderImpl(); ctx.restore()
       S.__cam = null; S.__vw = null; S.__vh = null
-      ctx.strokeStyle = 'rgba(255,158,196,.55)'; ctx.lineWidth = 2
+      var gdiv = ctx.createLinearGradient(0, halfH - 8, 0, halfH + 8)
+      gdiv.addColorStop(0, 'rgba(199,125,255,0)')
+      gdiv.addColorStop(.5, 'rgba(199,125,255,.95)')
+      gdiv.addColorStop(1, 'rgba(123,44,191,0)')
+      ctx.save()
+      ctx.shadowColor = '#c77dff'; ctx.shadowBlur = 18
+      ctx.strokeStyle = gdiv; ctx.lineWidth = 4
       ctx.beginPath(); ctx.moveTo(0, halfH); ctx.lineTo(cv.width, halfH); ctx.stroke()
+      ctx.restore()
       ctx.fillStyle = 'rgba(255,217,160,.85)'; ctx.font = 'bold 12px sans-serif'
       ctx.textAlign = 'left'; ctx.textBaseline = 'top'
       ctx.fillText('P1', 6, 6)
@@ -5551,9 +5597,15 @@
     S.__cam = null
     S.__vw = null
     S.__vh = null
-    ctx.strokeStyle = 'rgba(255,158,196,.55)'
-    ctx.lineWidth = 2
+    var gdivh = ctx.createLinearGradient(halfW - 8, 0, halfW + 8, 0)
+    gdivh.addColorStop(0, 'rgba(199,125,255,0)')
+    gdivh.addColorStop(.5, 'rgba(199,125,255,.95)')
+    gdivh.addColorStop(1, 'rgba(123,44,191,0)')
+    ctx.save()
+    ctx.shadowColor = '#c77dff'; ctx.shadowBlur = 18
+    ctx.strokeStyle = gdivh; ctx.lineWidth = 4
     ctx.beginPath(); ctx.moveTo(halfW, 0); ctx.lineTo(halfW, cv.height); ctx.stroke()
+    ctx.restore()
     ctx.fillStyle = 'rgba(255,217,160,.85)'
     ctx.font = 'bold 12px -apple-system,sans-serif'
     ctx.textAlign = 'left'; ctx.textBaseline = 'top'
