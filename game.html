@@ -706,6 +706,11 @@
     border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);
     color:#fff;font-size:14px;line-height:1;z-index:2
   }
+  .stats-dual{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+  .stat-col{min-width:0}
+  .stat-col-title{margin:0 0 6px;font-size:.72rem;color:#c77dff;letter-spacing:.06em}
+  .stat-col .stat-grid{grid-template-columns:1fr 1fr;font-size:.62rem}
+  .stat-col .stat-card{padding:6px 8px}
   .stats-scroll{max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px;width:100%}
   .stats-sec{margin:10px 0 6px;font-size:.72rem;letter-spacing:.14em;color:#ff9ec4;text-align:left}
   .stats-tags{display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-start}
@@ -2860,9 +2865,49 @@
     return (S.hero.id === 'thanos' ? 1 : 0) + (S.relics && S.relics.leech ? 1 : 0) + (S.leech || 0)
   }
 
+  function renderStatsDual() {
+    var box = $('stats-scroll')
+    if (!box || !S || !S.p2) return
+    function side(hero, st, mates, syn, label) {
+      var rows = [
+        ['生命', Math.max(0, st.hp) + '/' + st.maxHp],
+        ['攻击', st.atk],
+        ['暴击', Math.round((st.crit || 0) * 100) + '%'],
+        ['闪避', Math.round((st.dodge || 0) * 100) + '%'],
+      ]
+      var h = '<div class="stat-col"><h3 class="stat-col-title">' + label + ' · ' + (hero.emoji || '') + hero.name + '</h3>'
+      h += '<div class="stat-card"><div class="stat-grid">'
+      for (var i = 0; i < rows.length; i++) h += '<span>' + rows[i][0] + ' <b>' + rows[i][1] + '</b></span>'
+      h += '</div></div>'
+      if (mates && mates.length) {
+        h += '<div class="stat-card"><h3>队友</h3><div class="stat-grid">'
+        for (var m = 0; m < mates.length; m++) {
+          var mm = mates[m], mh = heroById(mm.heroId)
+          h += '<span>' + (mh ? mh.emoji : '👤') + (mh ? mh.name : '队友') + ' <b>' + Math.max(0, mm.hp) + '/' + mm.maxHp + '</b></span>'
+        }
+        h += '</div></div>'
+      }
+      var names = []
+      for (var si = 0; si < SYNERGY.length; si++) {
+        var tier = syn && syn[SYNERGY[si].id] ? syn[SYNERGY[si].id] : 0
+        if (tier) names.push('【' + SYNERGY[si].name + '】' + tier + '/' + SYNERGY[si].members.length)
+      }
+      h += '<div class="stat-card"><h3>羁绊</h3><div class="stat-tags">' + (names.length ? '<span class="syn">' + names.join('</span><span class="syn">') + '</span>' : '<span>无</span>') + '</div></div>'
+      h += '</div>'
+      return h
+    }
+    var mates1 = teamOf('p1').map(function (m) { return { heroId: m.heroId, hp: m.hp, maxHp: m.maxHp } })
+    var mates2 = teamOf('p2').map(function (m) { return { heroId: m.heroId, hp: m.hp, maxHp: m.maxHp } })
+    box.innerHTML = '<div class="stats-dual">'
+      + side(S.hero, S, mates1, S.syn, 'P1')
+      + side(S.p2.hero, S.p2, mates2, S.p2.syn, 'P2')
+      + '</div>'
+  }
+
   function renderStats() {
     var box = $('stats-list')
     if (!box || !S) return
+    if (S.dual && S.p2) { renderStatsDual(); return }
     box.innerHTML = ''
     var crit = Math.round(S.crit * 100)
     var dodge = Math.round(S.dodge * 100)
