@@ -419,6 +419,7 @@
     border:1px solid rgba(255,158,196,.4);border-radius:999px;background:rgba(255,158,196,.12);
     color:#fff;padding:4px 12px;font-size:.7rem;font-family:inherit
   }
+  #ov-duo{z-index:75}
   .duo-wrap{display:flex;gap:10px;width:100%;max-width:900px;align-items:flex-start;flex-wrap:wrap}
   .duo-col{flex:1 1 300px;min-width:0}
   .duo-col h3{margin:0 0 6px;font-size:.72rem;color:#ff9ec4;letter-spacing:.08em}
@@ -4957,7 +4958,18 @@
     if (!ovDuo) return
     duoSel1 = null; duoSel2 = null
     buildDuo()
+    if (ovSelect) ovSelect.hidden = true
     ovDuo.hidden = false
+    var btn = $('duo-open')
+    if (btn) btn.textContent = '👥 双人模式：选 P1 / P2'
+    try { toast('双人模式已开启：左栏选 P1，右栏选 P2，然后点「双人出击」') } catch (e) { /* ignore */ }
+  }
+
+  function closeDuo() {
+    if (ovDuo) ovDuo.hidden = true
+    if (ovSelect) ovSelect.hidden = false
+    var btn = $('duo-open')
+    if (btn) btn.textContent = '👥 双人'
   }
 
   function applyP2Synergy() {
@@ -5219,9 +5231,13 @@
     } catch (e) { /* ignore */ }
   }
   if ($('duo-open')) $('duo-open').addEventListener('click', openDuo)
-  if ($('duo-cancel') && ovDuo) $('duo-cancel').addEventListener('click', function () { ovDuo.hidden = true })
+  if ($('duo-cancel') && ovDuo) $('duo-cancel').addEventListener('click', closeDuo)
   if (duoStartBtn) duoStartBtn.addEventListener('click', function () {
-    if (duoSel1 && duoSel2) startDual(duoSel1, duoSel2)
+    if (duoSel1 && duoSel2 && duoSel1 !== duoSel2) {
+      startDual(duoSel1, duoSel2)
+    } else {
+      try { toast('请先给 P1 和 P2 各选一个不同的角色') } catch (e) { /* ignore */ }
+    }
   })
   if ($('meta-open')) $('meta-open').addEventListener('click', openMeta)
   if ($('meta-close')) $('meta-close').addEventListener('click', closeMeta)
