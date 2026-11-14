@@ -5162,18 +5162,25 @@
     ctx.fillStyle = '#0a0910'
     ctx.fillRect(0, 0, cv.width, cv.height)
 
+    // P1 视口
     S.__cam = { x: S.player.x, y: S.player.y }
+    try { ctx.setTransform(1, 0, 0, 1, 0, 0) } catch (e) { /* ignore */ }
     ctx.save()
     ctx.beginPath(); ctx.rect(0, 0, halfW, cv.height); ctx.clip()
     renderImpl()
     ctx.restore()
 
+    // P2 视口：独立 transform / 独立裁剪 / 独立背景，绝不继承 P1 的状态
     S.__cam = { x: S.p2.x, y: S.p2.y }
+    try { ctx.setTransform(1, 0, 0, 1, 0, 0) } catch (e) { /* ignore */ }
     ctx.save()
     ctx.beginPath(); ctx.rect(halfW, 0, cv.width - halfW, cv.height); ctx.clip()
+    ctx.fillStyle = '#0a0910'
+    ctx.fillRect(halfW, 0, cv.width - halfW, cv.height)
     ctx.translate(halfW, 0)
     renderImpl()
     ctx.restore()
+    try { ctx.setTransform(1, 0, 0, 1, 0, 0) } catch (e) { /* ignore */ }
 
     S.__cam = null
     S.__vw = null
