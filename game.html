@@ -436,6 +436,28 @@
     transform:translateX(-50%)
   }
 
+  /* 双人：顶部只留名字+血条，其余全部下移 */
+  body.dual-on .hud .stat,
+  body.dual-on .hud .relics,
+  body.dual-on .hud .team-strip,
+  body.dual-on .hud .syn-panel{display:none !important}
+  body.dual-on .hud .hpwrap{margin:0}
+  body.dual-on #p2-hud .p2-atk{display:none !important}
+  body.dual-on .hpline{font-size:.68rem}
+  body.dual-on .hud{flex-direction:column;align-items:flex-start;gap:2px;padding:3px 8px}
+  body.dual-on #p2-hud{flex-direction:column;align-items:flex-end;gap:2px;padding:3px 8px}
+
+  #dual-stats{
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    width:100%;padding:3px 8px;margin:3px 0 0;
+    font-size:.6rem;color:#cfc7e0;
+    border-top:1px solid rgba(255,158,196,.18);
+    border-bottom:1px solid rgba(255,158,196,.12)
+  }
+  #dual-stats[hidden]{display:none}
+  #dual-stats .ds-side{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #dual-stats .ds-right{text-align:right}
+
   /* 双人：顶部左右对称 HUD */
   body.dual-on{padding-bottom:54px}
   body.dual-on header,
@@ -492,7 +514,7 @@
   /* 日志与底部提示/按钮不再互压 */
   body.dual-on .log{max-height:56px;overflow-y:auto;margin:2px 0 0}
   body.dual-on .hint{padding:2px 8px 0;margin-bottom:2px;font-size:.6rem}
-  body.dual-on canvas{max-height:calc(100dvh - 210px) !important}
+  body.dual-on canvas{max-height:calc(100dvh - 165px) !important}
   body.dual-on #boss-bar{top:auto;bottom:calc(env(safe-area-inset-bottom, 0px) + 54px)}
 
   /* 双人：让地图吃掉剩余空间，压缩日志/提示/顶栏 */
@@ -857,6 +879,11 @@
       <p id="end-desc">—</p>
       <button class="btn" id="end-again" type="button">再来一次</button>
     </div>
+  </div>
+
+  <div id="dual-stats" hidden>
+    <span class="ds-side" id="ds-p1">—</span>
+    <span class="ds-side ds-right" id="ds-p2">—</span>
   </div>
 
   <div class="log" id="log"><p>选好角色，开始吧。</p></div>
@@ -4323,6 +4350,16 @@
         teamStrip.hidden = true
       }
     }
+    var ds = $('dual-stats'), ds1 = $('ds-p1'), ds2 = $('ds-p2')
+    if (ds) {
+      if (S.dual && S.p2) {
+        ds.hidden = false
+        if (ds1) ds1.textContent = 'P1 攻' + S.atk + ' Lv' + S.level + ' 金' + (S.gold || 0) + ' EXP' + S.xp + '/' + S.xpNext + ' 层' + S.floor + ' 门' + dirArrow()
+        if (ds2) ds2.textContent = 'P2 攻' + S.p2.atk + ' ❤' + Math.max(0, S.p2.hp) + '/' + S.p2.maxHp + ' 层' + S.floor
+      } else {
+        ds.hidden = true
+      }
+    }
     if (p2Hud) {
       if (S.dual && S.p2) {
         p2Hud.hidden = false
@@ -4352,7 +4389,7 @@
     var w = stage ? stage.clientWidth : 0
     if (!w || w < 80) w = vw ? vw - 20 : 0
     if (!w || w < 80) w = 480
-    var reserve = (S && S.dual) ? (vh && vh < 900 ? 170 : 200) : 0
+    var reserve = (S && S.dual) ? (vh && vh < 900 ? 150 : 170) : 0
     var maxH = vh
       ? Math.max(180, (S && S.dual) ? (vh - reserve) : vh * 0.62)
       : 420
@@ -5330,6 +5367,7 @@
     newRun(heroId, seed)
     running = true
     if (p2Hud) p2Hud.hidden = true
+    if ($('dual-stats')) $('dual-stats').hidden = true
     try { document.body.classList.remove('dual-on') } catch (e) { /* ignore */ }
     var hintEl = document.querySelector('.hint')
     if (hintEl) hintEl.textContent = '在画面上滑动即可移动，撞到敌人就是攻击。'
