@@ -1588,17 +1588,26 @@
       S.vis = allVis
       return
     }
-    var p = S.player, r = S.vision
+    var r = S.vision
     if (!r || isNaN(r) || r < 1) r = 6
     var vis = {}
-    for (var y = Math.max(0, p.y - r); y <= Math.min(MAP_H - 1, p.y + r); y++) {
-      for (var x = Math.max(0, p.x - r); x <= Math.min(MAP_W - 1, p.x + r); x++) {
-        if ((x - p.x) * (x - p.x) + (y - p.y) * (y - p.y) > r * r + r) continue
-        if (los(S.grid, p.x, p.y, x, y)) {
-          vis[x + ',' + y] = true
-          S.seen[x + ',' + y] = true
+
+    function revealAround(p, radius) {
+      for (var y = Math.max(0, p.y - radius); y <= Math.min(MAP_H - 1, p.y + radius); y++) {
+        for (var x = Math.max(0, p.x - radius); x <= Math.min(MAP_W - 1, p.x + radius); x++) {
+          if ((x - p.x) * (x - p.x) + (y - p.y) * (y - p.y) > radius * radius + radius) continue
+          if (los(S.grid, p.x, p.y, x, y)) {
+            vis[x + ',' + y] = true
+            S.seen[x + ',' + y] = true
+          }
         }
       }
+    }
+
+    // 双人：两位玩家的视野取并集，P2 站的地方也必须是亮的
+    revealAround(S.player, r)
+    if (S.dual && S.p2 && !S.p2.dead) {
+      revealAround(S.p2, S.p2.vision || r)
     }
     S.vis = vis
   }
