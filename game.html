@@ -2146,6 +2146,7 @@
     }
 
     S.syn = next
+    applyP2Synergy()
     syncSynergy()
   }
 
@@ -3252,6 +3253,7 @@
     S.altar = m.altar
     S.team = []
     S.pathHistory = []
+    S.pathHistory2 = []
     computeSynergy()
     refreshLog()
     SND.ambience('calm')
@@ -3296,6 +3298,7 @@
     S.arena = !!m.arena
     S.altar = m.altar
     S.pathHistory = []
+    S.pathHistory2 = []
     S.seen = {}; S.vis = {}
     seedTrail(S.team.filter(function (m) { return !m.dead && m.hp > 0 }).length)
     S.hp = Math.min(S.maxHp, S.hp + 2 + (S.floorHeal || 0))
@@ -3491,6 +3494,7 @@
   /* 队伍成员统一定义：玩家 + 队友 */
   function teamTargets() {
     var list = [{ kind: 'player', x: S.player.x, y: S.player.y }]
+    if (S.dual && S.p2 && !S.p2.dead && S.p2.hp > 0) list.push({ kind: 'p2', x: S.p2.x, y: S.p2.y })
     for (var i = 0; i < S.team.length; i++) {
       var m = S.team[i]
       if (m.hp > 0) list.push({ kind: 'member', m: m, x: m.x, y: m.y })
@@ -3502,6 +3506,7 @@
     if (!S) return
     n = Math.max(0, Math.min(n, 4))
     S.pathHistory = []
+    S.pathHistory2 = []
     if (!n) return
     var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]]
     var alive = aliveTeam()
@@ -3598,6 +3603,27 @@
     return h2
   }
 
+  function hurtP2(dmg) {
+    if (!S || !S.dual || !S.p2 || S.p2.dead) return
+    if (S.god) return
+    var p = S.p2
+    if (Math.random() < Math.min(0.75, p.dodge || 0)) {
+      log('P2 侧身躲开了。')
+      return
+    }
+    p.hp -= dmg
+    fx(p.x, p.y, '-' + dmg, '#9fd8ff', -0.4)
+    log('P2 受到 ' + dmg + ' 点伤害。')
+    shake(4.2, 240)
+    if (p.hp <= 0) {
+      p.hp = 0
+      p.dead = true
+      log('P2 倒下了……')
+    }
+    syncHud()
+    render()
+  }
+
   function damageCompanion(m, dmg) {
     if (!m || m.hp <= 0) return
     if (S.god) { fx(m.x, m.y, '0', '#d7b3ff', -0.4); return }
@@ -3639,9 +3665,11 @@
       if (S.over) { render(); return }
       var cur = null
       if (b.tgt.kind === 'player') cur = { x: S.player.x, y: S.player.y, kind: 'player' }
+      else if (b.tgt.kind === 'p2' && S.p2 && !S.p2.dead) cur = { x: S.p2.x, y: S.p2.y, kind: 'p2' }
       else if (b.tgt.m && b.tgt.m.hp > 0) cur = { x: b.tgt.m.x, y: b.tgt.m.y, kind: 'member', m: b.tgt.m }
       if (cur && cur.x === b.tx && cur.y === b.ty) {
         if (cur.kind === 'player') hurtPlayer(b.dmg, e)
+        else if (cur.kind === 'p2') hurtP2(b.dmg)
         else damageCompanion(cur.m, b.dmg)
       } else {
         log('箭擦着过去了。')
@@ -3675,6 +3703,7 @@
     e.hp = 0
     e.__counted = true
     if (tgt.kind === 'player') hurtPlayer(e.atk, e)
+    else if (tgt.kind === 'p2') hurtP2(e.atk)
     else damageCompanion(tgt.m, e.atk)
     if (!S.over) {
       S.kills = (S.kills || 0) + 1
@@ -3706,14 +3735,27 @@
       }
     }
 
-    // 严格贴队列：队友 i 的坐标必须等于 pathHistory[i]（没路可走就不动）
+    // 跟随最近的玩家：各自踩在对应玩家的历史路径上
+    var p1 = S.player
+    var p2 = (S.dual && S.p2 && !S.p2.dead) ? S.p2 : null
+    var trail1 = S.pathHistory || []
+    var trail2 = S.pathHistory2 || []
+    var used1 = 0, used2 = 0
     for (var k = 0; k < alive.length; k++) {
       if (S.dogfood && Math.random() < 0.35) continue   // 吃撑了，原地发呆
-      var tgt = (S.pathHistory || [])[k]
+      var mm = alive[k]
+      var d1 = Math.abs(mm.x - p1.x) + Math.abs(mm.y - p1.y)
+      var d2 = p2 ? Math.abs(mm.x - p2.x) + Math.abs(mm.y - p2.y) : 99999
+      var tgt
+      if (p2 && d2 < d1) {
+        tgt = trail2[used2++]
+      } else {
+        tgt = trail1[used1++]
+      }
       if (!tgt) continue
       if (S.grid[tgt.y] && S.grid[tgt.y][tgt.x] === WALL) continue
-      alive[k].x = tgt.x
-      alive[k].y = tgt.y
+      mm.x = tgt.x
+      mm.y = tgt.y
     }
   }
 
@@ -3764,6 +3806,7 @@
           }
 
           if (S.hp > 0) hurtPlayer(aoeDmg, e)
+          if (S.dual && S.p2 && !S.p2.dead) hurtP2(aoeDmg)
           var aliveM = aliveTeam()
           for (var am2 = 0; am2 < aliveM.length; am2++) damageCompanion(aliveM[am2], aoeDmg)
           if (S.over) return
@@ -3839,6 +3882,8 @@
           if (S.over) return
           counterAttack(e)
           if (S.over) return
+        } else if (tgt.kind === 'p2') {
+          hurtP2(e.atk)
         } else {
           damageCompanion(tgt.m, e.atk)
         }
@@ -3865,6 +3910,8 @@
           if (S.over) return
           counterAttack(e)
           if (S.over) return
+        } else if (tgt.kind === 'p2') {
+          hurtP2(e.atk)
         } else {
           damageCompanion(tgt.m, e.atk)
         }
@@ -3922,6 +3969,7 @@
         }
         // 记录玩家移动前的坐标（历史路径队列，头部最新）
         if (!S.pathHistory) S.pathHistory = []
+    S.pathHistory2 = []
         S.pathHistory.unshift({ x: S.player.x, y: S.player.y })
         var capTrail = S.team.filter(function (m) { return !m.dead && m.hp > 0 }).length
         // 去掉与玩家新位置重复/冲突的节点，避免队友被塞到玩家脚下
@@ -4912,6 +4960,29 @@
     ovDuo.hidden = false
   }
 
+  function applyP2Synergy() {
+    if (!S || !S.dual || !S.p2) return
+    var h = S.p2.hero
+    var up = META.up || {}
+    var baseHp = h.hp + (up.hp || 0)
+    var baseAtk = h.atk + (up.atk || 0)
+    var baseCrit = h.crit + (up.crit || 0) / 100
+    var baseDodge = h.dodge + (up.dodge || 0) / 100
+    if (S.elderDone) {
+      baseAtk = Math.round(baseAtk * 1.2)
+      baseHp = Math.round(baseHp * 1.2)
+      baseCrit += 0.1
+    }
+    var newMax = baseHp + (S.synHp || 0)
+    var delta = newMax - (S.p2.maxHp || baseHp)
+    S.p2.maxHp = newMax
+    S.p2.hp = Math.max(1, Math.min(newMax, (S.p2.hp || newMax) + delta))
+    S.p2.atk = baseAtk + (S.synAtk || 0)
+    S.p2.crit = Math.min(0.9, baseCrit + (S.synCrit || 0))
+    S.p2.dodge = Math.min(0.75, baseDodge + (S.synDodge || 0))
+    syncHud()
+  }
+
   function setupP2(id2) {
     var h = heroById(id2)
     if (!h || !S) return
@@ -4940,6 +5011,7 @@
       dodge: Math.min(0.75, h.dodge + (up.dodge || 0) / 100),
       vision: h.vision,
     }
+    applyP2Synergy()
     if (p2Hud) p2Hud.hidden = false
     fit(); render(); syncHud()
   }
@@ -4980,6 +5052,10 @@
     if (e) {
       hitEnemyWith(p, e)
     } else {
+      if (!S.pathHistory2) S.pathHistory2 = []
+      S.pathHistory2.unshift({ x: p.x, y: p.y })
+      var cap2 = aliveTeam().length
+      if (S.pathHistory2.length > cap2) S.pathHistory2.length = cap2
       p.x = nx; p.y = ny
     }
     S.inputLockUntil = Date.now() + 110
@@ -5265,7 +5341,7 @@
     hurt: function (n) { if (S) { S.hp = Math.max(1, S.hp - n) } },
     forceRecruit: function (id) { var h = heroById(id); if (h) recruit(h) },
     synergy: function () { return S ? S.syn : null },
-    teamHp: function () { return S ? S.team.map(function (m) { return { id: m.heroId, hp: m.hp, max: m.maxHp, dead: !!m.dead } }) : [] },
+    teamHp: function () { return S ? S.team.map(function (m) { return { id: m.heroId, hp: m.hp, max: m.maxHp, dead: !!m.dead, x: m.x, y: m.y } }) : [] },
     hurtTeam: function (n) { if (S && S.team[0]) damageCompanion(S.team[0], n) },
     team: function () { return S ? S.team.map(function (m) { return { id: m.heroId, x: m.x, y: m.y, hp: m.hp, maxHp: m.maxHp, atk: m.atk } }) : [] },
     clearEnemies: function () { if (S) S.enemies.forEach(function (e) { e.hp = 0 }) },
@@ -5300,7 +5376,7 @@
         kills: S.kills || 0, steps: S.steps || 0, gold: S.gold || 0,
         relics2: Object.keys(S.relics2 || {}).length, syn: S.syn || {}, team: (S.team||[]).length, altar: S.altar ? 1 : 0, special: S.special ? S.special.kind : null, thornsNow: S.thorns || 0,
         items: S.items.length, relics: Object.keys(S.relics), seed: S.seed, aoeCount: S.aoeCount || 0,
-        turnCount: S.turnCount || 0, dual: !!S.dual, p2: S.p2 ? { id: S.p2.hero.id, x: S.p2.x, y: S.p2.y, hp: S.p2.hp, atk: S.p2.atk } : null,
+        turnCount: S.turnCount || 0, dual: !!S.dual, p2: S.p2 ? { id: S.p2.hero.id, x: S.p2.x, y: S.p2.y, hp: S.p2.hp, max: S.p2.maxHp, atk: S.p2.atk, crit: +S.p2.crit.toFixed(2), dodge: +S.p2.dodge.toFixed(2) } : null,
         p2X: S.p2 ? S.p2.x : null, p2Y: S.p2 ? S.p2.y : null
       }
     }
