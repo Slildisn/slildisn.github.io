@@ -3718,7 +3718,7 @@
       var h = Math.min(best.max - S.hp, amount)
       S.hp = Math.min(S.maxHp, S.hp + amount)
       fx(S.player.x, S.player.y, '+' + h, '#ff9ec4', -0.5)
-      log('药水回给主角 ' + h + ' 血。')
+      log('药水回给【' + S.hero.name + '】' + h + ' 血。')
       return h
     }
     var m2 = best.m
@@ -4113,7 +4113,7 @@
         S.pathHistory = clean
         if (S.pathHistory.length > capTrail) S.pathHistory.length = capTrail
         S.player.x = nx; S.player.y = ny
-        var landed = stepOn(nx, ny)
+        var landed = stepOn(nx, ny, 'p1')
         if (landed === 'floor') return true
         if (S.over) return true
         S.steps++
@@ -4158,19 +4158,48 @@
     return true
   }
 
-  function stepOn(x, y) {
+  function snapshotStats() {
+    return { atk: S.atk, crit: S.crit, dodge: S.dodge, maxHp: S.maxHp }
+  }
+
+  function applyDeltaToP2(before) {
+    if (!S || !S.dual || !S.p2) return
+    var dAtk = S.atk - before.atk
+    var dCrit = S.crit - before.crit
+    var dDodge = S.dodge - before.dodge
+    var dHp = S.maxHp - before.maxHp
+    if (dAtk) S.p2.atk = Math.max(1, S.p2.atk + dAtk)
+    if (dCrit) S.p2.crit = Math.min(0.9, Math.max(0, S.p2.crit + dCrit))
+    if (dDodge) S.p2.dodge = Math.min(0.75, Math.max(0, S.p2.dodge + dDodge))
+    if (dHp) { S.p2.maxHp = Math.max(1, S.p2.maxHp + dHp); S.p2.hp = Math.max(1, Math.min(S.p2.maxHp, S.p2.hp + dHp)) }
+    syncHud()
+  }
+
+  function stepOn(x, y, who) {
     for (var i = 0; i < S.items.length; i++) {
       var it = S.items[i]
       if (it.x === x && it.y === y) {
         S.items.splice(i, 1)
         if (it.kind === 'potion') {
           var heal = Math.round(7 * S.potionMul)
-          healLowest(heal)
+          if (who === 'p2' && S.dual && S.p2) {
+            var hb = Math.min(heal, S.p2.maxHp - S.p2.hp)
+            S.p2.hp = Math.min(S.p2.maxHp, S.p2.hp + heal)
+            fx(S.p2.x, S.p2.y, '+' + hb, '#9fd8ff', -0.5)
+            log('【' + S.p2.hero.name + '】喝下药水，回 ' + hb + ' 血。')
+            syncHud()
+          } else {
+            healLowest(heal)
+          }
           SND.coin()
         } else if (it.kind === 'trinket') {
+          var b1 = snapshotStats()
           pickTrinket(it.trinket)
+          applyDeltaToP2(b1)
         } else {
+          var b2 = snapshotStats()
           pickRelic(it.relic)
+          applyDeltaToP2(b2)
         }
         break
       }
@@ -5279,6 +5308,7 @@
       var cap2 = aliveTeam().length
       if (S.pathHistory2.length > cap2) S.pathHistory2.length = cap2
       p.x = nx; p.y = ny
+      stepOn(nx, ny, 'p2')
     }
     S.inputLockUntil = Date.now() + 110
     computeFov()
@@ -5580,6 +5610,8 @@
     specialPos: function () { return S ? S.special : null },
     altarPos: function () { return S ? S.altar : null },
     openAltar: openAltar,
+    dropItem: function (kind, id, x, y) { if (S) S.items.push({ x: x, y: y, kind: kind, trinket: id, relic: id }) },
+    hurtP2test: function (n) { if (S && S.p2) { S.p2.hp = Math.max(1, S.p2.hp - n) } },
     act2: function (dx, dy) { return act2(dx, dy) },
     dualMode: function (id1, id2) { startDual(id1, id2) },
     hasTrinket: function (id) { return !!(S && S.trinkets && S.trinkets[id]) },
