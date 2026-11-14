@@ -1891,8 +1891,13 @@
     return id
   }
 
-  function openTalent() {
-    if (!S || S.over || choosing || S.pending <= 0) return
+  var talentWho = 'p1'
+
+  function openTalent(who) {
+    talentWho = who === 'p2' ? 'p2' : 'p1'
+    var pend = talentWho === 'p2' ? (S && S.p2 ? S.p2.pending : 0) : (S ? S.pending : 0)
+    if (!S || S.over || choosing || pend <= 0) return
+    if (talentWho === 'p1' && S.p2 && S.p2.pending > 0) { /* P1 优先 */ }
     if (!ovTalent || !talentList) return
     choosing = true
     offered = rollTalents(3)
@@ -1912,7 +1917,7 @@
         talentList.appendChild(b)
       })(offered[i])
     }
-    if (talentTitle) talentTitle.textContent = 'Lv.' + S.level + ' —— 挑一个天赋'
+    if (talentTitle) talentTitle.textContent = (talentWho === 'p2' ? '【' + S.p2.hero.name + '】' : '') + 'Lv.' + (talentWho === 'p2' ? S.p2.level : S.level) + ' —— 挑一个天赋'
     ovTalent.hidden = false
     render()
     syncHud()
@@ -1922,13 +1927,29 @@
     if (!choosing) return
     choosing = false
     ovTalent.hidden = true
-    t.apply()
-    S.talents[t.id] = (S.talents[t.id] || 0) + 1
-    S.pending--
-    log('天赋「' + t.name + '」已生效。')
+    if (talentWho === 'p2' && S.p2) {
+      var b = snapshotStats()
+      t.apply()
+      var dAtk = S.atk - b.atk, dCrit = S.crit - b.crit, dDodge = S.dodge - b.dodge, dMax = S.maxHp - b.maxHp
+      // 个人属性回退给 P1，只加到 P2
+      S.atk = b.atk; S.crit = b.crit; S.dodge = b.dodge
+      S.p2.atk = Math.max(1, S.p2.atk + dAtk)
+      S.p2.crit = Math.min(0.9, S.p2.crit + dCrit)
+      S.p2.dodge = Math.min(0.75, S.p2.dodge + dDodge)
+      if (dMax) { S.p2.maxHp += dMax; S.p2.hp = Math.max(1, Math.min(S.p2.maxHp, S.p2.hp + dMax)) }
+      S.talents[t.id] = (S.talents[t.id] || 0) + 1
+      S.p2.pending--
+      log('【' + S.p2.hero.name + '】获得天赋「' + t.name + '」。')
+    } else {
+      t.apply()
+      S.talents[t.id] = (S.talents[t.id] || 0) + 1
+      S.pending--
+      log('天赋「' + t.name + '」已生效。')
+    }
     syncHud()
     render()
-    if (S.pending > 0) setTimeout(openTalent, 160)
+    if (S.pending > 0) setTimeout(function () { openTalent('p1') }, 160)
+    else if (S.p2 && S.p2.pending > 0) setTimeout(function () { openTalent('p2') }, 160)
   }
 
   /* ---------------- 队友招募 ---------------- */
@@ -3447,7 +3468,7 @@
   }
 
   // 击杀结算：经验、升级蓄力、吸血、铁墓开门
-  function killEnemy(e) {
+  function killEnemy(e, killer) {
     if (e.type === 'tomb' && S.hero.id === 'sparkle' && Math.random() < 0.35) return sparkleTrick(e)
     S.kills = (S.kills || 0) + 1
     S.gold = (S.gold || 0) + 1 + rnd(2)
@@ -3457,17 +3478,32 @@
     S.impact = { x: e.x, y: e.y, t: Date.now(), color: ebase.color }
     shake(6, 320)
     var gain = (e.type === 'tomb' ? 10 : e.type === 'shade' ? 3 : 2) + (S.bonusXp || 0)
-    S.xp += gain
+    var toP2 = !!(killer && S.p2 && killer === S.p2 && S.dual)
+    if (toP2) S.p2.xp += gain
+    else S.xp += gain
     fx(e.x, e.y, '+' + gain + ' EXP', '#ffd9a0', 0.5)
 
-    while (S.xp >= S.xpNext) {
-      S.xp -= S.xpNext
-      S.level++
-      S.xpNext = 6 + S.level * 3
-      S.pending++
-      fx(S.player.x, S.player.y, 'LV UP', '#ff9ec4', -0.6)
-      SND.level()
-      log('升到 Lv.' + S.level + '，记忆里多出一条路。')
+    if (toP2) {
+      while (S.p2.xp >= S.p2.xpNext) {
+        S.p2.xp -= S.p2.xpNext
+        S.p2.level++
+        S.p2.xpNext = 6 + S.p2.level * 3
+        S.p2.pending++
+        fx(S.p2.x, S.p2.y, 'LV UP', '#9fd8ff', -0.6)
+        SND.level()
+        log('【' + S.p2.hero.name + '】升到 Lv.' + S.p2.level + '。')
+      }
+      if (S.p2.pending > 0 && !choosing && S.pending <= 0) setTimeout(function () { openTalent('p2') }, 180)
+    } else {
+      while (S.xp >= S.xpNext) {
+        S.xp -= S.xpNext
+        S.level++
+        S.xpNext = 6 + S.level * 3
+        S.pending++
+        fx(S.player.x, S.player.y, 'LV UP', '#ff9ec4', -0.6)
+        SND.level()
+        log('升到 Lv.' + S.level + '，记忆里多出一条路。')
+      }
     }
 
     // 掉落：药水多，遗物少
@@ -4175,6 +4211,32 @@
     syncHud()
   }
 
+  function applyPickupStats(before, who) {
+    if (!S) return
+    var dAtk = S.atk - before.atk
+    var dCrit = S.crit - before.crit
+    var dDodge = S.dodge - before.dodge
+    var dMax = S.maxHp - before.maxHp
+    if (!S.dual || !S.p2) return
+    if (who === 'p2') {
+      // 个人属性只给拾取者：从 P1 回退，加到 P2
+      S.atk = before.atk
+      S.crit = before.crit
+      S.dodge = before.dodge
+      S.p2.atk = Math.max(1, S.p2.atk + dAtk)
+      S.p2.crit = Math.min(0.9, Math.max(0, S.p2.crit + dCrit))
+      S.p2.dodge = Math.min(0.75, Math.max(0, S.p2.dodge + dDodge))
+    } else {
+      // P1 拾取：个人属性留 P1
+    }
+    if (dMax) {
+      // 生命上限属于全队共享
+      S.p2.maxHp += dMax
+      S.p2.hp = Math.max(1, Math.min(S.p2.maxHp, S.p2.hp + dMax))
+    }
+    syncHud()
+  }
+
   function stepOn(x, y, who) {
     for (var i = 0; i < S.items.length; i++) {
       var it = S.items[i]
@@ -4195,11 +4257,11 @@
         } else if (it.kind === 'trinket') {
           var b1 = snapshotStats()
           pickTrinket(it.trinket)
-          applyDeltaToP2(b1)
+          applyPickupStats(b1, who)
         } else {
           var b2 = snapshotStats()
           pickRelic(it.relic)
-          applyDeltaToP2(b2)
+          applyPickupStats(b2, who)
         }
         break
       }
@@ -5258,6 +5320,7 @@
       crit: Math.min(0.9, h.crit + (up.crit || 0) / 100),
       dodge: Math.min(0.75, h.dodge + (up.dodge || 0) / 100),
       vision: h.vision,
+      xp: 0, level: 1, xpNext: 6, pending: 0,
     }
     applyP2Synergy()
     if (p2Hud) p2Hud.hidden = false
@@ -5283,7 +5346,7 @@
     log(nm + ' 击中「' + e.name + '」' + dmg + ' 点。')
     fx(e.x, e.y, '-' + dmg, crit ? '#ffb347' : '#ff4d5e', -0.45)
     shake(crit ? 4 : 3, 200)
-    if (e.hp <= 0) killEnemy(e)
+    if (e.hp <= 0) killEnemy(e, actor)
   }
 
   function act2(dx, dy) {
@@ -5610,6 +5673,8 @@
     specialPos: function () { return S ? S.special : null },
     altarPos: function () { return S ? S.altar : null },
     openAltar: openAltar,
+    p2LevelUp: function () { if (S && S.p2) { S.p2.pending = 1; openTalent('p2') } },
+    p1LevelUp: function () { if (S) { S.pending = 1; openTalent('p1') } },
     dropItem: function (kind, id, x, y) { if (S) S.items.push({ x: x, y: y, kind: kind, trinket: id, relic: id }) },
     hurtP2test: function (n) { if (S && S.p2) { S.p2.hp = Math.max(1, S.p2.hp - n) } },
     act2: function (dx, dy) { return act2(dx, dy) },
