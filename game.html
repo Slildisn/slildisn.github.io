@@ -4903,37 +4903,75 @@
 
   function bindSwipe() {
     if (!cv) return
+
+    // 每根手指独立记录：identifier -> { x, y, owner }，owner = 1/2
+    var touchStarts = {}
+    var usedTouch = false
+
+    function halfOwner(clientX) {
+      var w = (typeof window !== 'undefined' && window.innerWidth) ? window.innerWidth : 800
+      return clientX < w / 2 ? 1 : 2
+    }
+
+    function fire(owner, dx, dy) {
+      if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return
+      var dir = Math.abs(dx) >= Math.abs(dy)
+        ? (dx > 0 ? 'right' : 'left')
+        : (dy > 0 ? 'down' : 'up')
+      // 严格隔离：P1 只走 doDir，P2 只走 doDir2（且必须在双人模式）
+      if (owner === 2 && S && S.dual) doDir2(dir)
+      else doDir(dir)
+    }
+
     cv.addEventListener('touchstart', function (e) {
+      usedTouch = true
       if (!e.touches || !e.touches.length) return
-      swipeStart = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      for (var i = 0; i < e.touches.length; i++) {
+        var t = e.touches[i]
+        touchStarts[t.identifier] = {
+          x: t.clientX,
+          y: t.clientY,
+          owner: halfOwner(t.clientX),
+        }
+      }
     }, { passive: true })
 
     cv.addEventListener('touchend', function (e) {
-      if (!swipeStart) return
-      var t = (e.changedTouches && e.changedTouches[0]) || null
-      if (!t) { swipeStart = null; return }
-      var dx = t.clientX - swipeStart.x
-      var dy = t.clientY - swipeStart.y
-      swipeStart = null
-      if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return
-      var rightHalf = swipeStart && swipeStart.x > (window.innerWidth || 800) / 2
-      var mv = function (n) { if (S && S.dual && rightHalf) doDir2(n); else doDir(n) }
-      if (Math.abs(dx) >= Math.abs(dy)) mv(dx > 0 ? 'right' : 'left')
-      else mv(dy > 0 ? 'down' : 'up')
+      if (!e.changedTouches) return
+      var batch = []
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        var t = e.changedTouches[i]
+        var st = touchStarts[t.identifier]
+        if (!st) continue
+        delete touchStarts[t.identifier]
+        batch.push({ owner: st.owner, dx: t.clientX - st.x, dy: t.clientY - st.y })
+      }
+      // 双指同时松开：允许两位玩家在同一帧各走一步（清掉上一次的输入锁）
+      for (var k = 0; k < batch.length; k++) {
+        if (k > 0 && S) S.inputLockUntil = 0
+        fire(batch[k].owner, batch[k].dx, batch[k].dy)
+      }
     }, { passive: true })
 
-    // 桌面端鼠标拖拽也能走
+    cv.addEventListener('touchcancel', function (e) {
+      if (!e.changedTouches) return
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        delete touchStarts[e.changedTouches[i].identifier]
+      }
+    }, { passive: true })
+
+    // 桌面：鼠标拖拽（触摸设备上忽略，避免合成鼠标事件导致双触发/串线）
     var mDown = null
-    cv.addEventListener('mousedown', function (e) { mDown = { x: e.clientX, y: e.clientY } })
+    cv.addEventListener('mousedown', function (e) {
+      if (usedTouch) return
+      mDown = { x: e.clientX, y: e.clientY, owner: halfOwner(e.clientX) }
+    })
     cv.addEventListener('mouseup', function (e) {
-      if (!mDown) return
+      if (usedTouch || !mDown) return
       var dx = e.clientX - mDown.x, dy = e.clientY - mDown.y
+      var owner = mDown.owner
       mDown = null
-      if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return
-      var rightHalfM = mDown && (mDown.x + dx) > (window.innerWidth || 800) / 2
-      var mv2 = function (n) { if (S && S.dual && rightHalfM) doDir2(n); else doDir(n) }
-      if (Math.abs(dx) >= Math.abs(dy)) mv2(dx > 0 ? 'right' : 'left')
-      else mv2(dy > 0 ? 'down' : 'up')
+      fire(owner, dx, dy)
     })
   }
 
@@ -4967,9 +5005,6 @@
 
   function openDuo() {
     if (!ovDuo) return
-    if ((window.innerHeight || 0) > (window.innerWidth || 0)) {
-      try { toast('为了最佳视野，双人模式建议横屏游玩') } catch (e) { /* ignore */ }
-    }
     duoSel1 = null; duoSel2 = null
     buildDuo()
     if (ovSelect) ovSelect.hidden = true
@@ -4989,6 +5024,22 @@
     if (ovSelect) ovSelect.hidden = false
     var btn = $('duo-open')
     if (btn) btn.textContent = '👥 双人'
+  }
+
+  function findOpenTile(fromX, fromY, dirX) {
+    for (var d = 3; d <= 10; d++) {
+      var x = fromX + dirX * d
+      if (x < 1 || x >= MAP_W - 1) break
+      if (S.grid[fromY] && S.grid[fromY][x] !== WALL) return { x: x, y: fromY }
+    }
+    for (var d2 = 1; d2 <= 4; d2++) {
+      for (var sy = -d2; sy <= d2; sy++) {
+        var x2 = fromX + dirX * d2, y2 = fromY + sy
+        if (x2 < 1 || y2 < 1 || x2 >= MAP_W - 1 || y2 >= MAP_H - 1) continue
+        if (S.grid[y2] && S.grid[y2][x2] !== WALL) return { x: x2, y: y2 }
+      }
+    }
+    return { x: fromX, y: fromY }
   }
 
   function applyP2Synergy() {
@@ -5014,28 +5065,11 @@
     syncHud()
   }
 
-  function findOpenTile(fromX, fromY, dirX) {
-    for (var d = 3; d <= 10; d++) {
-      var x = fromX + dirX * d
-      if (x < 1 || x >= MAP_W - 1) break
-      if (S.grid[fromY] && S.grid[fromY][x] !== WALL) return { x: x, y: fromY }
-    }
-    for (var d2 = 1; d2 <= 4; d2++) {
-      for (var sy = -d2; sy <= d2; sy++) {
-        var x2 = fromX + dirX * d2, y2 = fromY + sy
-        if (x2 < 1 || y2 < 1 || x2 >= MAP_W - 1 || y2 >= MAP_H - 1) continue
-        if (S.grid[y2] && S.grid[y2][x2] !== WALL) return { x: x2, y: y2 }
-      }
-    }
-    return { x: fromX, y: fromY }
-  }
-
   function setupP2(id2) {
     var h = heroById(id2)
     if (!h || !S) return
     var up = META.up || {}
     var hp = h.hp + (up.hp || 0)
-    // P1 站左边、P2 站右边，拉开距离
     var baseX = S.player.x, baseY = S.player.y
     var p1Spot = findOpenTile(baseX, baseY, -1)
     S.player.x = p1Spot.x
@@ -5044,12 +5078,11 @@
     if (p2Spot.x === S.player.x && p2Spot.y === S.player.y) {
       p2Spot = { x: Math.min(MAP_W - 2, S.player.x + 1), y: S.player.y }
     }
-    var spot = p2Spot
     S.dual = true
     S.p2 = {
       hero: h,
-      x: spot.x,
-      y: spot.y,
+      x: p2Spot.x,
+      y: p2Spot.y,
       hp: hp,
       maxHp: hp,
       atk: h.atk + (up.atk || 0),
@@ -5092,7 +5125,7 @@
     var nx = p.x + dx, ny = p.y + dy
     if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return false
     if (S.grid[ny][nx] === WALL) return false
-    if (nx === S.player.x && ny === S.player.y) return false   // 禁止与 P1 重叠
+    if (nx === S.player.x && ny === S.player.y) return false
     for (var t = 0; t < S.team.length; t++) {
       var m = S.team[t]
       if (!m.dead && m.x === nx && m.y === ny) return false
