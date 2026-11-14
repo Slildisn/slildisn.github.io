@@ -458,58 +458,72 @@
   #dual-stats .ds-side{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #dual-stats .ds-right{text-align:right}
 
-  /* 双人：顶部左右对称 HUD */
+  /* 双人：顶部左右镜像 HUD（同一套模板） */
   body.dual-on{padding-bottom:54px}
   body.dual-on header,
   body.dual-on h1,
   body.dual-on .sub{display:none}
 
-  body.dual-on .hud{
-    position:fixed;
-    top:calc(env(safe-area-inset-top, 0px) + 4px);
-    left:8px;
-    width:calc(50vw - 14px);
-    max-width:none;
-    margin:0;
-    z-index:9996;
-    display:flex;
-    flex-direction:column;
-    align-items:flex-start;
-    gap:2px;
-    padding:4px 8px;
-    border-radius:12px;
-    background:rgba(20,14,30,.6);
-    backdrop-filter:blur(4px)
-  }
-  body.dual-on .hud .hpwrap{width:100%;margin:0}
-  body.dual-on .hud .stat{font-size:.58rem;line-height:1.25}
-  body.dual-on .hud .relics{display:none}
-  body.dual-on .hud .team-strip{max-width:100%;margin-top:2px}
-
+  body.dual-on .hud,
   body.dual-on #p2-hud,
   body.dual-on #p2-hud[hidden]{
     display:flex !important;
     position:fixed;
     top:calc(env(safe-area-inset-top, 0px) + 4px);
-    right:8px;
-    left:auto;
-    width:calc(50vw - 14px);
+    width:calc(50vw - 12px);
+    height:44px;
+    max-width:none;
     margin:0;
-    z-index:9996;
-    flex-direction:column;
-    align-items:flex-end;
-    gap:2px;
-    padding:4px 8px;
+    padding:5px 10px;
+    box-sizing:border-box;
     border-radius:12px;
-    background:rgba(20,14,30,.6);
-    border:1px solid rgba(159,216,255,.45);
+    background:rgba(20,14,30,.62);
+    border:1px solid rgba(255,158,196,.30);
     backdrop-filter:blur(4px);
-    text-align:right;
-    font-size:.58rem
+    flex-direction:column;
+    justify-content:center;
+    align-items:stretch;
+    gap:3px;
+    z-index:9996;
+    text-align:left
   }
-  body.dual-on .p2-name{font-size:.62rem}
-  body.dual-on .p2-hp{font-size:.58rem}
-  body.dual-on .p2-atk{font-size:.58rem}
+  body.dual-on .hud{left:8px}
+  body.dual-on #p2-hud,
+  body.dual-on #p2-hud[hidden]{right:8px;left:auto}
+
+  /* P1 / P2 内部完全一致：名字左、数值右、同一血条 */
+  body.dual-on .hud .hpline,
+  body.dual-on #p2-hud .p2-line{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    width:100%;
+    gap:8px;
+    font-size:.66rem;
+    line-height:1.15;
+    color:#ffd9a0;
+    font-weight:600
+  }
+  body.dual-on .hud .hpline span,
+  body.dual-on #p2-hud .p2-line span{color:#ffd9a0}
+  body.dual-on .hud .hpbar,
+  body.dual-on #p2-hud .hpbar{
+    width:100%;
+    height:7px;
+    border-radius:99px;
+    background:rgba(255,255,255,.16);
+    overflow:hidden
+  }
+  body.dual-on .hud .hpfill,
+  body.dual-on #p2-hud .hpfill{
+    height:100%;
+    background:linear-gradient(90deg,#ff6fa8,#ff9ec4)
+  }
+  body.dual-on .hud .stat,
+  body.dual-on .hud .relics,
+  body.dual-on .hud .team-strip,
+  body.dual-on .hud .syn-panel,
+  body.dual-on #p2-hud .p2-atk{display:none !important}
 
   /* 日志与底部提示/按钮不再互压 */
   body.dual-on .log{max-height:56px;overflow-y:auto;margin:2px 0 0}
@@ -707,9 +721,8 @@
   </div>
   <div class="toast" id="toast" hidden></div>
   <div id="p2-hud" hidden>
-    <span class="p2-name">P2</span>
-    <span class="p2-hp">—</span>
-    <span class="p2-atk">—</span>
+    <div class="p2-line"><span class="p2-name">P2</span><span class="p2-hp">— / —</span></div>
+    <div class="hpbar"><div class="hpfill" id="p2-fill" style="width:100%"></div></div>
   </div>
   <div id="boss-bar" aria-hidden="true"></div>
   <div id="boss-warn"><span>⚠️ 警告：终极防线已触发！</span></div>
@@ -4366,9 +4379,10 @@
         var nmEl = p2Hud.querySelector('.p2-name')
         var hpEl = p2Hud.querySelector('.p2-hp')
         var atkEl = p2Hud.querySelector('.p2-atk')
-        if (nmEl) nmEl.textContent = 'P2 ' + (S.p2.hero.emoji || '') + S.p2.hero.name
-        if (hpEl) hpEl.textContent = '❤ ' + Math.max(0, S.p2.hp) + '/' + S.p2.maxHp
-        if (atkEl) atkEl.textContent = '⚔ ' + S.p2.atk
+        if (nmEl) nmEl.textContent = (S.p2.hero.emoji || '') + S.p2.hero.name
+        if (hpEl) hpEl.textContent = Math.max(0, S.p2.hp) + ' / ' + S.p2.maxHp
+        var fill2 = $('p2-fill')
+        if (fill2) fill2.style.width = Math.max(0, Math.min(100, (S.p2.hp / S.p2.maxHp) * 100)) + '%'
       } else {
         p2Hud.hidden = true
       }
