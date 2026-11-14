@@ -436,6 +436,19 @@
     transform:translateX(-50%)
   }
   body.dual-on #boss-bar{top:auto;bottom:calc(env(safe-area-inset-bottom, 0px) + 54px)}
+
+  /* 双人：让地图吃掉剩余空间，压缩日志/提示/顶栏 */
+  body.dual-on .wrap{display:flex;flex-direction:column;min-height:100dvh}
+  body.dual-on .stage{flex:1 1 auto;display:flex;align-items:center;justify-content:center}
+  body.dual-on canvas{max-height:calc(100dvh - 170px) !important;margin:auto}
+  body.dual-on .hud{padding:4px 8px;margin-bottom:3px;gap:2px 10px}
+  body.dual-on .hud .hpwrap{margin-bottom:0}
+  body.dual-on .hud .hpline{font-size:.62rem}
+  body.dual-on .log{max-height:66px;overflow-y:auto;font-size:.64rem;margin:4px 0 2px}
+  body.dual-on .log p{line-height:1.45}
+  body.dual-on .hint{font-size:.62rem;padding:3px 8px 0;margin:0}
+  body.dual-on #p2-hud{padding:2px 8px;font-size:.6rem}
+  body.dual-on .topbtns{bottom:calc(env(safe-area-inset-bottom, 0px) + 2px)}
   #p2-hud{
     position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:10px;z-index:9997;
     display:flex;gap:8px;align-items:center;padding:4px 10px;border-radius:12px;
@@ -4281,7 +4294,10 @@
     var w = stage ? stage.clientWidth : 0
     if (!w || w < 80) w = vw ? vw - 20 : 0
     if (!w || w < 80) w = 480
-    var maxH = vh ? Math.max(180, vh * 0.62) : 420
+    var reserve = (S && S.dual) ? (vh && vh < 900 ? 170 : 200) : 0
+    var maxH = vh
+      ? Math.max(180, (S && S.dual) ? (vh - reserve) : vh * 0.62)
+      : 420
     var halves = (S && S.dual) ? 2 : 1
     var vw = halves === 2 ? 11 : VIEW_W
     var vh = halves === 2 ? 9 : VIEW_H
