@@ -419,6 +419,24 @@
     border:1px solid rgba(255,158,196,.4);border-radius:999px;background:rgba(255,158,196,.12);
     color:#fff;padding:4px 12px;font-size:.7rem;font-family:inherit
   }
+  .duo-wrap{display:flex;gap:10px;width:100%;max-width:900px;align-items:flex-start;flex-wrap:wrap}
+  .duo-col{flex:1 1 300px;min-width:0}
+  .duo-col h3{margin:0 0 6px;font-size:.72rem;color:#ff9ec4;letter-spacing:.08em}
+  .duo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  .duo-grid button{
+    border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(255,255,255,.04);
+    color:#efe9f7;padding:6px 2px;font-size:.62rem;min-width:0;overflow:hidden
+  }
+  .duo-grid button.sel{border-color:#ffd9a0;background:rgba(255,217,160,.18);box-shadow:0 0 0 1px #ffd9a0 inset}
+  #p2-hud{
+    position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:10px;z-index:9997;
+    display:flex;gap:8px;align-items:center;padding:4px 10px;border-radius:12px;
+    background:rgba(20,14,30,.72);border:1px solid rgba(159,216,255,.5);
+    color:#e8f4ff;font-size:.66rem;backdrop-filter:blur(4px)
+  }
+  #p2-hud[hidden]{display:none}
+  #p2-hud .p2-name{color:#9fd8ff;font-weight:700}
+  #p2-hud .p2-hp{color:#ffd9e6}
   .meta-list{display:flex;flex-direction:column;gap:8px}
   .up-row{gap:6px;align-items:center}
   .up-row .m-info{flex:1 1 auto;min-width:0}
@@ -587,6 +605,11 @@
     <div class="syn-panel" id="syn-panel" hidden></div>
   </div>
   <div class="toast" id="toast" hidden></div>
+  <div id="p2-hud" hidden>
+    <span class="p2-name">P2</span>
+    <span class="p2-hp">—</span>
+    <span class="p2-atk">—</span>
+  </div>
   <div id="boss-bar" aria-hidden="true"></div>
   <div id="boss-warn"><span>⚠️ 警告：终极防线已触发！</span></div>
   <div id="fatal" hidden>
@@ -596,6 +619,19 @@
 
   <div class="stage" id="stage">
     <canvas id="cv" width="480" height="352" aria-label="地牢画面"></canvas>
+    <div class="ov ov-global ov-scroll" id="ov-duo" hidden>
+      <h2>本地双人 · 同屏</h2>
+      <p>同一个世界、两套视角。P1 负责左半屏，P2 负责右半屏。</p>
+      <div class="duo-wrap">
+        <div class="duo-col"><h3>P1 · WASD / 左半屏</h3><div class="duo-grid" id="duo-p1"></div></div>
+        <div class="duo-col"><h3>P2 · IJKL / 右半屏</h3><div class="duo-grid" id="duo-p2"></div></div>
+      </div>
+      <div class="sum-btns">
+        <button class="btn" id="duo-start" type="button" disabled>双人出击</button>
+        <button class="btn ghost" id="duo-cancel" type="button">取消</button>
+      </div>
+    </div>
+
     <div class="ov ov-global ov-scroll" id="ov-select">
       <h2 id="select-title">选一个同行的人</h2>
       <p>每个人带的记忆不一样：血、攻、视野、暴击都不同。</p>
@@ -604,6 +640,7 @@
         <span id="meta-stats">最高 0 层 · 累计击杀 0</span>
         <span class="shards">◈ <b id="meta-shards">0</b> 碎片</span>
         <button type="button" id="meta-open">记忆升级</button>
+      <button type="button" id="duo-open">👥 双人</button>
       </div>
       <div class="seed-row">
         <label for="seed-input">种子</label>
@@ -817,6 +854,9 @@
   } catch (e) { BOSS_IMG = null }
 
   var ovSelect = $('ov-select'), pickEl = $('pick'), seedLine = $('seed-line')
+  var ovDuo = $('ov-duo'), duoP1El = $('duo-p1'), duoP2El = $('duo-p2')
+  var duoStartBtn = $('duo-start'), p2Hud = $('p2-hud')
+  var duoSel1 = null, duoSel2 = null
   var seedInput = $('seed-input')
 
   var LAST_SEED_KEY = 'cyrene.rogue.seed'
@@ -3868,6 +3908,8 @@
         if (S.over) return true
       } else if (S.grid[ny][nx] === WALL) {
         return false
+      } else if (S.dual && S.p2 && nx === S.p2.x && ny === S.p2.y) {
+        return false   // 双人模式禁止重叠
       } else {
         // 踩到队友不阻挡：交换位置（队友退到玩家刚才那格），再把历史队列修正
         for (var sw2 = 0; sw2 < S.team.length; sw2++) {
@@ -4145,6 +4187,19 @@
         teamStrip.hidden = true
       }
     }
+    if (p2Hud) {
+      if (S.dual && S.p2) {
+        p2Hud.hidden = false
+        var nmEl = p2Hud.querySelector('.p2-name')
+        var hpEl = p2Hud.querySelector('.p2-hp')
+        var atkEl = p2Hud.querySelector('.p2-atk')
+        if (nmEl) nmEl.textContent = 'P2 ' + (S.p2.hero.emoji || '') + S.p2.hero.name
+        if (hpEl) hpEl.textContent = '❤ ' + Math.max(0, S.p2.hp) + '/' + S.p2.maxHp
+        if (atkEl) atkEl.textContent = '⚔ ' + S.p2.atk
+      } else {
+        p2Hud.hidden = true
+      }
+    }
     if (hGold) hGold.textContent = String(S.gold || 0)
     if (hLv) hLv.textContent = String(S.level)
     if (hXp) hXp.textContent = S.xp + '/' + S.xpNext
@@ -4162,12 +4217,13 @@
     if (!w || w < 80) w = vw ? vw - 20 : 0
     if (!w || w < 80) w = 480
     var maxH = vh ? Math.max(180, vh * 0.62) : 420
-    var tsW = w / VIEW_W
+    var halves = (S && S.dual) ? 2 : 1
+    var tsW = (w / halves) / VIEW_W
     var tsH = maxH / VIEW_H
-    var tsRatio = (w * 0.78) / VIEW_H
-    TS = Math.max(10, Math.floor(Math.min(tsW, tsH, tsRatio) || 24))
+    var tsRatio = ((w / halves) * 0.78) / VIEW_H
+    TS = Math.max(8, Math.floor(Math.min(tsW, tsH, tsRatio) || 24))
     if (!isFinite(TS) || TS < 8) TS = 24
-    cv.width = TS * VIEW_W
+    cv.width = TS * VIEW_W * halves
     cv.height = TS * VIEW_H
     cv.style.width = ''
     cv.style.height = ''
@@ -4175,6 +4231,12 @@
 
   function render() {
     if (FATAL.dead || !ctx || !S) return
+    if (S.dual && S.p2) {
+      try { dualRender() } catch (e) {
+        try { ctx.fillStyle = '#0a0910'; ctx.fillRect(0, 0, cv.width, cv.height) } catch (e2) { /* ignore */ }
+      }
+      return
+    }
     try {
       renderImpl()
     } catch (err) {
@@ -4197,7 +4259,8 @@
 
   function renderImpl() {
     if (!ctx || !S) return
-    var camX = clamp(S.player.x - ((VIEW_W / 2) | 0), 0, MAP_W - VIEW_W)
+    var camSrc = S.__cam || S.player
+    var camX = clamp(camSrc.x - ((VIEW_W / 2) | 0), 0, MAP_W - VIEW_W)
     var camY = clamp(S.player.y - ((VIEW_H / 2) | 0), 0, MAP_H - VIEW_H)
     ctx.fillStyle = '#0a0910'
     ctx.fillRect(0, 0, cv.width, cv.height)
@@ -4706,6 +4769,29 @@
       }
     }
 
+    // P2 实体（双人模式）
+    if (S.dual && S.p2) {
+      var p2x = (S.p2.x - camX) * TS + TS / 2
+      var p2y = (S.p2.y - camY) * TS + TS / 2
+      if (p2x > -TS && p2x < cv.width + TS && p2y > -TS && p2y < cv.height + TS) {
+        ctx.fillStyle = 'rgba(10,9,16,.6)'
+        ctx.beginPath(); ctx.arc(p2x, p2y, TS * .42, 0, Math.PI * 2); ctx.fill()
+        ctx.strokeStyle = '#9fd8ff'
+        ctx.lineWidth = Math.max(1.5, TS * .07)
+        ctx.beginPath(); ctx.arc(p2x, p2y, TS * .42, 0, Math.PI * 2); ctx.stroke()
+        var h2 = S.p2.hero
+        if (h2 && emojiOk(h2.emoji)) {
+          ctx.font = Math.max(14, Math.round(TS * .82)) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+          ctx.fillStyle = '#fff'
+          ctx.fillText(h2.emoji, p2x, p2y + TS * .03)
+        } else if (h2) {
+          ctx.fillStyle = '#9fd8ff'
+          ctx.beginPath(); ctx.arc(p2x, p2y, TS * .22, 0, Math.PI * 2); ctx.fill()
+        }
+      }
+    }
+
     if (S.__shaking) { ctx.restore(); S.__shaking = false }
 
     // 飘字（伤害 / 经验 / 升级）
@@ -4738,7 +4824,11 @@
 
   document.addEventListener('keydown', function (e) {
     var k = e.key
-    if (k === 'ArrowUp' || k === 'w' || k === 'W') { e.preventDefault(); doDir('up') }
+    if (k === 'i' || k === 'I') { e.preventDefault(); doDir2('up') }
+    else if (k === 'k' || k === 'K') { e.preventDefault(); doDir2('down') }
+    else if (k === 'j' || k === 'J') { e.preventDefault(); doDir2('left') }
+    else if (k === 'l' || k === 'L') { e.preventDefault(); doDir2('right') }
+    else if (k === 'ArrowUp' || k === 'w' || k === 'W') { e.preventDefault(); doDir('up') }
     else if (k === 'ArrowDown' || k === 's' || k === 'S') { e.preventDefault(); doDir('down') }
     else if (k === 'ArrowLeft' || k === 'a' || k === 'A') { e.preventDefault(); doDir('left') }
     else if (k === 'ArrowRight' || k === 'd' || k === 'D') { e.preventDefault(); doDir('right') }
@@ -4766,8 +4856,10 @@
       var dy = t.clientY - swipeStart.y
       swipeStart = null
       if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return
-      if (Math.abs(dx) >= Math.abs(dy)) doDir(dx > 0 ? 'right' : 'left')
-      else doDir(dy > 0 ? 'down' : 'up')
+      var rightHalf = swipeStart && swipeStart.x > (window.innerWidth || 800) / 2
+      var mv = function (n) { if (S && S.dual && rightHalf) doDir2(n); else doDir(n) }
+      if (Math.abs(dx) >= Math.abs(dy)) mv(dx > 0 ? 'right' : 'left')
+      else mv(dy > 0 ? 'down' : 'up')
     }, { passive: true })
 
     // 桌面端鼠标拖拽也能走
@@ -4778,9 +4870,161 @@
       var dx = e.clientX - mDown.x, dy = e.clientY - mDown.y
       mDown = null
       if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return
-      if (Math.abs(dx) >= Math.abs(dy)) doDir(dx > 0 ? 'right' : 'left')
-      else doDir(dy > 0 ? 'down' : 'up')
+      var rightHalfM = mDown && (mDown.x + dx) > (window.innerWidth || 800) / 2
+      var mv2 = function (n) { if (S && S.dual && rightHalfM) doDir2(n); else doDir(n) }
+      if (Math.abs(dx) >= Math.abs(dy)) mv2(dx > 0 ? 'right' : 'left')
+      else mv2(dy > 0 ? 'down' : 'up')
     })
+  }
+
+  /* ---------------- 本地双人 ---------------- */
+  function buildDuoGrid(box, who) {
+    box.innerHTML = ''
+    for (var i = 0; i < HEROES.length; i++) {
+      var h = HEROES[i]
+      if (h.hidden && !META.unlocked[h.id]) continue
+      var b = document.createElement('button')
+      b.type = 'button'
+      b.textContent = (h.emoji || '') + ' ' + h.name
+      if ((who === 1 ? duoSel1 : duoSel2) === h.id) b.className = 'sel'
+      ;(function (id) {
+        b.addEventListener('click', function () {
+          if (who === 1) duoSel1 = id; else duoSel2 = id
+          buildDuo()
+        })
+      })(h.id)
+      box.appendChild(b)
+    }
+  }
+
+  function buildDuo() {
+    if (!duoP1El || !duoP2El) return
+    buildDuoGrid(duoP1El, 1)
+    buildDuoGrid(duoP2El, 2)
+    var ok = !!(duoSel1 && duoSel2 && duoSel1 !== duoSel2)
+    if (duoStartBtn) duoStartBtn.disabled = !ok
+  }
+
+  function openDuo() {
+    if (!ovDuo) return
+    duoSel1 = null; duoSel2 = null
+    buildDuo()
+    ovDuo.hidden = false
+  }
+
+  function setupP2(id2) {
+    var h = heroById(id2)
+    if (!h || !S) return
+    var up = META.up || {}
+    var hp = h.hp + (up.hp || 0)
+    var spot = null
+    var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]
+    for (var i = 0; i < dirs.length; i++) {
+      var nx = S.player.x + dirs[i][0], ny = S.player.y + dirs[i][1]
+      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue
+      if (S.grid[ny][nx] === WALL) continue
+      if (nx === S.player.x && ny === S.player.y) continue
+      spot = { x: nx, y: ny }
+      break
+    }
+    if (!spot) spot = { x: S.player.x, y: S.player.y }
+    S.dual = true
+    S.p2 = {
+      hero: h,
+      x: spot.x,
+      y: spot.y,
+      hp: hp,
+      maxHp: hp,
+      atk: h.atk + (up.atk || 0),
+      crit: Math.min(0.9, h.crit + (up.crit || 0) / 100),
+      dodge: Math.min(0.75, h.dodge + (up.dodge || 0) / 100),
+      vision: h.vision,
+    }
+    if (p2Hud) p2Hud.hidden = false
+    fit(); render(); syncHud()
+  }
+
+  function startDual(id1, id2) {
+    if (!id1 || !id2 || id1 === id2) return
+    if (ovDuo) ovDuo.hidden = true
+    start(id1, readSeed ? readSeed() : 0)
+    setupP2(id2)
+    log('双人模式：P1 用 WASD / 左半屏，P2 用 IJKL / 右半屏。')
+  }
+
+  function hitEnemyWith(actor, e) {
+    var crit = Math.random() < (actor.crit || 0)
+    var dmg = Math.max(1, actor.atk * (crit ? 2 : 1))
+    e.hp -= dmg
+    var nm = actor === (S && S.p2) ? 'P2' : 'P1'
+    log(nm + ' 击中「' + e.name + '」' + dmg + ' 点。')
+    fx(e.x, e.y, '-' + dmg, crit ? '#ffb347' : '#ff4d5e', -0.45)
+    shake(crit ? 4 : 3, 200)
+    if (e.hp <= 0) killEnemy(e)
+  }
+
+  function act2(dx, dy) {
+    if (FATAL.dead) return false
+    if (!S || !S.dual || !S.p2 || S.over || !running || choosing || itemOpen || S.paused) return false
+    if (S.inputLockUntil && Date.now() < S.inputLockUntil) return false
+    var p = S.p2
+    var nx = p.x + dx, ny = p.y + dy
+    if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return false
+    if (S.grid[ny][nx] === WALL) return false
+    if (nx === S.player.x && ny === S.player.y) return false   // 禁止与 P1 重叠
+    for (var t = 0; t < S.team.length; t++) {
+      var m = S.team[t]
+      if (!m.dead && m.x === nx && m.y === ny) return false
+    }
+    var e = enemyAt(nx, ny)
+    if (e) {
+      hitEnemyWith(p, e)
+    } else {
+      p.x = nx; p.y = ny
+    }
+    S.inputLockUntil = Date.now() + 110
+    computeFov()
+    teamTurn()
+    if (!S.over) enemiesTurn()
+    render(); syncHud(); saveRun()
+    return true
+  }
+
+  function doDir2(name) {
+    if (!running) return false
+    var d = DIRS[name]
+    if (!d) return false
+    return act2(d[0], d[1])
+  }
+
+  function dualRender() {
+    var halfW = Math.floor(cv.width / 2)
+    ctx.fillStyle = '#0a0910'
+    ctx.fillRect(0, 0, cv.width, cv.height)
+
+    S.__cam = { x: S.player.x, y: S.player.y }
+    ctx.save()
+    ctx.beginPath(); ctx.rect(0, 0, halfW, cv.height); ctx.clip()
+    renderImpl()
+    ctx.restore()
+
+    S.__cam = { x: S.p2.x, y: S.p2.y }
+    ctx.save()
+    ctx.beginPath(); ctx.rect(halfW, 0, cv.width - halfW, cv.height); ctx.clip()
+    ctx.translate(halfW, 0)
+    renderImpl()
+    ctx.restore()
+
+    S.__cam = null
+    ctx.strokeStyle = 'rgba(255,158,196,.55)'
+    ctx.lineWidth = 2
+    ctx.beginPath(); ctx.moveTo(halfW, 0); ctx.lineTo(halfW, cv.height); ctx.stroke()
+    ctx.fillStyle = 'rgba(255,217,160,.85)'
+    ctx.font = 'bold 12px -apple-system,sans-serif'
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top'
+    ctx.fillText('P1', 6, 6)
+    ctx.textAlign = 'right'
+    ctx.fillText('P2', cv.width - 6, 6)
   }
 
   /* ---------------- 选择界面 ---------------- */
@@ -4833,6 +5077,7 @@
     choosing = false
     newRun(heroId, seed)
     running = true
+    if (p2Hud) p2Hud.hidden = true
     if (seedLine && S) seedLine.textContent = '种子 ' + S.seed
     if (S && S.seed && !cheatActive()) {
       try { localStorage.setItem(LAST_SEED_KEY, String(S.seed)) } catch (e) { /* ignore */ }
@@ -4897,6 +5142,11 @@
       if (lastSeed && seedLine) seedLine.textContent = '上次种子 ' + lastSeed + '（留空=随机）'
     } catch (e) { /* ignore */ }
   }
+  if ($('duo-open')) $('duo-open').addEventListener('click', openDuo)
+  if ($('duo-cancel') && ovDuo) $('duo-cancel').addEventListener('click', function () { ovDuo.hidden = true })
+  if (duoStartBtn) duoStartBtn.addEventListener('click', function () {
+    if (duoSel1 && duoSel2) startDual(duoSel1, duoSel2)
+  })
   if ($('meta-open')) $('meta-open').addEventListener('click', openMeta)
   if ($('meta-close')) $('meta-close').addEventListener('click', closeMeta)
   if (sumAgain) sumAgain.addEventListener('click', restartRun)
@@ -4993,6 +5243,8 @@
     specialPos: function () { return S ? S.special : null },
     altarPos: function () { return S ? S.altar : null },
     openAltar: openAltar,
+    act2: function (dx, dy) { return act2(dx, dy) },
+    dualMode: function (id1, id2) { startDual(id1, id2) },
     hasTrinket: function (id) { return !!(S && S.trinkets && S.trinkets[id]) },
     pickTrinket: pickTrinket,
     tryRender: function () { try { render(); return null } catch (e) { return e && e.stack ? e.stack : String(e) } },
@@ -5047,7 +5299,9 @@
         shakeLeft: Math.max(0, (S.shakeUntil || 0) - Date.now()), shakeMag: S.shakeMag || 0,
         kills: S.kills || 0, steps: S.steps || 0, gold: S.gold || 0,
         relics2: Object.keys(S.relics2 || {}).length, syn: S.syn || {}, team: (S.team||[]).length, altar: S.altar ? 1 : 0, special: S.special ? S.special.kind : null, thornsNow: S.thorns || 0,
-        items: S.items.length, relics: Object.keys(S.relics), seed: S.seed, aoeCount: S.aoeCount || 0
+        items: S.items.length, relics: Object.keys(S.relics), seed: S.seed, aoeCount: S.aoeCount || 0,
+        turnCount: S.turnCount || 0, dual: !!S.dual, p2: S.p2 ? { id: S.p2.hero.id, x: S.p2.x, y: S.p2.y, hp: S.p2.hp, atk: S.p2.atk } : null,
+        p2X: S.p2 ? S.p2.x : null, p2Y: S.p2 ? S.p2.y : null
       }
     }
   }
