@@ -431,10 +431,68 @@
   .duo-grid button.sel{border-color:#ffd9a0;background:rgba(255,217,160,.18);box-shadow:0 0 0 1px #ffd9a0 inset}
   body.dual-on .topbtns{
     top:auto;
-    bottom:calc(env(safe-area-inset-bottom, 0px) + 10px);
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 8px);
     left:50%;right:auto;
     transform:translateX(-50%)
   }
+
+  /* 双人：顶部左右对称 HUD */
+  body.dual-on{padding-bottom:54px}
+  body.dual-on header,
+  body.dual-on h1,
+  body.dual-on .sub{display:none}
+
+  body.dual-on .hud{
+    position:fixed;
+    top:calc(env(safe-area-inset-top, 0px) + 4px);
+    left:8px;
+    width:calc(50vw - 14px);
+    max-width:none;
+    margin:0;
+    z-index:9996;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:2px;
+    padding:4px 8px;
+    border-radius:12px;
+    background:rgba(20,14,30,.6);
+    backdrop-filter:blur(4px)
+  }
+  body.dual-on .hud .hpwrap{width:100%;margin:0}
+  body.dual-on .hud .stat{font-size:.58rem;line-height:1.25}
+  body.dual-on .hud .relics{display:none}
+  body.dual-on .hud .team-strip{max-width:100%;margin-top:2px}
+
+  body.dual-on #p2-hud,
+  body.dual-on #p2-hud[hidden]{
+    display:flex !important;
+    position:fixed;
+    top:calc(env(safe-area-inset-top, 0px) + 4px);
+    right:8px;
+    left:auto;
+    width:calc(50vw - 14px);
+    margin:0;
+    z-index:9996;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:2px;
+    padding:4px 8px;
+    border-radius:12px;
+    background:rgba(20,14,30,.6);
+    border:1px solid rgba(159,216,255,.45);
+    backdrop-filter:blur(4px);
+    text-align:right;
+    font-size:.58rem
+  }
+  body.dual-on .p2-name{font-size:.62rem}
+  body.dual-on .p2-hp{font-size:.58rem}
+  body.dual-on .p2-atk{font-size:.58rem}
+
+  /* 日志与底部提示/按钮不再互压 */
+  body.dual-on .log{max-height:56px;overflow-y:auto;margin:2px 0 0}
+  body.dual-on .hint{padding:2px 8px 0;margin-bottom:2px;font-size:.6rem}
+  body.dual-on canvas{max-height:calc(100dvh - 210px) !important}
   body.dual-on #boss-bar{top:auto;bottom:calc(env(safe-area-inset-bottom, 0px) + 54px)}
 
   /* 双人：让地图吃掉剩余空间，压缩日志/提示/顶栏 */
