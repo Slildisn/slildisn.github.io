@@ -2495,7 +2495,7 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
 
 /* ---- 加载日志 ---- */
 .boot .boot-log{
-  width:min(480px,86vw);min-height:7.8em;
+  width:min(480px,86vw);min-height:7.8em;max-height:9.3em;overflow:hidden;
   margin:2px auto 0;padding:0;
   font-family:inherit;font-size:clamp(.52rem,2.1vw,.62rem);
   line-height:1.55;text-align:left;
@@ -4552,9 +4552,14 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
     line.appendChild(t)
     line.appendChild(m)
     logEl.appendChild(line)
+    if (logEl.children.length > 6) {
+      var old = logEl.firstElementChild || logEl.children[0]
+      if (old && logEl.removeChild) logEl.removeChild(old)
+    }
   }
 
   var LOGS = [
+    [90, '[SYS_LOAD]', 'cold boot // ETA 20:00'],
     [110, '[SYS_LOAD]', 'mounting /memory'],
     [480, '[SYS_LOAD]', 'loading core modules'],
     [820, '[OK]', 'sword spirit link established'],
@@ -4562,6 +4567,48 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
     [1520, '[SYS_LOAD]', 'decrypting assets'],
     [1880, '[OK]', 'memory core ready'],
   ]
+
+  // 20 分钟长开屏：把 30 条系统日志均匀铺到 20s ~ 19m40s
+  var LONG_LOGS = [
+    ['[SYS_LOAD]', 'scanning hex grid sectors'],
+    ['[OK]', 'sector 01/12 verified'],
+    ['[SYNC]', 'resonance buffer 08%'],
+    ['[WARN]', 'tomb firewall handshake failed'],
+    ['[SYS_LOAD]', 'rerouting through mirror node'],
+    ['[OK]', 'node 0x7F stable'],
+    ['[MEM]', 'reconstructing memory lattice'],
+    ['[SYNC]', 'lattice sync 17%'],
+    ['[WARN]', 'packet loss on channel -10F'],
+    ['[SYS_LOAD]', 'reindexing memory shards'],
+    ['[OK]', 'shard 04/16 restored'],
+    ['[MEM]', 'decrypting sword spirit signature'],
+    ['[WARN]', 'signature mismatch // retrying'],
+    ['[SYS_LOAD]', 'brute-force resonance lock'],
+    ['[OK]', 'resonance lock accepted'],
+    ['[SYNC]', 'harmonic buffer 34%'],
+    ['[MEM]', 'mounting /memory/floor-10'],
+    ['[WARN]', 'tomb sentinel detected'],
+    ['[SYS_LOAD]', 'cloaking signal behind hex grid'],
+    ['[OK]', 'sentinel path diverged'],
+    ['[MEM]', 'reassembling cutscene fragments'],
+    ['[SYNC]', 'fragment 09/24 linked'],
+    ['[WARN]', 'corrupted frame dropped'],
+    ['[SYS_LOAD]', 'rebuilding visual cortex feed'],
+    ['[OK]', 'feed restored'],
+    ['[MEM]', 'writing boot manifest'],
+    ['[SYNC]', 'manifest checksum 7F3A'],
+    ['[SYS_LOAD]', 'warming neon shader banks'],
+    ['[OK]', 'shader banks online'],
+    ['[MEM]', 'final memory integrity 99.7%'],
+  ]
+  ;(function () {
+    var from = 20000, to = 1180000
+    for (var i = 0; i < LONG_LOGS.length; i++) {
+      var at = Math.round(from + (to - from) * (i / (LONG_LOGS.length - 1)))
+      LOGS.push([at, LONG_LOGS[i][0], LONG_LOGS[i][1]])
+    }
+  })()
+  LOGS.sort(function (a, b) { return a[0] - b[0] })
   LOGS.forEach(function (item) {
     timers.push(setTimeout(function () {
       addLog(item[1], item[2], item[1] === '[WARN]')
@@ -4571,8 +4618,12 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
   var SUBS = [
     [120, 'INITIALIZING MEMORY CORE'],
     [760, 'LOADING ASSETS'],
-    [1560, 'DECRYPTING ASSETS'],
-    [2060, 'SYNC COMPLETE'],
+    [20000, 'DECRYPTING ASSETS'],
+    [240000, 'RECONSTRUCTING MEMORY'],
+    [600000, 'SYNCING RESONANCE'],
+    [900000, 'REBUILDING VISUAL CORTEX'],
+    [1140000, 'FINALIZING BOOT'],
+    [1190000, 'SYNC COMPLETE'],
   ]
   SUBS.forEach(function (item) {
     timers.push(setTimeout(function () {
@@ -4601,7 +4652,7 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
   }
 
   var t0 = 0
-  var DUR = 2500
+  var DUR = 1200000
   function tick(ts) {
     if (done) return
     if (!t0) t0 = ts
