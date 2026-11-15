@@ -4987,7 +4987,7 @@
         ctx.font = 'bold ' + Math.max(9, Math.round(TS * 0.32)) + 'px -apple-system,"PingFang SC",sans-serif'
         ctx.textAlign = 'center'; ctx.textBaseline = 'top'
         ctx.fillText((isDick ? '迪克' : '铁墓') + (e.enraged ? '·狂暴' : ''), ex, ey + R1 + TS * 0.06)
-      } else if (e.type === 'archer') {      } else if (e.type === 'archer') {
+      } else if (e.type === 'archer') {
         // 暗箭手：瘦长身影 + 弓
         ctx.fillStyle = 'rgba(159,180,255,' + (0.10 + 0.08 * pulse) + ')'
         ctx.beginPath(); ctx.arc(ex, ey, TS * .4, 0, Math.PI * 2); ctx.fill()
