@@ -829,7 +829,6 @@
     <span class="stat">金币 <b id="h-gold">0</b></span>
     <span class="stat">EXP <b id="h-xp">0/6</b></span>
     <span class="stat">层 <b id="h-floor">1</b></span>
-    <span class="stat">门 <b id="h-dir">—</b></span>
     <span class="relics" id="h-relics"></span>
     <span class="relics" id="h-talents"></span>
     <div class="team-strip" id="team-strip" hidden></div>
@@ -1013,7 +1012,7 @@
 
     <div class="ov ov-global ov-tapclose" id="ov-help" hidden>
       <h2>怎么玩</h2>
-      <p>在画面上滑动走一步（电脑用方向键/WASD），撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>门的方向看 HUD 上的「门」那一栏。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>第 <b>10 层</b> 是铁墓（每 3 回合全屏震击）；第 <b>20 层</b> 是迪克（每 2 回合召唤代码或侵蚀攻击）；第 <b>30 层</b> 是双 BOSS 终局，没有楼梯，两个都倒下才算通关。<br>5、15、25…这类中间层会有<b>休息室</b>，踩上去全队回 6 血。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>走到光门上会先弹出<b>招募面板</b>：三选一招募队友（最多 5 人，满员会替换最早那位）；卡片上有羁绊标签和「招募后激活哪些羁绊」的预判。队友踩着你的历史路径跟随，不会穿墙；他们凑齐会触发<b>羁绊</b>（左上角显示）。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
+      <p>在画面上滑动走一步（电脑用方向键/WASD），撞到敌人就是攻击；你走完，怨灵也会朝你走一步。<br>伤害就是面板上的「攻」；撞上互相扣血，它先手打你，你也会回手一刀。<br><br>粉色圆点是药水，金色菱形是遗物，<b>发光的方块是去下一层的门</b>。<br>屏幕外的光门会在你这一侧视口边缘亮起发光箭头。<br>升级会弹出三选一的天赋面板，选完立刻生效。<br>第 <b>10 层</b> 是铁墓（每 3 回合全屏震击）；第 <b>20 层</b> 是迪克（每 2 回合召唤代码或侵蚀攻击）；第 <b>30 层</b> 是双 BOSS 终局，没有楼梯，两个都倒下才算通关。<br>5、15、25…这类中间层会有<b>休息室</b>，踩上去全队回 6 血。<br>层数没有上限，死了才结束，最高层会记在这台设备上。<br>地牢里那个小人，就是你在选人界面挑的那位。<br>三种新怨灵：慢而厚的<b>游魂</b>、隔两格放冷箭的<b>暗箭手</b>、冲过来就炸的<b>自爆虫</b>。<br>进度会自动存在浏览器里，下次打开能「继续上次」；死亡才算结束。<br>走到光门上会先弹出<b>招募面板</b>：三选一招募队友（最多 5 人，满员会替换最早那位）；卡片上有羁绊标签和「招募后激活哪些羁绊」的预判。队友踩着你的历史路径跟随，不会穿墙；他们凑齐会触发<b>羁绊</b>（左上角显示）。<br>每层房间里有<b>宝箱</b>（三选一被动遗物）或<b>商店</b>（花金币买），被动遗物可以叠加，叠出不同流派。<br>右侧 🔊 可以一键静音（音乐和音效一起关）。<br>听说每个角色打 BOSS 的时候，都有自己的脾气——死法也不一样。</p>
       <button class="btn" id="help-close" type="button">知道了</button>
       <p class="tap-hint">点任意位置也能关掉</p>
     </div>
@@ -1085,7 +1084,7 @@
   var logEl = $('log')
   var hName = $('h-name'), hHp = $('h-hp'), hFill = $('h-fill'), hAtk = $('h-atk'), hFloor = $('h-floor'), hRelics = $('h-relics')
   var teamStrip = $('team-strip')
-  var hLv = $('h-lv'), hXp = $('h-xp'), hDir = $('h-dir'), hTalents = $('h-talents'), hGold = $('h-gold')
+  var hLv = $('h-lv'), hXp = $('h-xp'), hTalents = $('h-talents'), hGold = $('h-gold')
   var ovTalent = $('ov-talent'), talentList = $('talent-list'), talentTitle = $('talent-title')
   var ovMeta = $('ov-meta')
   var ovTeam = $('ov-team'), teamList = $('team-list')
@@ -1151,15 +1150,6 @@
     FX.push({ x: x, y: y, dy: dy || 0, dx: dx || 0, text: text, color: color, t: Date.now() })
     if (FX.length > 24) FX.shift()
     kickAnim()
-  }
-
-  function dirArrow() {
-    if (!S) return '—'
-    if (S.noStairs) return '终点'
-    var dx = S.stairs.x - S.player.x, dy = S.stairs.y - S.player.y
-    if (!dx && !dy) return '到了'
-    var v = (dy < 0 ? '↑' : dy > 0 ? '↓' : '') + (dx < 0 ? '←' : dx > 0 ? '→' : '')
-    return v || '到了'
   }
 
   function shake(mag, ms) {
@@ -3788,7 +3778,7 @@
     saveMeta()
     syncMetaBar()
     if (S.floor === 10 || S.floor === 20 || S.floor === 30) refreshLog()
-    if (S.steps > 0) log('第 ' + S.floor + ' 层，光门在' + dirArrow() + '方向。' + ((S.floor === 10 || S.floor === 20 || S.floor === 30) ? (S.floor === 30 ? '双 BOSS 守在这里。' : 'BOSS 守着门。') : ''))
+    if (S.steps > 0) log('第 ' + S.floor + ' 层。' + ((S.floor === 10 || S.floor === 20 || S.floor === 30) ? (S.floor === 30 ? '双 BOSS 守在这里。' : 'BOSS 守着门。') : ''))
     computeFov(); render(); syncHud()
     saveRun()
   }
@@ -4797,7 +4787,6 @@
     if ($('p2-atk-mini') && S.p2) $('p2-atk-mini').textContent = '⚔ ' + S.p2.atk
     if (hTalents) { hTalents.innerHTML = ''; hTalents.hidden = true }
     if (hFloor) hFloor.textContent = String(S.floor)
-    if (hDir) hDir.textContent = dirArrow()
     if (teamStrip) {
       teamStrip.innerHTML = ''
       if (teamOf(S.dual ? 'p1' : 'p1').length) {
