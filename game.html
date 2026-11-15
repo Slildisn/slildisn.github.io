@@ -785,7 +785,7 @@
   .syn-replace{font-size:.62rem;color:#ff9ec4}
 
 /* ============================================================
-   选人/双人选人：安全区 + 独立滚动修复
+   选人界面：纵向区块布局（状态栏 / 标题 / 卡片 / 操作 / 开始）
    ============================================================ */
 #ov-select, #ov-duo{
   top:0;bottom:0;
@@ -794,51 +794,177 @@
   box-sizing:border-box;
   padding-top:40px !important;
   padding-top:max(40px, calc(env(safe-area-inset-top, 0px) + 20px)) !important;
-  padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 16px) !important;
+  padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 14px) !important;
 }
 #ov-select{
   display:flex;flex-direction:column;justify-content:flex-start;
-  gap:8px;overflow:hidden;
+  gap:9px;overflow:hidden;
 }
-#ov-select > *{flex:0 0 auto}
-#ov-select > .pick{
-  flex:1 1 0;
-  min-height:0;
-  max-height:calc(100dvh - 180px);
-  width:100%;
-  overflow-y:auto;
-  overflow-x:hidden;
-  -webkit-overflow-scrolling:touch;
-  touch-action:pan-y;
-  overscroll-behavior:contain;
-  align-content:start;
-  padding:2px 4px 12px;
+#ov-select > *{flex:0 0 auto;min-width:0}
+
+/* ---- 顶部状态栏 ---- */
+.select-top{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:8px;flex-wrap:wrap;
+  padding:8px 11px;
+  border:1px solid rgba(0,229,255,.28);
+  border-radius:11px;
+  background:linear-gradient(90deg,rgba(0,229,255,.09),rgba(8,8,16,.55) 45%,rgba(255,45,143,.08));
+  box-shadow:0 0 18px rgba(0,229,255,.10),inset 0 0 16px rgba(0,229,255,.05);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.56rem;letter-spacing:.12em;color:#9feeff;
 }
-#ov-select .meta-bar,
-#ov-select .seed-row,
-#ov-select .seed,
-#ov-select #cont-run{flex:0 0 auto}
-#ov-duo{
-  overflow-y:auto;overflow-x:hidden;
-  -webkit-overflow-scrolling:touch;
-  touch-action:pan-y;
-  overscroll-behavior:contain;
+.select-brand{
+  display:inline-flex;align-items:center;gap:6px;
+  color:#6ff2ff;text-shadow:0 0 8px rgba(0,229,255,.55);white-space:nowrap
+}
+.select-brand i{
+  width:6px;height:6px;border-radius:50%;background:#00e5ff;
+  box-shadow:0 0 8px #00e5ff,0 0 16px rgba(0,229,255,.6);
+  animation:selPulse 1.6s ease-in-out infinite
+}
+@keyframes selPulse{0%,100%{opacity:.45;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
+.select-meta{
+  display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;
+  color:rgba(205,245,255,.62);font-size:.52rem;letter-spacing:.06em
+}
+.select-meta .shards{color:#ffd9a0;white-space:nowrap}
+.select-meta .shards b{color:#fff}
+
+/* ---- 标题 ---- */
+.select-head{text-align:center;padding:2px 0 0}
+#ov-select .select-head h2{
+  margin:0;
+  font-size:clamp(1.12rem,4.7vw,1.5rem);
+  font-weight:800;letter-spacing:.12em;color:#f4feff;
+  text-shadow:0 0 12px rgba(0,229,255,.55),0 0 30px rgba(0,229,255,.18),2px 0 0 rgba(255,45,143,.22)
+}
+.select-head p{
+  margin:4px 0 0;font-size:.63rem;
+  color:rgba(190,180,215,.72);letter-spacing:.02em
 }
 
-/* 菜单/选人时隐藏局内 HUD，避免固定血条压住标题 */
+/* ---- 卡片区：唯一滚动块 ---- */
+#ov-select > .pick{
+  flex:1 1 0;min-height:0;
+  width:100%;
+  max-height:calc(100dvh - 330px);
+  overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;overscroll-behavior:contain;
+  align-content:start;
+  gap:7px;
+  padding:2px 3px 10px;
+  border-radius:10px;
+}
+#ov-select > .pick::-webkit-scrollbar{width:5px}
+#ov-select > .pick::-webkit-scrollbar-thumb{background:rgba(0,229,255,.28);border-radius:99px}
+#ov-select .pick button{
+  position:relative;
+  border:1px solid rgba(160,140,210,.20);
+  border-radius:11px;
+  background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+  transition:border-color .18s,box-shadow .18s,transform .18s,background .18s
+}
+#ov-select .pick button.sel{
+  border-color:rgba(0,229,255,.85);
+  background:linear-gradient(180deg,rgba(0,229,255,.16),rgba(255,45,143,.10));
+  box-shadow:0 0 16px rgba(0,229,255,.35),inset 0 0 14px rgba(0,229,255,.10);
+  transform:translateY(-1px)
+}
+#ov-select .pick button.sel::after{
+  content:"";position:absolute;left:8px;right:8px;bottom:3px;height:1px;
+  background:linear-gradient(90deg,transparent,#00e5ff,#ff2d8f,transparent);
+  box-shadow:0 0 8px rgba(0,229,255,.6)
+}
+
+/* ---- 底部操作区 ---- */
+.select-bottom{
+  display:flex;flex-direction:column;gap:7px;
+  padding:8px 9px 9px;
+  border:1px solid rgba(160,140,210,.18);
+  border-radius:12px;
+  background:linear-gradient(180deg,rgba(22,16,34,.72),rgba(10,8,18,.85));
+}
+.select-tools{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.select-tool{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  min-height:38px;border-radius:9px;font:inherit;font-size:.68rem;
+  letter-spacing:.08em;color:#eafcff;
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(0,229,255,.28);
+  transition:background .18s,border-color .18s,box-shadow .18s,transform .18s
+}
+.select-tool .tool-ico{font-style:normal;font-size:.9rem;filter:drop-shadow(0 0 6px rgba(0,229,255,.5))}
+.select-tool.duo{border-color:rgba(255,45,143,.36);box-shadow:inset 0 0 12px rgba(255,45,143,.05)}
+.select-tool.meta{border-color:rgba(0,229,255,.34)}
+.select-tool:active{transform:translateY(1px)}
+.select-tool:hover{background:rgba(0,229,255,.10);border-color:rgba(0,229,255,.65)}
+.select-tool.duo:hover{background:rgba(255,45,143,.12);border-color:rgba(255,45,143,.7)}
+#ov-select .seed-row{margin-top:0;width:100%;max-width:none;gap:7px}
+#ov-select .seed-row label{font-size:.62rem;letter-spacing:.08em;color:rgba(200,190,225,.75)}
+#ov-select .seed-row .btn{padding:6px 9px;font-size:.64rem}
+#ov-select #seed-input{padding:7px 9px;font-size:.74rem}
+#ov-select .seed{margin:0;text-align:center;font-size:.56rem;color:rgba(150,140,180,.8);min-height:.8em}
+
+/* ---- 开始游戏 CTA ---- */
+.start-cta{
+  position:relative;overflow:hidden;
+  width:100%;min-height:48px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  border:1px solid rgba(0,229,255,.62);
+  border-radius:12px;
+  background:linear-gradient(90deg,rgba(0,229,255,.16),rgba(20,10,32,.72) 48%,rgba(255,45,143,.18));
+  box-shadow:0 0 22px rgba(0,229,255,.16),inset 0 0 18px rgba(0,229,255,.08);
+  color:#fff;font:inherit;
+  transition:box-shadow .18s,border-color .18s,transform .18s,opacity .18s
+}
+.start-cta::before{
+  content:"";position:absolute;top:0;left:-40%;width:40%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent);
+  transform:skewX(-20deg);
+  animation:ctaScan 3.4s ease-in-out infinite
+}
+@keyframes ctaScan{0%,55%{left:-45%}80%,100%{left:115%}}
+.start-cta-label{
+  font-size:.88rem;font-weight:800;letter-spacing:.20em;text-indent:.20em;
+  text-shadow:0 0 10px rgba(0,229,255,.75)
+}
+.start-cta-sub{font-size:.46rem;letter-spacing:.28em;color:rgba(140,240,255,.65);font-family:ui-monospace,monospace}
+.start-cta:active{transform:translateY(1px)}
+.start-cta:not(:disabled):hover{border-color:#00e5ff;box-shadow:0 0 30px rgba(0,229,255,.32),inset 0 0 22px rgba(0,229,255,.12)}
+.start-cta:disabled{opacity:.42;filter:saturate(.5);cursor:not-allowed}
+#ov-select #cont-run{width:100%;margin:0;padding:8px 10px;font-size:.66rem}
+
+#ov-duo{
+  overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;
+}
+
+/* 菜单/选人时隐藏局内 HUD */
 body.menu-mode .hud,
 body.menu-mode #p2-hud{display:none !important}
-/* 双人 HUD 永远在弹层之下，不再盖住天赋/宝箱/选人 */
+/* 双人 HUD 永远在弹层之下 */
 body.dual-on .hud,
 body.dual-on #p2-hud,
 body.dual-on #p2-hud[hidden]{z-index:50}
 
-@media (max-height:560px){
-  #ov-select{gap:5px}
-  #ov-select > p,
+@media (max-height:620px){
+  #ov-select{gap:6px}
+  .select-head p{display:none}
+  .select-bottom{gap:5px;padding:6px 8px}
+  .select-tool{min-height:34px}
   #ov-select .seed{display:none}
-  #ov-select .meta-bar{margin-top:4px;padding:4px 10px}
-  #ov-select > .pick{min-height:80px}
+  .start-cta{min-height:44px}
+  #ov-select > .pick{max-height:calc(100dvh - 300px)}
+}
+@media (max-height:500px){
+  .select-top{font-size:.5rem;padding:6px 9px}
+  .select-brand{font-size:.5rem}
+  #ov-select .select-head h2{font-size:1rem}
+  #ov-select .seed-row{display:none}
+  .select-tool{min-height:31px;font-size:.62rem}
+  .start-cta-label{font-size:.8rem}
 }
 </style>
 <script>
@@ -935,21 +1061,38 @@ body.dual-on #p2-hud[hidden]{z-index:50}
     </div>
 
     <div class="ov ov-global ov-scroll" id="ov-select">
-      <h2 id="select-title">选一个同行的人</h2>
-      <p>每个人带的记忆不一样：血、攻、视野、暴击都不同。</p>
+      <div class="select-top">
+        <span class="select-brand"><i></i>CYRENE // MEMORY TERMINAL</span>
+        <span class="select-meta">
+          <span id="meta-stats">最高 0 层 · 累计击杀 0</span>
+          <span class="shards">◈ <b id="meta-shards">0</b> 碎片</span>
+        </span>
+      </div>
+
+      <div class="select-head">
+        <h2 id="select-title">选一个同行的人</h2>
+        <p>每个人带的记忆不一样：血、攻、视野、暴击都不同。</p>
+      </div>
+
       <div class="pick" id="pick"></div>
-      <div class="meta-bar">
-        <span id="meta-stats">最高 0 层 · 累计击杀 0</span>
-        <span class="shards">◈ <b id="meta-shards">0</b> 碎片</span>
-        <button type="button" id="meta-open">记忆升级</button>
-      <button type="button" id="duo-open">👥 双人</button>
+
+      <div class="select-bottom">
+        <div class="select-tools">
+          <button type="button" class="select-tool duo" id="duo-open"><span class="tool-ico">👥</span><span class="tool-txt" id="duo-label">双人模式</span></button>
+          <button type="button" class="select-tool meta" id="meta-open"><span class="tool-ico">◈</span><span class="tool-txt">记忆升级</span></button>
+        </div>
+        <div class="seed-row">
+          <label for="seed-input">种子</label>
+          <input id="seed-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="9" placeholder="留空=随机" autocomplete="off" spellcheck="false" />
+          <button type="button" class="btn ghost" id="seed-random">随机</button>
+        </div>
+        <p class="seed" id="seed-line">种子 —</p>
       </div>
-      <div class="seed-row">
-        <label for="seed-input">种子</label>
-        <input id="seed-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="9" placeholder="留空=随机" autocomplete="off" spellcheck="false" />
-        <button type="button" class="btn ghost" id="seed-random">随机</button>
-      </div>
-      <p class="seed" id="seed-line">种子 —</p>
+
+      <button class="start-cta" id="start-run" type="button" disabled>
+        <span class="start-cta-label">开始游戏</span>
+        <span class="start-cta-sub">ENTER THE TOMB</span>
+      </button>
       <button class="btn ghost" id="cont-run" type="button" hidden>继续上次</button>
     </div>
     <div class="ov ov-global" id="ov-talent" hidden>
@@ -1165,6 +1308,7 @@ body.dual-on #p2-hud[hidden]{z-index:50}
   var duoStartBtn = $('duo-start'), p2Hud = $('p2-hud')
   var duoSel1 = null, duoSel2 = null
   var seedInput = $('seed-input')
+  var selectedHeroId = null
 
   var LAST_SEED_KEY = 'cyrene.rogue.seed'
 
@@ -5930,8 +6074,8 @@ body.dual-on #p2-hud[hidden]{z-index:50}
     buildDuo()
     if (ovSelect) ovSelect.hidden = true
     ovDuo.hidden = false
-    var btn = $('duo-open')
-    if (btn) btn.textContent = '👥 双人模式：选 P1 / P2'
+    var lbl = $('duo-label')
+    if (lbl) lbl.textContent = '选 P1 / P2'
     var portraitNow = (window.innerHeight || 0) > (window.innerWidth || 0)
     try {
       toast(portraitNow
@@ -5944,8 +6088,8 @@ body.dual-on #p2-hud[hidden]{z-index:50}
     setMenuChrome(true)
     if (ovDuo) ovDuo.hidden = true
     if (ovSelect) ovSelect.hidden = false
-    var btn = $('duo-open')
-    if (btn) btn.textContent = '👥 双人'
+    var lbl = $('duo-label')
+    if (lbl) lbl.textContent = '双人模式'
   }
 
   function findOpenTile(fromX, fromY, dirX) {
@@ -6199,6 +6343,13 @@ body.dual-on #p2-hud[hidden]{z-index:50}
       if (b.id === 'thanos') return 1
       return 0
     })
+    var available = order.filter(function (h) { return !(h.hidden && !META.unlocked[h.id]) })
+    var stillThere = false
+    for (var ai = 0; ai < available.length; ai++) {
+      if (available[ai].id === selectedHeroId) stillThere = true
+    }
+    if (!selectedHeroId || !stillThere) selectedHeroId = available.length ? available[0].id : null
+
     order.forEach(function (h) {
       var locked = h.hidden && !META.unlocked[h.id]
       var b = document.createElement('button')
@@ -6219,14 +6370,41 @@ body.dual-on #p2-hud[hidden]{z-index:50}
           }
           b.appendChild(tags)
         }
-        b.addEventListener('click', function () { start(h.id, readSeed()) })
+        b.setAttribute('data-hero', h.id)
+        b.setAttribute('aria-pressed', h.id === selectedHeroId ? 'true' : 'false')
+        if (h.id === selectedHeroId) b.classList.add('sel')
+        b.addEventListener('click', function () { selectHero(h.id) })
       }
       pickEl.appendChild(b)
     })
+    syncPickerSelection()
+  }
+
+  function selectHero(id) {
+    var h = heroById(id)
+    if (!h || (h.hidden && !META.unlocked[id])) return
+    selectedHeroId = id
+    syncPickerSelection()
+  }
+
+  function syncPickerSelection() {
+    if (!pickEl) return
+    var kids = pickEl.children
+    for (var i = 0; i < kids.length; i++) {
+      var el = kids[i]
+      var id = el.getAttribute ? el.getAttribute('data-hero') : null
+      if (!id) continue
+      if (id === selectedHeroId) el.classList.add('sel')
+      else el.classList.remove('sel')
+      el.setAttribute('aria-pressed', id === selectedHeroId ? 'true' : 'false')
+    }
+    var sb = $('start-run')
+    if (sb) sb.disabled = !selectedHeroId
   }
 
   function start(heroId, seed) {
     var hh = heroById(heroId)
+    if (hh) selectedHeroId = heroId
     if (hh && hh.hidden && !META.unlocked[heroId]) return
     if (ovSelect) ovSelect.hidden = true
     if (ovEnd) ovEnd.hidden = true
@@ -6326,6 +6504,9 @@ body.dual-on #p2-hud[hidden]{z-index:50}
     }
   })
   if ($('meta-open')) $('meta-open').addEventListener('click', openMeta)
+  if ($('start-run')) $('start-run').addEventListener('click', function () {
+    if (selectedHeroId) start(selectedHeroId, readSeed())
+  })
   if ($('meta-close')) $('meta-close').addEventListener('click', closeMeta)
   if (sumAgain) sumAgain.addEventListener('click', restartRun)
   if (sumContinue) sumContinue.addEventListener('click', continueRun)
