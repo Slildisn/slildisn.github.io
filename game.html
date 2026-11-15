@@ -784,6 +784,10 @@
   .syn-preview.down{color:#ff8a9c}
   .syn-replace{font-size:.62rem;color:#ff9ec4}
 
+/* 关键：ID 选择器的 display:flex 会压过 .ov[hidden]，必须显式兜底 */
+#ov-select[hidden],
+#ov-duo[hidden]{display:none !important}
+
 /* ============================================================
    选人界面：纵向区块布局（状态栏 / 标题 / 卡片 / 操作 / 开始）
    ============================================================ */
