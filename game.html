@@ -396,11 +396,15 @@
   /* ---- 剧情系统 ---- */
   #story{
     position:fixed;inset:0;z-index:9993;display:grid;place-items:center;
-    padding:24px;background:rgba(8,4,18,.66);backdrop-filter:blur(3px)
+    padding:24px;background:rgba(8,4,18,.34);backdrop-filter:blur(2px)
   }
   #story[hidden]{display:none}
+  body.intro-playing .idle-bubble,
+  body.intro-playing .status-idle,
+  body.intro-playing [data-idle],
+  body.intro-playing .chat-name em{display:none !important}
   .story-card{
-    width:min(560px,92vw);max-height:74vh;overflow-y:auto;
+    width:min(480px,86vw);max-height:74vh;overflow-y:auto;
     padding:18px 18px 16px;border-radius:16px;
     background:linear-gradient(180deg, rgba(48,18,84,.94), rgba(18,8,34,.96));
     border:1px solid rgba(199,125,255,.55);
@@ -5484,14 +5488,21 @@
     }, speed || 38)
   }
 
-  function skipStory() {
+  var storyTyping = false
+
+  function finishStoryText() {
     var el = $('story-text')
     if (el) { clearInterval(typeText._t); el.textContent = STORY_TEXT; el.classList.remove('caret') }
+    storyTyping = false
+  }
+
+  function skipStory() {
     var st = $('story')
-    if (st && !st.hidden) {
-      st.hidden = true
-      try { SND.chime() } catch (e) { /* ignore */ }
-    }
+    if (!st || st.hidden) return
+    if (storyTyping) { finishStoryText(); return }   // 第一次点击：补全文字
+    st.hidden = true
+    try { document.body.classList.remove('intro-playing') } catch (e) { /* ignore */ }
+    try { SND.chime() } catch (e) { /* ignore */ }
   }
 
   var STORY_TEXT = '公元 2077 年，多元宇宙的记忆核心崩溃了。\n黑客迪克篡改了数据，铁墓封锁了深渊。\n作为被选中的记忆行者，你唯一能做的，就是一层层往下砸，\n直到铁墓先倒下。'
@@ -5500,7 +5511,9 @@
     var st = $('story')
     if (!st) return
     st.hidden = false
-    typeText($('story-text'), STORY_TEXT, 34)
+    try { document.body.classList.add('intro-playing') } catch (e) { /* ignore */ }
+    storyTyping = true
+    typeText($('story-text'), STORY_TEXT, 34, function () { storyTyping = false })
   }
 
   function showBossLine(text, tone) {
