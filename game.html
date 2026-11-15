@@ -2,6 +2,21 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<script>
+  /* 防盗：非官方部署域名立即踢回官网。
+     放行本地调试（localhost / 127.0.0.1）与 APK/WebView 壳（file:/appassets），
+     其它 http(s) 镜像站一律不加载游戏本体。 */
+  ;(function () {
+    try {
+      var p = String((location && location.protocol) || '').toLowerCase()
+      if (p === 'file:' || p === 'content:' || p === 'app:' || p === 'capacitor:' || p === 'ionic:') return
+      var h = String((location && location.hostname) || '').toLowerCase()
+      if (!h) return
+      if (h === 'slildisn.github.io' || h === 'localhost' || h === '127.0.0.1' || h === 'appassets.androidplatform.net') return
+      window.location.replace('https://slildisn.github.io/game.html')
+    } catch (e) { /* ignore */ }
+  })()
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>铁墓大乱斗：从灭霸开始 ｜ 昔涟 CYRENE</title>
 <meta name="description" content="昔涟同人站的小游戏《铁墓大乱斗：从灭霸开始》——回合制肉鸽地牢，14 位跨次元角色可选，逐层下降、拾取遗物与奇物、击败铁墓。纯前端、可离线安装。">
@@ -1350,20 +1365,43 @@
       } catch (e) { ambNodes = null }
     }
 
-    /* ---- BGM：程序化循环乐段（和弦垫 + 贝斯 + 琶音，BOSS 层换调加鼓点） ---- */
-    var mus = { gain: null, timer: null, nextT: 0, step: 0, mode: 'calm' }
-    var CALM_CHORDS = [
-      [220.0, 261.63, 329.63],
-      [174.61, 220.0, 261.63],
-      [196.0, 246.94, 293.66],
-      [164.81, 196.0, 246.94],
-    ]
-    var BOSS_CHORDS = [
-      [146.83, 174.61, 220.0],
-      [116.54, 146.83, 174.61],
-      [130.81, 155.56, 196.0],
-      [110.0, 138.59, 164.81],
-    ]
+    /* ---- BGM：三套程序化乐段（主菜单 / 地牢 / BOSS），Web Audio 实时合成 ---- */
+    var mus = { gain: null, timer: null, nextT: 0, step: 0, mode: 'menu', theme: null }
+    var THEMES = {
+      // 主菜单：慢速小调、低频脉冲、稀疏钟声 —— 深邃赛博
+      menu: {
+        bpm: 62,
+        chords: [
+          [110.00, 130.81, 164.81, 196.00],
+          [87.31, 110.00, 130.81, 164.81],
+          [98.00, 123.47, 146.83, 196.00],
+          [82.41, 103.83, 123.47, 164.81],
+        ],
+        padVol: 0.085, bassVol: 0.105, arpVol: 0.05,
+      },
+      // 地牢：中速拨弦 + 轻鼓，轻快但带着紧张
+      dungeon: {
+        bpm: 104,
+        chords: [
+          [220.00, 261.63, 329.63],
+          [196.00, 246.94, 293.66],
+          [174.61, 220.00, 261.63],
+          [196.00, 246.94, 311.13],
+        ],
+        padVol: 0.07, bassVol: 0.10, arpVol: 0.075,
+      },
+      // BOSS：高速、半音压迫、四拍底鼓 + 反拍军鼓
+      boss: {
+        bpm: 142,
+        chords: [
+          [146.83, 174.61, 220.00],
+          [116.54, 146.83, 174.61],
+          [138.59, 164.81, 207.65],
+          [110.00, 138.59, 164.81],
+        ],
+        padVol: 0.095, bassVol: 0.125, arpVol: 0.075,
+      },
+    }
 
     function musicInit() {
       if (mus.gain || !ac) return
@@ -1374,62 +1412,124 @@
       } catch (e) { mus.gain = null }
     }
 
-    function voice(type, freq, t, dur, vol, attack) {
+    function musVoice(type, freq, t, dur, vol, attack, cutoff) {
       try {
         var o = ac.createOscillator()
         var g = ac.createGain()
         o.type = type
         o.frequency.setValueAtTime(freq, t)
-        var a = attack || 0.02
+        var a = attack || 0.015
         g.gain.setValueAtTime(0.0001, t)
-        g.gain.exponentialRampToValueAtTime(vol, t + a)
+        g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t + a)
         g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
-        o.connect(g); g.connect(mus.gain)
-        o.start(t); o.stop(t + dur + 0.05)
+        if (cutoff) {
+          var f = ac.createBiquadFilter()
+          f.type = 'lowpass'
+          f.frequency.value = cutoff
+          o.connect(f); f.connect(g)
+        } else {
+          o.connect(g)
+        }
+        g.connect(mus.gain)
+        o.start(t); o.stop(t + dur + 0.06)
       } catch (e) { /* ignore */ }
     }
 
-    function pad(freq, t, dur, vol) {
-      voice('triangle', freq, t, dur, vol, 0.35)
-      voice('sine', freq * 1.005, t, dur, vol * 0.6, 0.4)
+    function musPad(freq, t, dur, vol) {
+      musVoice('triangle', freq, t, dur, vol, 0.45, 1200)
+      musVoice('sine', freq * 1.004, t, dur, vol * 0.6, 0.55, 900)
     }
 
-    function kick(t) {
+    function musBass(freq, t, dur, vol) {
+      musVoice('sine', freq, t, dur, vol, 0.012, 260)
+      musVoice('triangle', freq, t, dur, vol * 0.3, 0.012, 420)
+    }
+
+    function musPluck(freq, t, vol, type) {
+      musVoice(type || 'triangle', freq, t, 0.15, vol, 0.004, 2600)
+    }
+
+    function musNoise(t, dur, vol, freq, q) {
       try {
-        var o = ac.createOscillator()
-        var g = ac.createGain()
-        o.type = 'sine'
-        o.frequency.setValueAtTime(90, t)
-        o.frequency.exponentialRampToValueAtTime(38, t + 0.22)
-        g.gain.setValueAtTime(0.3, t)
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28)
-        o.connect(g); g.connect(mus.gain)
-        o.start(t); o.stop(t + 0.3)
+        var len = Math.max(1, Math.floor(ac.sampleRate * dur))
+        var buf = ac.createBuffer(1, len, ac.sampleRate)
+        var d = buf.getChannelData(0)
+        for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2)
+        var src = ac.createBufferSource(); src.buffer = buf
+        var bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq || 5200; bp.Q.value = q || 1.2
+        var g = ac.createGain(); g.gain.value = vol
+        src.connect(bp); bp.connect(g); g.connect(mus.gain)
+        src.start(t)
       } catch (e) { /* ignore */ }
+    }
+
+    function musKick(t, vol) {
+      try {
+        var o = ac.createOscillator(); var g = ac.createGain()
+        o.type = 'sine'
+        o.frequency.setValueAtTime(118, t)
+        o.frequency.exponentialRampToValueAtTime(42, t + 0.18)
+        g.gain.setValueAtTime(Math.max(0.001, vol), t)
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24)
+        o.connect(g); g.connect(mus.gain)
+        o.start(t); o.stop(t + 0.26)
+      } catch (e) { /* ignore */ }
+    }
+
+    function musSnare(t, vol) {
+      musNoise(t, 0.11, vol, 1900, 1.1)
+      musVoice('triangle', 185, t, 0.09, vol * 0.35, 0.003, 900)
     }
 
     function scheduleMusic() {
-      if (!ac || !mus.gain) return
-      var boss = mus.mode === 'boss'
-      var beat = 60 / (boss ? 104 : 78) / 2
-      var chords = boss ? BOSS_CHORDS : CALM_CHORDS
+      if (!ac || !mus.gain || !mus.theme) return
+      // 标签页被挂起后 currentTime 可能甩开调度指针，避免补出一串“过去”的音符
+      if (mus.nextT < ac.currentTime - 0.2) mus.nextT = ac.currentTime + 0.05
+      var th = mus.theme
+      var stepDur = 60 / th.bpm / 4
       var guard = 0
-      while (mus.nextT < ac.currentTime + 0.25 && guard++ < 32) {
-        var s16 = mus.step % 16
+      while (mus.nextT < ac.currentTime + 0.28 && guard++ < 64) {
+        var s = mus.step % 16
+        var bar = (mus.step >> 4) % th.chords.length
+        var chord = th.chords[bar]
         var t = mus.nextT
-        var chord = chords[(mus.step >> 3) % chords.length]
 
-        if (s16 === 0) {
-          for (var i = 0; i < chord.length; i++) pad(chord[i], t, beat * 14, boss ? 0.17 : 0.15)
+        // 每小节铺一层和弦垫
+        if (s === 0) {
+          for (var i = 0; i < chord.length; i++) musPad(chord[i], t, stepDur * 15, th.padVol)
         }
-        if (s16 === 0 || s16 === 8) voice('sine', chord[0] / 2, t, beat * 3.2, 0.16, 0.01)
-        if (s16 % 2 === 0) {
-          var n = chord[(s16 / 2) % chord.length] * (s16 === 6 ? 2 : 1)
-          voice('triangle', n, t, beat * 1.6, boss ? 0.11 : 0.095, 0.008)
+
+        if (mus.mode === 'menu') {
+          // 主菜单：低频脉冲 + 稀疏高音钟声，留白多、空间深
+          if (s === 0) musBass(chord[0] / 2, t, stepDur * 15.5, th.bassVol)
+          if (s === 0 || s === 8) musBass(chord[0] / 4, t, stepDur * 7.2, th.bassVol * 0.5)
+          if (s === 4 || s === 10 || s === 14) {
+            var mNote = chord[(s / 2) % chord.length] * 2
+            musPluck(mNote, t, th.arpVol, 'sine')
+            musPluck(mNote * 2, t + stepDur * 0.5, th.arpVol * 0.35, 'sine')
+          }
+          if (s === 12) musNoise(t, 0.9, 0.02, 1400, 0.6)
+        } else if (mus.mode === 'dungeon') {
+          // 地牢：走路感的拨弦琶音 + 轻底鼓/踩镲
+          if (s === 0 || s === 8) musBass(chord[0] / 2, t, stepDur * 3.4, th.bassVol)
+          if (s % 2 === 0) {
+            var dNote = chord[(s / 2) % chord.length]
+            musPluck(s === 6 ? dNote * 2 : dNote, t, th.arpVol, 'triangle')
+          }
+          if (s === 0 || s === 8) musKick(t, 0.10)
+          if (s === 4 || s === 12) musNoise(t, 0.045, 0.035, 6800, 1.4)
+          if (s === 14) musNoise(t, 0.06, 0.02, 3000, 1.1)
+        } else {
+          // BOSS：急促八分音符贝斯 + 四拍底鼓 + 反拍军鼓 + 高频踩镲
+          if (s % 2 === 0) musBass(chord[0] / 2, t, stepDur * 1.7, th.bassVol)
+          if (s % 2 === 0) musPluck(chord[(s / 2) % chord.length] * 2, t, th.arpVol, 'square')
+          if (s % 4 === 0) musKick(t, 0.16)
+          if (s === 4 || s === 12) musSnare(t, 0.06)
+          if (s % 2 === 1) musNoise(t, 0.025, 0.02, 7600, 1.6)
+          if (s === 0) musNoise(t, 0.35, 0.02, 900, 0.5)
         }
-        if (boss && (s16 === 0 || s16 === 6)) kick(t)
         mus.step++
-        mus.nextT += beat
+        mus.nextT += stepDur
       }
     }
 
@@ -1437,20 +1537,41 @@
       if (!ac) return
       musicInit()
       if (!mus.gain) return
-      mus.mode = kind === 'boss' ? 'boss' : 'calm'
-      if (!mus.timer) {
-        mus.nextT = ac.currentTime + 0.12
-        mus.step = 0
-        mus.timer = setInterval(function () { try { scheduleMusic() } catch (e) { /* ignore */ } }, 45)
-        try { if (typeof S !== 'undefined' && S && S.logs) log('♪ 背景音乐已开（右侧 🔊 可静音）。') } catch (e) { /* ignore */ }
+      var mode = kind === 'boss' ? 'boss' : kind === 'dungeon' ? 'dungeon' : kind === 'menu' ? 'menu' : 'none'
+      if (mode === 'none') {
+        mus.mode = 'none'
+        mus.theme = null
+        try {
+          mus.gain.gain.cancelScheduledValues(ac.currentTime)
+          mus.gain.gain.setTargetAtTime(0.0001, ac.currentTime, 0.4)
+        } catch (e) { /* ignore */ }
+        if (mus.timer) { clearInterval(mus.timer); mus.timer = null }
+        return
       }
-      var target = kind === 'boss' ? 0.62 : kind === 'none' ? 0.0001 : 0.5
-      try { mus.gain.gain.setTargetAtTime(target, ac.currentTime, 0.7) } catch (e) { /* ignore */ }
+      var changed = mus.mode !== mode
+      mus.mode = mode
+      mus.theme = THEMES[mode]
+      if (changed) mus.step = 0
+      if (!mus.timer) {
+        mus.nextT = ac.currentTime + 0.08
+        mus.timer = setInterval(function () { try { scheduleMusic() } catch (e) { /* ignore */ } }, 45)
+        try {
+          if (typeof S !== 'undefined' && S && S.logs) {
+            log('♪ BGM：' + (mode === 'menu' ? '主菜单' : mode === 'boss' ? 'BOSS 战' : '地牢') + '（右侧 🔊 可静音）。')
+          }
+        } catch (e) { /* ignore */ }
+      }
+      try {
+        mus.gain.gain.cancelScheduledValues(ac.currentTime)
+        mus.gain.gain.setTargetAtTime(mode === 'boss' ? 0.58 : 0.52, ac.currentTime, 0.45)
+      } catch (e) { /* ignore */ }
     }
 
     return {
       unlock: unlock,
       music: music,
+      musicMode: function () { return mus.mode },
+      musicPlaying: function () { return !!mus.timer },
       isMuted: function () { return muted },
       toggleMute: function () {
         muted = !muted
@@ -1524,7 +1645,7 @@
         noise(0.08, 0.08, 2600, 1.4)
       },
       ambience: function (kind) {
-        if (!ac || muted) return
+        if (!ac) return
         ambienceStart()
         if (!ambGain) return
         try {
@@ -1538,9 +1659,19 @@
 
   // 任何一次点按/按键后才允许出声（绕开自动播放限制）
   ;(function () {
+    function sceneTheme() {
+      try {
+        if (typeof S !== 'undefined' && S && running && !S.over) {
+          return (S.floor === 10 || S.floor === 20 || S.floor === 30) ? 'boss' : 'dungeon'
+        }
+      } catch (e) { /* ignore */ }
+      return 'menu'
+    }
     function first() {
       SND.unlock()
-      SND.music('calm')
+      var th = sceneTheme()
+      SND.music(th)
+      SND.ambience(th === 'boss' ? 'boss' : 'calm')
       var btn = document.getElementById('btn-sound')
       if (btn) btn.textContent = SND.isMuted() ? '🔇' : '🔊'
     }
@@ -3468,6 +3599,8 @@
     if (!d) { refreshContinue(); return }
     S = d
     running = true
+    SND.ambience((d.floor === 10 || d.floor === 20 || d.floor === 30) ? 'boss' : 'calm')
+    SND.music((d.floor === 10 || d.floor === 20 || d.floor === 30) ? 'boss' : 'dungeon')
     if (ovSelect) ovSelect.hidden = true
     if (ovEnd) ovEnd.hidden = true
     if (ovSummary) ovSummary.hidden = true
@@ -3588,7 +3721,7 @@
     computeSynergy()
     refreshLog()
     SND.ambience('calm')
-    SND.music('calm')
+    SND.music('dungeon')
     computeFov()
     render()
     syncHud()
@@ -3609,7 +3742,7 @@
       SND.music('boss')
     } else {
       SND.ambience('calm')
-      SND.music('calm')
+      SND.music('dungeon')
       if (S.floor % 5 === 0 && S.floor !== 0) {
         if (S.floor === 10 || S.floor === 20 || S.floor === 30) {
           // BOSS 大平层：不提示休息室
@@ -4578,6 +4711,8 @@
       syncMetaBar()
       refreshContinue()
       refreshLog()
+      SND.music('menu')
+      SND.ambience('calm')
     } catch (e) { /* ignore */ }
   }
 
@@ -4588,6 +4723,8 @@
     if (!cheatActive()) {
       try { localStorage.setItem('cyrene.rogue.best', '5') } catch (e) { /* ignore */ }
     }
+    SND.music('none')
+    SND.ambience('none')
     if (ovEnd) {
       ovEnd.hidden = false
       endBig.textContent = '✦'
@@ -6109,6 +6246,7 @@
     hasTrinket: function (id) { return !!(S && S.trinkets && S.trinkets[id]) },
     pickTrinket: pickTrinket,
     tryRender: function () { try { render(); return null } catch (e) { return e && e.stack ? e.stack : String(e) } },
+    bgm: function () { return { mode: SND.musicMode(), playing: SND.musicPlaying(), muted: SND.isMuted() } },
     killBossType: function (t) {
       if (!S) return false
       for (var i = 0; i < S.enemies.length; i++) {
