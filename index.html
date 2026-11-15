@@ -4559,7 +4559,7 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
   }
 
   var LOGS = [
-    [90, '[SYS_LOAD]', 'cold boot // ETA 03:00'],
+    [90, '[SYS_LOAD]', 'cold boot // ETA 02:00'],
     [110, '[SYS_LOAD]', 'mounting /memory'],
     [480, '[SYS_LOAD]', 'loading core modules'],
     [820, '[OK]', 'sword spirit link established'],
@@ -4568,7 +4568,7 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
     [1880, '[OK]', 'memory core ready'],
   ]
 
-  // 3 分钟长开屏：把 30 条系统日志均匀铺到 20s ~ 2m40s
+  // 2 分钟长开屏：把 30 条系统日志均匀铺到 20s ~ 1m40s
   var LONG_LOGS = [
     ['[SYS_LOAD]', 'scanning hex grid sectors'],
     ['[OK]', 'sector 01/12 verified'],
@@ -4602,7 +4602,7 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
     ['[MEM]', 'final memory integrity 99.7%'],
   ]
   ;(function () {
-    var from = 20000, to = 160000
+    var from = 20000, to = 100000
     for (var i = 0; i < LONG_LOGS.length; i++) {
       var at = Math.round(from + (to - from) * (i / (LONG_LOGS.length - 1)))
       LOGS.push([at, LONG_LOGS[i][0], LONG_LOGS[i][1]])
@@ -4619,11 +4619,11 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
     [120, 'INITIALIZING MEMORY CORE'],
     [760, 'LOADING ASSETS'],
     [20000, 'DECRYPTING ASSETS'],
-    [36000, 'RECONSTRUCTING MEMORY'],
-    [90000, 'SYNCING RESONANCE'],
-    [135000, 'REBUILDING VISUAL CORTEX'],
-    [171000, 'FINALIZING BOOT'],
-    [178000, 'SYNC COMPLETE'],
+    [30000, 'RECONSTRUCTING MEMORY'],
+    [60000, 'SYNCING RESONANCE'],
+    [90000, 'REBUILDING VISUAL CORTEX'],
+    [114000, 'FINALIZING BOOT'],
+    [118000, 'SYNC COMPLETE'],
   ]
   SUBS.forEach(function (item) {
     timers.push(setTimeout(function () {
@@ -4652,7 +4652,7 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
   }
 
   var t0 = 0
-  var DUR = 180000
+  var DUR = 120000
   function tick(ts) {
     if (done) return
     if (!t0) t0 = ts
