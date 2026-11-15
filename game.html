@@ -393,6 +393,45 @@
   @media (prefers-reduced-motion:reduce){#boss-warn span{animation:none}}
 
   #ov-end{z-index:120}
+  /* ---- 剧情系统 ---- */
+  #story{
+    position:fixed;inset:0;z-index:9993;display:grid;place-items:center;
+    padding:24px;background:rgba(8,4,18,.66);backdrop-filter:blur(3px)
+  }
+  #story[hidden]{display:none}
+  .story-card{
+    width:min(560px,92vw);max-height:74vh;overflow-y:auto;
+    padding:18px 18px 16px;border-radius:16px;
+    background:linear-gradient(180deg, rgba(48,18,84,.94), rgba(18,8,34,.96));
+    border:1px solid rgba(199,125,255,.55);
+    box-shadow:0 0 26px rgba(123,44,191,.55), inset 0 0 20px rgba(199,125,255,.12);
+    color:#efe6ff;font-size:.86rem;line-height:1.9;letter-spacing:.02em
+  }
+  .story-card p{margin:0;min-height:3.6em;white-space:pre-wrap}
+  .story-tip{margin-top:10px;font-size:.62rem;color:#b98ce0;text-align:right}
+  .story-card .caret::after{content:'▌';color:#c77dff;animation:caretBlink .7s steps(2) infinite}
+  @keyframes caretBlink{50%{opacity:0}}
+  #boss-line{
+    position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);
+    z-index:9994;pointer-events:none;text-align:center;
+    font-weight:800;font-size:clamp(14px,4.2vw,24px);line-height:1.7;
+    letter-spacing:.04em;max-width:90vw;white-space:pre-wrap;
+    animation:bossLineIn .25s ease-out
+  }
+  #boss-line.red{color:#ff3b57;text-shadow:0 0 14px rgba(255,0,50,.9),0 0 34px rgba(255,0,50,.5);animation:bossLineIn .25s ease-out, warnBlink .6s steps(2) infinite}
+  #boss-line.green{color:#6dffa8;text-shadow:0 0 14px rgba(0,255,130,.85),0 0 34px rgba(0,255,130,.45);animation:bossLineIn .25s ease-out, warnBlink .6s steps(2) infinite}
+  #boss-line.purple{color:#e0b3ff;text-shadow:0 0 14px rgba(199,125,255,.9),0 0 34px rgba(123,44,191,.6);animation:bossLineIn .25s ease-out, warnBlink .6s steps(2) infinite}
+  @keyframes bossLineIn{from{opacity:0;transform:translate(-50%,-50%) scale(.94)}}
+  #boss-line[hidden]{display:none}
+  #ov-event[hidden]{display:none}
+  #ov-event .story-card{max-height:80vh}
+  .event-btn{
+    display:block;width:100%;margin-top:10px;padding:12px 14px;border-radius:12px;
+    border:1px solid rgba(199,125,255,.5);background:rgba(123,44,191,.18);
+    color:#f3e8ff;font-size:.8rem;text-align:left;line-height:1.6
+  }
+  .event-btn:active{background:rgba(199,125,255,.3)}
+  .event-btn b{color:#ffd9a0}
   #fatal{
     position:fixed;inset:0;z-index:2147483000;background:#000;
     display:grid;place-content:center;justify-items:center;gap:18px;
@@ -785,6 +824,20 @@
     <div class="p2-mates" id="p2-mates"></div>
   </div>
   <div id="boss-bar" aria-hidden="true"></div>
+  <div id="story" hidden>
+    <div class="story-card">
+      <p id="story-text"></p>
+      <div class="story-tip" id="story-tip">点击任意处继续</div>
+    </div>
+  </div>
+  <div id="boss-line" hidden></div>
+  <div class="ov ov-global" id="ov-event" hidden>
+    <div class="story-card">
+      <p id="event-text" style="min-height:0"></p>
+      <button type="button" class="event-btn" id="event-a"></button>
+      <button type="button" class="event-btn" id="event-b"></button>
+    </div>
+  </div>
   <div id="boss-warn"><span>⚠️ 警告：终极防线已触发！</span></div>
   <div id="fatal" hidden>
     <div class="fatal-q">❓</div>
@@ -1720,9 +1773,11 @@
         var sx2 = sr.x + (sr.w > 2 ? 1 + rnd(sr.w - 2) : 0)
         var sy2 = sr.y + (sr.h > 2 ? 1 + rnd(sr.h - 2) : 0)
         if (!free(sx2, sy2)) continue
+        var spRoll = rnd(100)
         special = isRestFloor
           ? { kind: 'rest', x: sx2, y: sy2 }
-          : { kind: rnd(100) < 58 ? 'chest' : 'shop', x: sx2, y: sy2 }
+          : (spRoll < 18 ? { kind: 'event', x: sx2, y: sy2 }
+            : { kind: spRoll < 58 ? 'chest' : 'shop', x: sx2, y: sy2 })
         break
       }
     }
@@ -2005,6 +2060,8 @@
       S.talents[t.id] = (S.talents[t.id] || 0) + 1
       S.pending--
       log('天赋「' + t.name + '」已生效。')
+      var hmLine = heroLine(S.hero.id)
+      if (hmLine) log('【' + S.hero.name + '】' + hmLine)
     }
     syncHud()
     render()
@@ -2249,6 +2306,8 @@
     if (ovTeam) ovTeam.hidden = true
     S.paused = false
     log('「' + hero.name + '」加入了队伍。')
+    var recruitLine = heroLine(hero.id)
+    if (recruitLine) setTimeout(function () { log('【' + hero.name + '】' + recruitLine) }, 220)
     SND.chime()
     var newM = S.team[S.team.length - 1]
     if (newM) fx(newM.x, newM.y, hero.name, '#ffd9e6', -0.6)
@@ -2366,6 +2425,7 @@
         var desc = ''
         for (var tk = 0; tk < s2.tiers.length; tk++) if (s2.tiers[tk].n === newT) desc = s2.tiers[tk].desc
         toast('【' + s2.name + '】羁绊已激活！' + desc)
+        if (s2.id === 'train') log('【星穹列车组】跃迁坐标已锁定，全体冲锋！')
         SND.level()
       } else if (newT < oldT && oldT > 0) {
         toast('【' + s2.name + '】羁绊失效')
@@ -3555,6 +3615,9 @@
       }
     }
     var m = genMap(S.floor, S.seed + S.floor * 7919)
+    if (S.floor === 10) setTimeout(function () { showBossLine('铁墓：数据即真理，你们只是无用的乱码。', 'red') }, 120)
+    if (S.floor === 20) setTimeout(function () { showBossLine('迪克：想找回记忆？问过我的键盘了吗？', 'green') }, 120)
+    if (S.floor === 30) setTimeout(function () { showBossLine('铁墓与迪克：终极防火墙已启动，系统将彻底重置！', 'purple') }, 120)
     if (S.floor === 30) setTimeout(showBossWarn, 60)
     S.grid = m.grid; S.items = m.items; S.enemies = m.enemies
     S.player.x = m.start.x; S.player.y = m.start.y
@@ -4436,6 +4499,7 @@
       S.special = null
       if (spKind === 'chest') openChest()
       else if (spKind === 'rest') restTeam()
+      else if (spKind === 'event') openEventRoom()
       else openShop()
     }
     if (!S.noStairs && x === S.stairs.x && y === S.stairs.y) {
@@ -5385,6 +5449,117 @@
     })
   }
 
+  /* ---------------- 剧情系统 ---------------- */
+  var HERO_LINES = {
+    thanos: '天命，由我掌控。',
+    nailong: '嗷呜！今天也要吃光地牢！',
+    murasame: '刀出鞘，就别指望我收回去。',
+    sparkle: '剧情？我只看乐子。',
+    mika: '别怕，我会把你们一个个捡回来的。',
+    firefly: '光还在，就还没到终点。',
+    pig: '猪猪侠，出发！',
+    taffy: '直播间的家人们，看我拆了这层。',
+    fatcat: '喵——先睡一觉再说。',
+    trailblazer: '列车不停，脚步不止。',
+    march: '拍照留念，顺便敲碎它！',
+    danheng: '速战速决。',
+  }
+
+  function heroLine(id) { return HERO_LINES[id] || '' }
+
+  function typeText(el, text, speed, done) {
+    if (!el) { if (done) done(); return }
+    el.textContent = ''
+    el.classList.add('caret')
+    var i = 0
+    clearInterval(typeText._t)
+    typeText._t = setInterval(function () {
+      i++
+      el.textContent = text.slice(0, i)
+      if (i >= text.length) {
+        clearInterval(typeText._t)
+        el.classList.remove('caret')
+        if (done) done()
+      }
+    }, speed || 38)
+  }
+
+  function skipStory() {
+    var el = $('story-text')
+    if (el) { clearInterval(typeText._t); el.textContent = STORY_TEXT; el.classList.remove('caret') }
+    var st = $('story')
+    if (st && !st.hidden) {
+      st.hidden = true
+      try { SND.chime() } catch (e) { /* ignore */ }
+    }
+  }
+
+  var STORY_TEXT = '公元 2077 年，多元宇宙的记忆核心崩溃了。\n黑客迪克篡改了数据，铁墓封锁了深渊。\n作为被选中的记忆行者，你唯一能做的，就是一层层往下砸，\n直到铁墓先倒下。'
+
+  function showOpening() {
+    var st = $('story')
+    if (!st) return
+    st.hidden = false
+    typeText($('story-text'), STORY_TEXT, 34)
+  }
+
+  function showBossLine(text, tone) {
+    var el = $('boss-line')
+    if (!el) return
+    el.textContent = text
+    el.className = tone || 'purple'
+    el.hidden = false
+    clearTimeout(showBossLine._t)
+    showBossLine._t = setTimeout(function () { el.hidden = true }, 3400)
+  }
+
+  function openEventRoom() {
+    if (!S || !$('ov-event')) return
+    S.paused = true
+    var a = $('event-a'), b2 = $('event-b')
+    if (a) a.innerHTML = '<b>献祭 5 点生命</b><br>换取一件奇物（生命不足 6 点时无法选择）'
+    if (b2) b2.innerHTML = '<b>喝下奇怪的药水</b><br>50% 回满血，50% 掉一半血'
+    var txt = $('event-text')
+    if (txt) txt.textContent = '低语从墙缝里渗出来：「拿点什么来换吧……」'
+    if (a) a.disabled = S.hp <= 5
+    $('ov-event').hidden = false
+  }
+
+  function closeEventRoom() {
+    if ($('ov-event')) $('ov-event').hidden = true
+    if (S) S.paused = false
+    render(); syncHud()
+  }
+
+  function eventChoose(kind) {
+    if (!S) return
+    if (kind === 'a') {
+      if (S.hp <= 5) { closeEventRoom(); return }
+      S.hp -= 5
+      var tk = pick(TRINKETS)
+      if (S.dual && S.p2) {
+        var bb = snapshotStats()
+        pickTrinket(tk.id)
+        applyPickupStats(bb, 'p1')
+      } else {
+        pickTrinket(tk.id)
+      }
+      log('你献祭了 5 点生命，换来了「' + tk.name + '」。')
+    } else {
+      if (Math.random() < 0.5) {
+        S.hp = S.maxHp
+        if (S.dual && S.p2) S.p2.hp = S.p2.maxHp
+        log('奇怪的药水居然有效：全队回满。')
+      } else {
+        S.hp = Math.max(1, Math.floor(S.hp / 2))
+        if (S.dual && S.p2) S.p2.hp = Math.max(1, Math.floor(S.p2.hp / 2))
+        log('药水是假的，生命被抽走了一半。')
+      }
+    }
+    closeEventRoom()
+    syncHud(); render()
+  }
+
   /* ---------------- 本地双人 ---------------- */
   function buildDuoGrid(box, who) {
     box.innerHTML = ''
@@ -5726,6 +5901,10 @@
     choosing = false
     newRun(heroId, seed)
     running = true
+    if (!window.__introShown) {
+      window.__introShown = true
+      setTimeout(showOpening, 260)
+    }
     if (p2Hud) p2Hud.hidden = true
     if ($('dual-stats')) $('dual-stats').hidden = true
     try { document.body.classList.remove('dual-on') } catch (e) { /* ignore */ }
@@ -5795,6 +5974,9 @@
       if (lastSeed && seedLine) seedLine.textContent = '上次种子 ' + lastSeed + '（留空=随机）'
     } catch (e) { /* ignore */ }
   }
+  if ($('story')) $('story').addEventListener('click', skipStory)
+  if ($('event-a')) $('event-a').addEventListener('click', function () { eventChoose('a') })
+  if ($('event-b')) $('event-b').addEventListener('click', function () { eventChoose('b') })
   if ($('duo-open')) $('duo-open').addEventListener('click', openDuo)
   if ($('duo-cancel') && ovDuo) $('duo-cancel').addEventListener('click', closeDuo)
   if (duoStartBtn) duoStartBtn.addEventListener('click', function () {
@@ -5900,6 +6082,9 @@
     specialPos: function () { return S ? S.special : null },
     altarPos: function () { return S ? S.altar : null },
     openAltar: openAltar,
+    eventNow: function () { openEventRoom() },
+    chooseEvent: function (k) { eventChoose(k) },
+    bossLine: function (t, c) { showBossLine(t, c) },
     recruitAs: function (who, id) { recruitOwner = who; var h = heroById(id); if (h) recruit(h) },
     p2syn: function () { return S && S.p2 ? (S.p2.syn || null) : null },
     p2LevelUp: function () { if (S && S.p2) { S.p2.pending = 1; openTalent('p2') } },
