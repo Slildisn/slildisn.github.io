@@ -4830,7 +4830,7 @@
     if (ds) {
       if (S.dual && S.p2) {
         ds.hidden = false
-        if (ds1) ds1.textContent = 'P1 攻' + S.atk + ' Lv' + S.level + ' 金' + (S.gold || 0) + ' EXP' + S.xp + '/' + S.xpNext + ' 层' + S.floor + ' 门' + dirArrow()
+        if (ds1) ds1.textContent = 'P1 攻' + S.atk + ' Lv' + S.level + ' 金' + (S.gold || 0) + ' EXP' + S.xp + '/' + S.xpNext + ' 层' + S.floor
         if (ds2) ds2.textContent = 'P2 攻' + S.p2.atk + ' ❤' + Math.max(0, S.p2.hp) + '/' + S.p2.maxHp + ' 层' + S.floor
       } else {
         ds.hidden = true
@@ -4928,8 +4928,118 @@
     }
   }
 
-  function renderImpl() {
+  // 光门/楼梯指引：屏内画动态下指箭头 + 脉动光环，屏外钉在各自视口边缘
+  function drawGateGuide(who, camX, camY, vw, vh) {
+    if (!S || !running || S.over || !S.stairs || S.noStairs) return
+    var p = who === 'p2' ? (S.dual ? S.p2 : null) : S.player
+    if (!p) return
+    if (who === 'p2' && (p.dead || p.hp <= 0)) return
+    var st = S.stairs
+    if (p.x === st.x && p.y === st.y) return
+
+    var vpW = vw * TS, vpH = vh * TS
+    var col = who === 'p2'
+      ? { main: '#ffd166', alt: '#7fd8ff' }
+      : { main: '#ff6fa8', alt: '#c77dff' }
+    var now = Date.now()
+    var pulse = 0.5 + 0.5 * Math.sin(now / 240)
+    var sx = (st.x - camX) * TS + TS / 2
+    var sy = (st.y - camY) * TS + TS / 2
+    var onScreen = sx > TS * 0.55 && sx < vpW - TS * 0.55 && sy > TS * 0.55 && sy < vpH - TS * 0.55
+
+    if (onScreen) {
+      // 光门头顶：两层错峰下坠的发光箭头
+      var bob = Math.sin(now / 230) * TS * 0.06
+      var baseY = Math.max(TS * 0.55, sy - TS * 1.15 + bob)
+      ctx.save()
+      ctx.translate(sx, baseY)
+      for (var ci = 0; ci < 2; ci++) {
+        var off = ((now / 560 + ci * 0.5) % 1)
+        ctx.save()
+        ctx.translate(0, (off - 0.5) * TS * 0.38)
+        ctx.globalAlpha = (0.95 - off * 0.55) * (0.7 + pulse * 0.3)
+        ctx.shadowColor = col.main
+        ctx.shadowBlur = 12 + pulse * 12
+        ctx.fillStyle = col.main
+        ctx.beginPath()
+        ctx.moveTo(0, TS * 0.30)
+        ctx.lineTo(-TS * 0.30, TS * (-0.12))
+        ctx.lineTo(-TS * 0.11, TS * (-0.12))
+        ctx.lineTo(-TS * 0.11, TS * (-0.34))
+        ctx.lineTo(TS * 0.11, TS * (-0.34))
+        ctx.lineTo(TS * 0.11, TS * (-0.12))
+        ctx.lineTo(TS * 0.30, TS * (-0.12))
+        ctx.closePath(); ctx.fill()
+        ctx.shadowBlur = 0
+        ctx.strokeStyle = 'rgba(9,7,16,.88)'
+        ctx.lineWidth = Math.max(2, TS * 0.07)
+        ctx.stroke()
+        ctx.globalAlpha = 0.55
+        ctx.fillStyle = col.alt
+        ctx.beginPath()
+        ctx.moveTo(0, TS * 0.18)
+        ctx.lineTo(-TS * 0.16, TS * (-0.08))
+        ctx.lineTo(TS * 0.16, TS * (-0.08))
+        ctx.closePath(); ctx.fill()
+        ctx.restore()
+      }
+      ctx.restore()
+      // 光门脉动光环
+      ctx.save()
+      ctx.strokeStyle = col.alt
+      ctx.globalAlpha = 0.30 + pulse * 0.35
+      ctx.lineWidth = Math.max(1.5, TS * 0.06)
+      ctx.shadowColor = col.alt
+      ctx.shadowBlur = 8 + pulse * 8
+      ctx.beginPath(); ctx.arc(sx, sy, TS * (0.44 + pulse * 0.10), 0, Math.PI * 2); ctx.stroke()
+      ctx.restore()
+      return
+    }
+
+    // 屏外：从视口中心指向光门，把箭头钉在视口边缘
+    var cx = vpW / 2, cy = vpH / 2
+    var dx = sx - cx, dy = sy - cy
+    if (!dx && !dy) return
+    var pad = Math.max(16, TS * 0.95)
+    var tx = dx > 0 ? (vpW - pad - cx) / dx : dx < 0 ? (pad - cx) / dx : Infinity
+    var ty = dy > 0 ? (vpH - pad - cy) / dy : dy < 0 ? (pad - cy) / dy : Infinity
+    var tt = Math.min(tx, ty)
+    if (!isFinite(tt) || tt <= 0) return
+
+    var ax = cx + dx * tt, ay = cy + dy * tt
+    var ang = Math.atan2(dy, dx)
+    var wob = Math.sin(now / 170) * TS * 0.07
+
+    ctx.save()
+    ctx.translate(ax + Math.cos(ang) * wob, ay + Math.sin(ang) * wob)
+    ctx.rotate(ang)
+    ctx.globalAlpha = 0.72 + pulse * 0.28
+    ctx.shadowColor = col.main
+    ctx.shadowBlur = 12 + pulse * 14
+    ctx.fillStyle = col.main
+    ctx.beginPath()
+    ctx.moveTo(TS * 0.62, 0)
+    ctx.lineTo(TS * 0.10, -TS * 0.26)
+    ctx.lineTo(TS * 0.10, -TS * 0.11)
+    ctx.lineTo(-TS * 0.46, -TS * 0.11)
+    ctx.lineTo(-TS * 0.46, TS * 0.11)
+    ctx.lineTo(TS * 0.10, TS * 0.11)
+    ctx.lineTo(TS * 0.10, TS * 0.26)
+    ctx.closePath(); ctx.fill()
+    ctx.shadowBlur = 0
+    ctx.globalAlpha = 0.7
+    ctx.fillStyle = col.alt
+    ctx.beginPath()
+    ctx.moveTo(TS * 0.44, 0)
+    ctx.lineTo(TS * 0.06, -TS * 0.13)
+    ctx.lineTo(TS * 0.06, TS * 0.13)
+    ctx.closePath(); ctx.fill()
+    ctx.restore()
+  }
+
+  function renderImpl(who) {
     if (!ctx || !S) return
+    who = who === 'p2' ? 'p2' : 'p1'
     var camSrc = S.__cam || S.player
     var vw = S.__vw || VIEW_W
     var vh = S.__vh || VIEW_H
@@ -5482,6 +5592,8 @@
         ctx.globalAlpha = 1
       }
     }
+
+    drawGateGuide(who, camX, camY, vw, vh)
   }
 
   /* ---------------- 输入 ---------------- */
@@ -5936,11 +6048,11 @@
       ctx.fillStyle = '#0a0910'; ctx.fillRect(0, 0, cv.width, cv.height)
       S.__cam = { x: S.player.x, y: S.player.y }
       ctx.save(); ctx.beginPath(); ctx.rect(0, 0, cv.width, halfH); ctx.clip()
-      renderImpl(); ctx.restore()
+      renderImpl('p1'); ctx.restore()
       S.__cam = { x: S.p2.x, y: S.p2.y }
       ctx.save(); ctx.beginPath(); ctx.rect(0, halfH, cv.width, cv.height - halfH); ctx.clip()
       ctx.fillStyle = '#0a0910'; ctx.fillRect(0, halfH, cv.width, cv.height - halfH)
-      ctx.translate(0, halfH); renderImpl(); ctx.restore()
+      ctx.translate(0, halfH); renderImpl('p2'); ctx.restore()
       S.__cam = null; S.__vw = null; S.__vh = null
       var gdiv = ctx.createLinearGradient(0, halfH - 8, 0, halfH + 8)
       gdiv.addColorStop(0, 'rgba(199,125,255,0)')
@@ -5966,7 +6078,7 @@
     try { ctx.setTransform(1, 0, 0, 1, 0, 0) } catch (e) { /* ignore */ }
     ctx.save()
     ctx.beginPath(); ctx.rect(0, 0, halfW, cv.height); ctx.clip()
-    renderImpl()
+    renderImpl('p1')
     ctx.restore()
 
     // P2 视口：独立 transform / 独立裁剪 / 独立背景，绝不继承 P1 的状态
@@ -5977,7 +6089,7 @@
     ctx.fillStyle = '#0a0910'
     ctx.fillRect(halfW, 0, cv.width - halfW, cv.height)
     ctx.translate(halfW, 0)
-    renderImpl()
+    renderImpl('p2')
     ctx.restore()
     try { ctx.setTransform(1, 0, 0, 1, 0, 0) } catch (e) { /* ignore */ }
 
