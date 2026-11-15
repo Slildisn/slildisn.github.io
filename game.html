@@ -783,6 +783,63 @@
   .syn-preview.up{color:#ffd9a0}
   .syn-preview.down{color:#ff8a9c}
   .syn-replace{font-size:.62rem;color:#ff9ec4}
+
+/* ============================================================
+   选人/双人选人：安全区 + 独立滚动修复
+   ============================================================ */
+#ov-select, #ov-duo{
+  top:0;bottom:0;
+  height:100vh;
+  height:100dvh;
+  box-sizing:border-box;
+  padding-top:40px !important;
+  padding-top:max(40px, calc(env(safe-area-inset-top, 0px) + 20px)) !important;
+  padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 16px) !important;
+}
+#ov-select{
+  display:flex;flex-direction:column;justify-content:flex-start;
+  gap:8px;overflow:hidden;
+}
+#ov-select > *{flex:0 0 auto}
+#ov-select > .pick{
+  flex:1 1 0;
+  min-height:0;
+  max-height:calc(100dvh - 180px);
+  width:100%;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  overscroll-behavior:contain;
+  align-content:start;
+  padding:2px 4px 12px;
+}
+#ov-select .meta-bar,
+#ov-select .seed-row,
+#ov-select .seed,
+#ov-select #cont-run{flex:0 0 auto}
+#ov-duo{
+  overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  overscroll-behavior:contain;
+}
+
+/* 菜单/选人时隐藏局内 HUD，避免固定血条压住标题 */
+body.menu-mode .hud,
+body.menu-mode #p2-hud{display:none !important}
+/* 双人 HUD 永远在弹层之下，不再盖住天赋/宝箱/选人 */
+body.dual-on .hud,
+body.dual-on #p2-hud,
+body.dual-on #p2-hud[hidden]{z-index:50}
+
+@media (max-height:560px){
+  #ov-select{gap:5px}
+  #ov-select > p,
+  #ov-select .seed{display:none}
+  #ov-select .meta-bar{margin-top:4px;padding:4px 10px}
+  #ov-select > .pick{min-height:80px}
+}
 </style>
 <script>
   if ('serviceWorker' in navigator) {
@@ -3589,6 +3646,15 @@
     if (!d) { refreshContinue(); return }
     S = d
     running = true
+    setMenuChrome(false)
+    if (d.dual && d.p2) {
+      try { document.body.classList.add('dual-on') } catch (e) { /* ignore */ }
+      if (p2Hud) p2Hud.hidden = false
+    } else {
+      try { document.body.classList.remove('dual-on') } catch (e) { /* ignore */ }
+      if (p2Hud) p2Hud.hidden = true
+    }
+    try { fit() } catch (e) { /* ignore */ }
     SND.ambience((d.floor === 10 || d.floor === 20 || d.floor === 30) ? 'boss' : 'calm')
     SND.music((d.floor === 10 || d.floor === 20 || d.floor === 30) ? 'boss' : 'dungeon')
     if (ovSelect) ovSelect.hidden = true
@@ -4676,6 +4742,20 @@
     render()
   }
 
+  // 菜单/选人态：隐藏局内 HUD，彻底清掉双人固定布局
+  function setMenuChrome(on) {
+    try {
+      if (on) document.body.classList.add('menu-mode')
+      else document.body.classList.remove('menu-mode')
+    } catch (e) { /* ignore */ }
+    if (on) {
+      try { document.body.classList.remove('dual-on') } catch (e) { /* ignore */ }
+      if (p2Hud) p2Hud.hidden = true
+      if ($('dual-stats')) $('dual-stats').hidden = true
+      if (ovDuo) ovDuo.hidden = true
+    }
+  }
+
   function backToMenu() {
     try {
       running = false
@@ -4696,7 +4776,11 @@
       if ($('boss-warn')) $('boss-warn').classList.remove('on')
       if ($('boss-bar')) { $('boss-bar').classList.remove('on'); $('boss-bar').innerHTML = '' }
       if (ctx && cv) { ctx.fillStyle = '#0a0910'; ctx.fillRect(0, 0, cv.width, cv.height) }
+      setMenuChrome(true)
       if (ovSelect) ovSelect.hidden = false
+      var hintEl = document.querySelector('.hint')
+      if (hintEl) hintEl.textContent = '在画面上滑动即可移动，撞到敌人就是攻击。'
+      try { fit() } catch (e) { /* ignore */ }
       buildPicker()
       syncMetaBar()
       refreshContinue()
@@ -5841,6 +5925,7 @@
 
   function openDuo() {
     if (!ovDuo) return
+    setMenuChrome(true)
     duoSel1 = null; duoSel2 = null
     buildDuo()
     if (ovSelect) ovSelect.hidden = true
@@ -5856,6 +5941,7 @@
   }
 
   function closeDuo() {
+    setMenuChrome(true)
     if (ovDuo) ovDuo.hidden = true
     if (ovSelect) ovSelect.hidden = false
     var btn = $('duo-open')
@@ -5925,6 +6011,7 @@
   }
 
   function setupP2(id2) {
+    setMenuChrome(false)
     var h = heroById(id2)
     if (!h || !S) return
     var up = META.up || {}
@@ -6158,6 +6245,7 @@
     }
     if (p2Hud) p2Hud.hidden = true
     if ($('dual-stats')) $('dual-stats').hidden = true
+    setMenuChrome(false)
     try { document.body.classList.remove('dual-on') } catch (e) { /* ignore */ }
     var hintEl = document.querySelector('.hint')
     if (hintEl) hintEl.textContent = '在画面上滑动即可移动，撞到敌人就是攻击。'
@@ -6270,6 +6358,7 @@
     loadMeta()
     syncMetaBar()
     buildPicker()
+    setMenuChrome(true)
     fit()
     var seed = Date.now() % 1000000
     if (seedLine) seedLine.textContent = '种子 ' + seed
