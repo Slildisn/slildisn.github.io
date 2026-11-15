@@ -2,15 +2,13 @@
 
 # 🕯️ 铁墓大乱斗 (Iron Tomb Brawl) - Demo 版
 
-[![下载安卓 APK](https://img.shields.io/badge/%F0%9F%93%A5%20%E4%B8%8B%E8%BD%BD-APK%20V1.0-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/Slildisn/slildisn.github.io/releases/latest)
-[![Release v1.0.0](https://img.shields.io/badge/Release-v1.0.0-8A2BE2?style=for-the-badge&logo=github)](https://github.com/Slildisn/slildisn.github.io/releases/tag/v1.0.0)
-
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-Installable-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
 ![AI-Generated](https://img.shields.io/badge/AI--Generated-100%25-ff69b4?style=for-the-badge)
 ![Roguelike](https://img.shields.io/badge/Roguelike-2D%20Turn--Based-4b0082?style=for-the-badge)
 
-### [ 🎮 立即在线试玩 ](https://slildisn.github.io/game.html)
+[![在线试玩](https://img.shields.io/badge/%F0%9F%8E%AE%20%E5%9C%A8%E7%BA%BF%E8%AF%95%E7%8E%A9-game.html-3DDC84?style=for-the-badge)](https://slildisn.github.io/game.html)
+[![下载安卓 APK](https://img.shields.io/badge/%F0%9F%93%A5%20%E4%B8%8B%E8%BD%BD-APK%20V1.0-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/Slildisn/slildisn.github.io/releases/latest)
 
 ![封面](docs/shots/cover.png)
 
@@ -26,13 +24,39 @@
 
 ---
 
-## ✨ 核心特色（Demo 版已实装）
+## ✨ 最新卖点
 
-- 🎭 **多元跨界阵容**：星穹列车组、漫威、国漫等 **13+ 位角色**与专属羁绊。
-- ⚔️ **史诗级三段 BOSS 战**：第 10 层 **铁墓**、第 20 层 **黑客迪克**、第 30 层 **双 BOSS 混合双打大平台**。
-- 🎲 **高自由度肉鸽**：局内奇物（含**命运扭蛋机**、**免死稻草人**）、天赋叠加、局内外双成长。
-- 🐍 **贪吃蛇式组队**：最高 **5 人满编小队**，完美跟随机制。
-- 🛡️ **硬核防盗机制**：自带域名锁定、反调试与黑屏问号处决系统。
+### 🖥️ 双人同屏分屏
+
+- **一台设备、两个人开黑**：横屏左右分屏，竖屏上下分屏
+- **独立视野**：P1/P2 各自一部摄像机，各看各的半屏
+- **独立仇恨**：怪物会随机锁定任何一名玩家，AOE 同时命中两人
+- **各自带队**：每人最多 5 名队友，独立队列跟随、独立羁绊、独立天赋
+- 触屏严格分区：左半屏归 P1，右半屏归 P2，双指可同时操作
+
+### 🎭 沉浸式剧情
+
+- **赛博朋克开场白**：打字机逐字播放，点击先补全再关闭
+- **三段 BOSS 台词**：第 10 层红字铁墓、第 20 层绿字迪克、第 30 层紫字双 BOSS
+- **随机事件房**：献祭生命换奇物，或赌一瓶回满/减半的怪药水
+- **角色专属台词**：招募、升级三选一、激活羁绊时弹出各自的口头禅
+
+### 🌐 全平台支持
+
+- **网页**：打开即玩，无需安装
+- **PWA**：安装到主屏幕，全屏运行、断网可玩
+- **安卓 APK**：独立安装包，内置同款玩法
+- **赛博朋克 UI**：霓虹紫双人 HUD、发光分割线、深紫半透明面板
+
+### ⚔️ 史诗级三段 BOSS 战
+
+- 第 **10 层** 铁墓 / 第 **20 层** 黑客迪克 / 第 **30 层** 双 BOSS 混合双打
+- 第 30 层无楼梯，两人全部倒下 BOSS 才算通关，击杀其一另一个立刻狂暴
+
+### 🛡️ 硬核防盗机制
+
+- 域名锁定、反调试、作者标记校验
+- 未授权部署或篡改源码 → 黑屏问号处决
 
 ---
 
@@ -47,6 +71,6 @@
 
 **Demo 版本 · 持续更新中**
 
-[仓库](https://github.com/Slildisn/slildisn.github.io) · [在线试玩](https://slildisn.github.io/game.html)
+[仓库](https://github.com/Slildisn/slildisn.github.io) · [在线试玩](https://slildisn.github.io/game.html) · [下载 APK](https://github.com/Slildisn/slildisn.github.io/releases/latest)
 
 </div>
