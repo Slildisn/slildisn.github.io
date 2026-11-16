@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <script>
   /* 防盗：非官方部署域名立即踢回官网。
-     放行本地调试（localhost / 127.0.0.1）与 APK/WebView 壳（file:/appassets），
+     放行本地调试（localhost / 127.0.0.1）、Vercel（*.vercel.app）与 APK/WebView 壳（file:/appassets），
      其它 http(s) 镜像站一律不加载游戏本体。 */
   ;(function () {
     try {
@@ -13,6 +13,7 @@
       var h = String((location && location.hostname) || '').toLowerCase()
       if (!h) return
       if (h === 'slildisn.github.io' || h === 'localhost' || h === '127.0.0.1' || h === 'appassets.androidplatform.net') return
+      if (h.slice(-11) === '.vercel.app') return
       window.location.replace('https://slildisn.github.io/game.html')
     } catch (e) { /* ignore */ }
   })()
@@ -2999,6 +3000,7 @@ body.dual-on #p2-hud[hidden]{z-index:50}
       var h = String((location && location.hostname) || '').toLowerCase()
       if (!h) return true
       if (h === 'slildisn.github.io' || h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0') return true
+      if (h.length > 11 && h.slice(-11) === '.vercel.app') return true
       if (h.length > 10 && h.slice(-10) === '.localhost') return true
       if (h === 'appassets.androidplatform.net') return true
       if (isShellEnv()) return true
