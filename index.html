@@ -4559,7 +4559,7 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
   }
 
   var LOGS = [
-    [90, '[SYS_LOAD]', 'cold boot // ETA 00:20'],
+    [90, '[SYS_LOAD]', 'cold boot // ETA 01:00'],
     [110, '[SYS_LOAD]', 'mounting /memory'],
     [480, '[SYS_LOAD]', 'loading core modules'],
     [820, '[OK]', 'sword spirit link established'],
@@ -4568,7 +4568,7 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
     [1880, '[OK]', 'memory core ready'],
   ]
 
-  // 20 秒短开屏：取前 10 条系统日志均匀铺到 3s ~ 18.5s
+  // 1 分钟长开屏：把 30 条系统日志均匀铺到 3s ~ 56s
   var LONG_LOGS = [
     ['[SYS_LOAD]', 'scanning hex grid sectors'],
     ['[OK]', 'sector 01/12 verified'],
@@ -4602,8 +4602,8 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
     ['[MEM]', 'final memory integrity 99.7%'],
   ]
   ;(function () {
-    var from = 3000, to = 18500
-    var longCount = Math.min(10, LONG_LOGS.length)
+    var from = 3000, to = 56000
+    var longCount = LONG_LOGS.length
     for (var i = 0; i < longCount; i++) {
       var at = Math.round(from + (to - from) * (i / (longCount - 1)))
       LOGS.push([at, LONG_LOGS[i][0], LONG_LOGS[i][1]])
@@ -4619,12 +4619,12 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
   var SUBS = [
     [120, 'INITIALIZING MEMORY CORE'],
     [760, 'LOADING ASSETS'],
-    [4000, 'DECRYPTING ASSETS'],
-    [8000, 'RECONSTRUCTING MEMORY'],
-    [12000, 'SYNCING RESONANCE'],
-    [15500, 'REBUILDING VISUAL CORTEX'],
-    [18000, 'FINALIZING BOOT'],
-    [19300, 'SYNC COMPLETE'],
+    [10000, 'DECRYPTING ASSETS'],
+    [20000, 'RECONSTRUCTING MEMORY'],
+    [35000, 'SYNCING RESONANCE'],
+    [48000, 'REBUILDING VISUAL CORTEX'],
+    [55000, 'FINALIZING BOOT'],
+    [58000, 'SYNC COMPLETE'],
   ]
   SUBS.forEach(function (item) {
     timers.push(setTimeout(function () {
@@ -4653,7 +4653,7 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
   }
 
   var t0 = 0
-  var DUR = 20000
+  var DUR = 60000
   function tick(ts) {
     if (done) return
     if (!t0) t0 = ts
