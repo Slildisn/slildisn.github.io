@@ -1,7 +1,8 @@
 <div align="center">
 
-# 🕯️ 铁墓大乱斗 (Iron Tomb Brawl) - Demo 版
+# 🕯️ 铁墓大乱斗 (Iron Tomb Brawl) - 官方正版
 
+![Official Version](https://img.shields.io/badge/Official%20Version-CYRENE%20Studio-FFD700?style=for-the-badge&labelColor=6B21A8)
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-Installable-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
 ![Human-Directed](https://img.shields.io/badge/Human--Directed-AI--Assisted-7b61ff?style=for-the-badge)
@@ -18,7 +19,7 @@
 
 ## 📖 游戏简介
 
-> 由 **王纳** 设计、导演并测试，AI 辅助编码完成的 **2D 回合制肉鸽网页游戏 Demo**。
+> 由 **CYRENE Studio** 设计、导演并测试，AI 辅助编码完成的 **2D 回合制肉鸽网页游戏 Demo**。
 
 从灭霸开始，一层层往下砸：随机房间、随机怨灵、随机宝箱。招募队友、凑齐羁绊、叠满奇物，用一根手指滑动着把地牢拆掉。
 
@@ -62,9 +63,11 @@
 
 ## 📜 署名与原创说明
 
-- **Designed & Directed by 王纳**
+- **Official Version · CYRENE Studio**
+- **Designed & Directed by CYRENE**
+- **© 2024 CYRENE Studio. All Rights Reserved.**
 - 本项目未引入任何游戏引擎、框架或第三方 JS/CSS 库；代码、UI、数值与玩法实现均在本仓库内完成。
-- 角色名称、立绘与同人素材版权归原权利方所有；本项目为非官方同人作品，代码与玩法实现归王纳所有。
+- 角色名称、立绘与同人素材版权归原权利方所有；本项目为非官方同人作品，代码与玩法实现归 CYRENE Studio 所有。
 - 完整条款见 [LICENSE](./LICENSE)。
 
 ---
@@ -72,7 +75,7 @@
 ## 🧑‍💻 开发者手记
 
 > 本项目耗时仅 **24 小时**，没有使用游戏引擎，纯 **HTML5 Canvas** 实现。
-> 王纳负责设计、导演、测试与验收；AI 辅助编码与部署。
+> CYRENE Studio 负责设计、导演、测试与验收；AI 辅助编码与部署。
 
 ---
 

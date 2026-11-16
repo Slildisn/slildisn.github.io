@@ -18,10 +18,10 @@
   })()
 </script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>铁墓大乱斗：从灭霸开始 ｜ 昔涟 CYRENE</title>
+<title>铁墓大乱斗 官方正版 | CYRENE Studio</title>
 <meta name="description" content="昔涟同人站的小游戏《铁墓大乱斗：从灭霸开始》——回合制肉鸽地牢，14 位跨次元角色可选，逐层下降、拾取遗物与奇物、击败铁墓。纯前端、可离线安装。">
 <meta name="author" content="CYRENE_Original">
-<meta name="director" content="王纳">
+<meta name="director" content="CYRENE">
 <meta name="theme-color" content="#2a1b3d">
 <meta name="application-name" content="铁墓大乱斗">
 <meta name="mobile-web-app-capable" content="yes">
@@ -173,6 +173,7 @@
   #credit{margin:14px 0 2px;text-align:center;font:600 .6rem/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;color:rgba(210,180,255,.60);text-shadow:0 0 10px rgba(169,139,255,.30)}
   #credit b{color:#ffe9ff;font-weight:700;text-shadow:0 0 12px rgba(255,158,196,.55)}
   body.dual-on #credit{font-size:.52rem;margin:6px 0 0;opacity:.8}
+  #official-copyright{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom, 0px) + 3px);z-index:76;text-align:center;pointer-events:none;padding:0 8px;font:500 .44rem/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;color:rgba(220,200,255,.52);text-shadow:0 0 8px rgba(169,139,255,.32);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
   /* overlays */
   .ov{
@@ -1246,7 +1247,9 @@ body.dual-on #p2-hud[hidden]{z-index:50}
 
   <p class="hint">在画面上滑动即可移动，撞到敌人就是攻击。</p>
 
-  <p id="credit">Designed &amp; Directed by <b>王纳</b></p>
+  <div id="official-copyright">© 2024 CYRENE Studio. Designed &amp; Directed by CYRENE. All Rights Reserved.</div>
+
+  <p id="credit">© 2024 CYRENE Studio. Designed &amp; Directed by <b>CYRENE</b>. All Rights Reserved.</p>
 
 </div>
 
@@ -1254,7 +1257,7 @@ body.dual-on #p2-hud[hidden]{z-index:50}
 ;(function () {
   'use strict'
 
-  var DIRECTOR = '王纳'
+  var DIRECTOR = 'CYRENE'
 
   /* ---------------- 数据 ---------------- */
   var HEROES = [
@@ -2988,7 +2991,7 @@ body.dual-on #p2-hud[hidden]{z-index:50}
       ].join('\n')
       console.log('%c' + art, 'color:#ff2d55;font-weight:700;font-size:11px;line-height:1.05')
       console.log('%c警告：这里是系统底层，请勿非法篡改代码！', 'color:#fff;background:#c40024;font-size:20px;font-weight:800;padding:8px 14px;border-radius:6px')
-      console.log('%cDesigned & Directed by 王纳', 'color:#c77dff;font-weight:700;font-size:12px')
+      console.log('%cDesigned & Directed by CYRENE · © 2024 CYRENE Studio', 'color:#c77dff;font-weight:700;font-size:12px')
     } catch (e) { /* ignore */ }
   }
 
@@ -3014,6 +3017,8 @@ body.dual-on #p2-hud[hidden]{z-index:50}
       if (!d || String(d.getAttribute('content')) !== DIRECTOR) return false
       var c = document.getElementById('credit')
       if (!c || String(c.textContent || '').indexOf('Designed & Directed by ' + DIRECTOR) < 0) return false
+      var oc = document.getElementById('official-copyright')
+      if (!oc || String(oc.textContent || '').indexOf('© 2024 CYRENE Studio') < 0) return false
       return true
     } catch (e) { return false }
   }
@@ -6735,6 +6740,6 @@ body.dual-on #p2-hud[hidden]{z-index:50}
   }
 })()
 </script>
-<!-- Designed & Directed by 王纳 · Copyright (c) 2026. All rights reserved. -->
+<!-- Designed & Directed by CYRENE · © 2024 CYRENE Studio. All rights reserved. -->
 </body>
 </html>

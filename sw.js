@@ -2,7 +2,7 @@
  * 页面导航：网络优先，断网回退缓存
  * 静态资源：缓存优先 + 网络回填
  */
-const CACHE = 'iron-tomb-v27'
+const CACHE = 'iron-tomb-v28'
 const PRECACHE = ['./', './game.html', './manifest.json', './icon-192.png', './icon-512.png', './assets/boss-dick.png']
 
 self.addEventListener('install', (event) => {

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="director" content="王纳">
-<title>昔涟 · CYRENE ｜ 不同以往的浪漫故事</title>
+<meta name="director" content="CYRENE">
+<title>铁墓大乱斗 官方正版 | CYRENE Studio</title>
 <meta name="description" content="昔涟（Cyrene）：《崩坏：星穹铁道》翁法罗斯篇章的角色档案、故事与表情集。迷迷、昔涟、德谬歌——同一个名字的三次降生。">
 <meta name="theme-color" content="#0b0a12">
 <meta property="og:title" content="昔涟 · CYRENE">
@@ -2554,6 +2554,18 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
 }
 .boot-credit b{color:#fff;font-weight:700;text-shadow:0 0 12px rgba(255,158,196,.55)}
 @media (max-height:520px){.boot-credit{display:none}}
+
+#official-copyright{
+  position:fixed;left:0;right:0;
+  bottom:calc(env(safe-area-inset-bottom, 0px) + 3px);
+  z-index:80;text-align:center;pointer-events:none;
+  padding:0 10px;
+  font:500 .46rem/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.05em;
+  color:rgba(220,200,255,.52);
+  text-shadow:0 0 8px rgba(169,139,255,.32);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
 </style>
 </head>
 <body>
@@ -2589,12 +2601,13 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
     </div>
     <div class="boot-log" id="boot-log"></div>
   </div>
-  <div class="boot-credit">Designed &amp; Directed by <b>王纳</b></div>
+  <div class="boot-credit">Designed &amp; Directed by <b>CYRENE</b> · © 2024 CYRENE Studio</div>
   <div class="boot-flash" aria-hidden="true"></div>
 </div>
 
 
 <div class="progress" id="progress" aria-hidden="true"></div>
+<div id="official-copyright">© 2024 CYRENE Studio. Designed &amp; Directed by CYRENE. All Rights Reserved.</div>
 <canvas id="stars" aria-hidden="true"></canvas>
 
 <header class="nav">
@@ -4581,7 +4594,8 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
     [1140, '[WARN]', 'tomb signature detected // -10F'],
     [1520, '[SYS_LOAD]', 'decrypting assets'],
     [1880, '[OK]', 'memory core ready'],
-    [1960, '[CREDIT]', 'Designed & Directed by 王纳'],
+    [58500, '[SYS_LOAD]', 'Official Release by CYRENE Studio'],
+    [1960, '[CREDIT]', 'Designed & Directed by CYRENE'],
   ]
 
   // 1 分钟长开屏：把 30 条系统日志均匀铺到 3s ~ 56s
@@ -4687,6 +4701,6 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
 })()
 
 </script>
-<!-- Designed & Directed by 王纳 · Copyright (c) 2026. All rights reserved. -->
+<!-- Designed & Directed by CYRENE · © 2024 CYRENE Studio. All rights reserved. -->
 </body>
 </html>
