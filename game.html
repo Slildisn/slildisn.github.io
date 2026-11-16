@@ -3085,7 +3085,12 @@ body.dual-on #p2-hud[hidden]{z-index:50}
       return
     }
     if (cmd === 'CLEAR_SAVE') {
-      try { localStorage.clear() } catch (e) { /* ignore */ }
+      try {
+        localStorage.removeItem('cyrene.rogue.run')
+        localStorage.removeItem('cyrene.rogue.meta')
+        localStorage.removeItem('cyrene.rogue.best')
+        localStorage.removeItem('cyrene.rogue.seed')
+      } catch (e) { /* ignore */ }
       if (S) cheatLog('【警告：记忆已被彻底抹除，正在重启……】', true)
       setTimeout(function () { try { location.reload() } catch (e) { /* ignore */ } }, 80)
       return
@@ -3260,7 +3265,7 @@ body.dual-on #p2-hud[hidden]{z-index:50}
   }
 
   function renderStatsDual() {
-    var box = $('stats-scroll')
+    var box = $('stats-list')
     if (!box || !S || !S.p2) return
     function side(hero, st, mates, syn, label) {
       var rows = [
@@ -3769,6 +3774,34 @@ body.dual-on #p2-hud[hidden]{z-index:50}
       var h = heroById(d.heroId)
       if (!h) return null
       d.hero = h
+      // 双人存档：P2 角色必须按 id 重新绑定静态数据，不能信任存档里的名字/表情
+      if (d.p2) {
+        var p2h = d.p2.hero && d.p2.hero.id ? heroById(d.p2.hero.id) : null
+        if (p2h) {
+          d.p2.hero = p2h
+          d.dual = true
+          var mh = Number(d.p2.maxHp)
+          if (!isFinite(mh) || mh < 1) mh = p2h.hp
+          d.p2.maxHp = mh
+          var chp = Number(d.p2.hp)
+          d.p2.hp = isFinite(chp) ? Math.max(1, Math.min(mh, chp)) : mh
+          var patk = Number(d.p2.atk)
+          d.p2.atk = isFinite(patk) && patk > 0 ? patk : p2h.atk
+          var pcrit = Number(d.p2.crit)
+          d.p2.crit = isFinite(pcrit) ? Math.max(0, Math.min(0.9, pcrit)) : p2h.crit
+          var pdodge = Number(d.p2.dodge)
+          d.p2.dodge = isFinite(pdodge) ? Math.max(0, Math.min(0.75, pdodge)) : p2h.dodge
+          d.p2.level = Math.max(1, Math.floor(Number(d.p2.level) || 1))
+          d.p2.xp = Math.max(0, Math.floor(Number(d.p2.xp) || 0))
+          d.p2.xpNext = Math.max(1, Math.floor(Number(d.p2.xpNext) || 6))
+          d.p2.pending = Math.max(0, Math.floor(Number(d.p2.pending) || 0))
+        } else {
+          d.p2 = null
+          d.dual = false
+        }
+      } else {
+        d.dual = false
+      }
       d.bullets = []
       d.paused = false
       d.over = false
