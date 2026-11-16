@@ -21,6 +21,7 @@
 <title>铁墓大乱斗：从灭霸开始 ｜ 昔涟 CYRENE</title>
 <meta name="description" content="昔涟同人站的小游戏《铁墓大乱斗：从灭霸开始》——回合制肉鸽地牢，14 位跨次元角色可选，逐层下降、拾取遗物与奇物、击败铁墓。纯前端、可离线安装。">
 <meta name="author" content="CYRENE_Original">
+<meta name="director" content="王纳">
 <meta name="theme-color" content="#2a1b3d">
 <meta name="application-name" content="铁墓大乱斗">
 <meta name="mobile-web-app-capable" content="yes">
@@ -169,6 +170,9 @@
   }
   .side button:active{background:rgba(255,255,255,.1)}
   .hint{margin:10px 0 0;font-size:.7rem;color:#8f87a6;text-align:center}
+  #credit{margin:14px 0 2px;text-align:center;font:600 .6rem/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;color:rgba(210,180,255,.60);text-shadow:0 0 10px rgba(169,139,255,.30)}
+  #credit b{color:#ffe9ff;font-weight:700;text-shadow:0 0 12px rgba(255,158,196,.55)}
+  body.dual-on #credit{font-size:.52rem;margin:6px 0 0;opacity:.8}
 
   /* overlays */
   .ov{
@@ -1242,11 +1246,15 @@ body.dual-on #p2-hud[hidden]{z-index:50}
 
   <p class="hint">在画面上滑动即可移动，撞到敌人就是攻击。</p>
 
+  <p id="credit">Designed &amp; Directed by <b>王纳</b></p>
+
 </div>
 
 <script>
 ;(function () {
   'use strict'
+
+  var DIRECTOR = '王纳'
 
   /* ---------------- 数据 ---------------- */
   var HEROES = [
@@ -2937,7 +2945,7 @@ body.dual-on #p2-hud[hidden]{z-index:50}
 
   var FATAL_TEXT = {
     host: 'FATAL ERROR: 未经授权的部署环境，代码已被锁定。',
-    meta: 'FATAL ERROR: 核心记忆缺失，系统已自毁。',
+    meta: 'FATAL ERROR: 作者署名或核心标记被篡改，代码已锁定。',
     devtools: 'FATAL ERROR: 核心记忆缺失，系统已自毁。',
   }
 
@@ -2980,6 +2988,7 @@ body.dual-on #p2-hud[hidden]{z-index:50}
       ].join('\n')
       console.log('%c' + art, 'color:#ff2d55;font-weight:700;font-size:11px;line-height:1.05')
       console.log('%c警告：这里是系统底层，请勿非法篡改代码！', 'color:#fff;background:#c40024;font-size:20px;font-weight:800;padding:8px 14px;border-radius:6px')
+      console.log('%cDesigned & Directed by 王纳', 'color:#c77dff;font-weight:700;font-size:12px')
     } catch (e) { /* ignore */ }
   }
 
@@ -3000,8 +3009,13 @@ body.dual-on #p2-hud[hidden]{z-index:50}
   function authorMetaIntact() {
     try {
       var m = document.querySelector('meta[name="author"]')
-      return !!m && String(m.getAttribute('content')) === 'CYRENE_Original'
-    } catch (e) { return true }
+      if (!m || String(m.getAttribute('content')) !== 'CYRENE_Original') return false
+      var d = document.querySelector('meta[name="director"]')
+      if (!d || String(d.getAttribute('content')) !== DIRECTOR) return false
+      var c = document.getElementById('credit')
+      if (!c || String(c.textContent || '').indexOf('Designed & Directed by ' + DIRECTOR) < 0) return false
+      return true
+    } catch (e) { return false }
   }
 
   function guardChecks() {
@@ -6721,5 +6735,6 @@ body.dual-on #p2-hud[hidden]{z-index:50}
   }
 })()
 </script>
+<!-- Designed & Directed by 王纳 · Copyright (c) 2026. All rights reserved. -->
 </body>
 </html>

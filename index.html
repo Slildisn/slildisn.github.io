@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="director" content="王纳">
 <title>昔涟 · CYRENE ｜ 不同以往的浪漫故事</title>
 <meta name="description" content="昔涟（Cyrene）：《崩坏：星穹铁道》翁法罗斯篇章的角色档案、故事与表情集。迷迷、昔涟、德谬歌——同一个名字的三次降生。">
 <meta name="theme-color" content="#0b0a12">
@@ -2540,6 +2541,19 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
   .boot-hud-reticle .tick-ring,
   .boot .boot-title,.boot .boot-title::before,.boot .boot-title::after{animation:none}
 }
+
+.boot-credit{
+  position:absolute;left:0;right:0;
+  bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);
+  z-index:6;text-align:center;
+  font:600 .58rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.18em;
+  color:rgba(180,245,255,.62);
+  text-shadow:0 0 10px rgba(0,229,255,.35);
+  pointer-events:none;
+}
+.boot-credit b{color:#fff;font-weight:700;text-shadow:0 0 12px rgba(255,158,196,.55)}
+@media (max-height:520px){.boot-credit{display:none}}
 </style>
 </head>
 <body>
@@ -2575,6 +2589,7 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
     </div>
     <div class="boot-log" id="boot-log"></div>
   </div>
+  <div class="boot-credit">Designed &amp; Directed by <b>王纳</b></div>
   <div class="boot-flash" aria-hidden="true"></div>
 </div>
 
@@ -4566,6 +4581,7 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
     [1140, '[WARN]', 'tomb signature detected // -10F'],
     [1520, '[SYS_LOAD]', 'decrypting assets'],
     [1880, '[OK]', 'memory core ready'],
+    [1960, '[CREDIT]', 'Designed & Directed by 王纳'],
   ]
 
   // 1 分钟长开屏：把 30 条系统日志均匀铺到 3s ~ 56s
@@ -4671,5 +4687,6 @@ html.theme-neon ::selection{background:rgba(77,255,158,.35);color:#04120a}
 })()
 
 </script>
+<!-- Designed & Directed by 王纳 · Copyright (c) 2026. All rights reserved. -->
 </body>
 </html>
