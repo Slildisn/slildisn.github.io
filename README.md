@@ -2,7 +2,7 @@
 
 # 🕯️ 铁墓大乱斗 (Iron Tomb Brawl) - 官方正版
 
-![Official Version](https://img.shields.io/badge/Official%20Version-CYRENE%20Studio-FFD700?style=for-the-badge&labelColor=6B21A8)
+![Official](https://img.shields.io/badge/Official-CYRENE%20Studio-gold)
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-Installable-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
 ![Human-Directed](https://img.shields.io/badge/Human--Directed-AI--Assisted-7b61ff?style=for-the-badge)
@@ -81,8 +81,16 @@
 
 <div align="center">
 
-**Demo 版本 · 持续更新中**
+**Official Version · CYRENE Studio**
 
 [仓库](https://github.com/Slildisn/slildisn.github.io) · [在线试玩](https://slildisn.github.io/game.html) · [下载 APK](https://github.com/Slildisn/slildisn.github.io/releases/latest)
+
+</div>
+
+---
+
+<div align="center">
+
+**© 2024 CYRENE Studio. Designed & Directed by CYRENE.**
 
 </div>
