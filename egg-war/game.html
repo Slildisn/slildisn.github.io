@@ -222,6 +222,15 @@ function bootGame() {
     rock: { name: '石头蛋', cost: 50, hp: 1500, size: 92, color: 0xe8edf2 }
   };
 
+  /* 鸡窝基地：有血量，被啃空才算失守 */
+  const BASE = {
+    hp: 300,
+    peckDmg: 12,
+    peckRate: 0.9
+  };
+
+  const PREP_TIME = 15;   // 开局安全准备时间（秒）
+
   /* 敌方（数值不动） */
   const ENEMY = {
     hp: 260,
@@ -415,7 +424,9 @@ function bootGame() {
       this.drops = [];
       this.cards = [];
 
-      this.timers = { enemy: 4, corn: 2.2 };
+      this.baseHp = BASE.hp;
+      this.wave = 0;
+      this.timers = { enemy: PREP_TIME, corn: 2.2 };
       this.pendingRow = null;
 
       this.drawArena();
@@ -528,6 +539,13 @@ function bootGame() {
       }).setOrigin(0.5);
       this.add.text(49, cy - 20, '基地', {
         fontFamily: FONT, fontSize: '21px', color: '#5a3b12', fontStyle: 'bold'
+      }).setOrigin(0.5);
+
+      // 基地血量
+      this.baseBarBg = this.add.rectangle(49, cy + 36, 68, 10, 0x5c4326, 0.20);
+      this.baseBarFg = this.add.rectangle(49 - 32, cy + 36, 64, 6, 0x7fd8a8).setOrigin(0, 0.5);
+      this.baseHpText = this.add.text(49, cy + 58, String(BASE.hp), {
+        fontFamily: FONT, fontSize: '18px', color: '#5a3b12', fontStyle: 'bold'
       }).setOrigin(0.5);
 
       // 右侧橘红出兵口
@@ -667,6 +685,10 @@ function bootGame() {
       this.add.text(640, 704, '① 点卡牌选中   ② 点草坪格子放置   ③ 点掉落的玉米粒 +25', {
         fontFamily: FONT, fontSize: '15px', color: '#7b6650'
       }).setOrigin(0.5);
+
+      this.prepText = this.add.text(640, 60, '', {
+        fontFamily: FONT, fontSize: '20px', color: '#b35a1f', fontStyle: 'bold'
+      }).setOrigin(0.5).setVisible(false);
 
       this.pauseText = this.add.text(CANVAS_W / 2, CANVAS_H / 2, '⏸  已暂停', {
         fontFamily: FONT, fontSize: '46px', color: '#5c4326', fontStyle: 'bold'
@@ -852,6 +874,9 @@ function bootGame() {
 
     /* ---------------- 敌人 ---------------- */
     spawnEnemy(rowArg) {
+      this.wave += 1;
+      const early = this.wave <= 2;              // 前两波更慢
+      const spd = ENEMY.speed * (early ? 0.8 : 1);
       const row = (typeof rowArg === 'number' && rowArg >= 0 && rowArg < G.rows)
         ? rowArg
         : Phaser.Math.Between(0, G.rows - 1);
@@ -870,6 +895,7 @@ function bootGame() {
         hp: ENEMY.hp,
         maxHp: ENEMY.hp,
         attackCd: 0,
+        speed: spd,
         body,
         barY,
         bar,
@@ -879,7 +905,8 @@ function bootGame() {
       this.syncEnemy(e);
       this.syncBar(bar, 0, x, barY);
 
-      pushLog('🦃 刷怪 第' + (row + 1) + '行 ｜ 公鸡 HP ' + ENEMY.hp);
+      pushLog('🦃 第' + this.wave + '波 · 第' + (row + 1) + '行 ｜ HP ' + ENEMY.hp +
+        ' ｜ 速度 ' + Math.round(spd));
     }
 
     syncEnemy(e) {
@@ -967,6 +994,25 @@ function bootGame() {
       this.bullets = this.bullets.filter((x) => x !== b);
     }
 
+    /* ---------------- 鸡窝基地血量 ---------------- */
+    damageBase(dmg) {
+      if (this.over || this.baseHp <= 0) return;
+      this.baseHp = Math.max(0, this.baseHp - dmg);
+      this.updateBaseHp();
+      this.flash(78, G.y0 + GRID_H / 2 + 58, '-' + dmg, '#d9673f');
+      pushLog('🏠 鸡窝被啄 -' + dmg + ' → 剩余 ' + this.baseHp);
+
+      if (this.baseHp <= 0) this.gameOver();
+    }
+
+    updateBaseHp() {
+      if (!this.baseBarFg) return;
+      const ratio = Phaser.Math.Clamp(this.baseHp / BASE.hp, 0, 1);
+      this.baseBarFg.displayWidth = Math.max(0.01, 64 * ratio);
+      this.baseBarFg.fillColor = hpColor(ratio);
+      if (this.baseHpText) this.baseHpText.setText(String(this.baseHp));
+    }
+
     /* ---------------- 掉落玉米粒 ---------------- */
     dropCorn(x, y0, targetY, life, owner) {
       const glow = this.add.circle(x, y0, 27, 0xfff0b8, 0.20).setDepth(18);
@@ -1004,6 +1050,19 @@ function bootGame() {
     }
 
     collectCorn(d) {
+      // 点任意一颗 = 全场一起收
+      if (!this.drops.length) return;
+      const all = this.drops.slice();
+      let total = 0;
+      all.forEach((one) => {
+        if (!one.alive) return;
+        total += 1;
+        this.collectOne(one);
+      });
+      if (total > 1) pushLog('🌽 一键全收 · ' + total + ' 颗');
+    }
+
+    collectOne(d) {
       if (!d.alive) return;
       this.corn += 25;
       this.refreshHud();
@@ -1055,33 +1114,39 @@ function bootGame() {
     showSpawnWarning(row) {
       const y = cellY(row);
 
+      // 红光闪烁（3 秒，跟着出兵倒计时一起呼吸）
       const halo = this.add.graphics().setDepth(9);
-      halo.fillStyle(0xffb066, 0.30);
-      halo.fillEllipse(0, 0, 92, 104);
-      halo.lineStyle(3, 0xff9a4d, 0.55);
-      halo.strokeEllipse(0, 0, 92, 104);
+      halo.fillStyle(0xff7a5c, 0.34);
+      halo.fillEllipse(0, 0, 96, 108);
+      halo.lineStyle(4, 0xff5540, 0.75);
+      halo.strokeEllipse(0, 0, 96, 108);
       halo.setPosition(1231, y);
 
       this.tweens.add({
         targets: halo,
-        scaleX: 1.12, scaleY: 1.12, alpha: 0.55,
-        duration: 380, yoyo: true, repeat: 2, ease: 'Sine.easeInOut',
+        alpha: 0.25, scaleX: 1.14, scaleY: 1.14,
+        duration: 300, yoyo: true, repeat: 4, ease: 'Sine.easeInOut',
         onComplete: () => {
           this.tweens.add({
-            targets: halo, alpha: 0, duration: 200,
+            targets: halo, alpha: 0, duration: 180,
             onComplete: () => halo.destroy()
           });
         }
       });
 
-      const tip = this.add.text(1231, y - 62, '公鸡来袭', {
-        fontFamily: FONT, fontSize: '17px', color: '#b35a1f', fontStyle: 'bold'
+      const tip = this.add.text(1231, y - 66, '公鸡来袭 3s', {
+        fontFamily: FONT, fontSize: '19px', color: '#c0392b', fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(10);
 
       this.tweens.add({
-        targets: tip, y: y - 76, alpha: 0,
-        duration: 1500, ease: 'Cubic.easeOut',
-        onComplete: () => tip.destroy()
+        targets: tip, alpha: 0.35,
+        duration: 300, yoyo: true, repeat: 4,
+        onComplete: () => {
+          this.tweens.add({
+            targets: tip, y: y - 84, alpha: 0, duration: 180,
+            onComplete: () => tip.destroy()
+          });
+        }
       });
 
       pushLog('⚠ 预警：第' + (row + 1) + '行即将出鸡');
@@ -1152,16 +1217,23 @@ function bootGame() {
       const dt = Math.min(delta, 120) / 1000;
       this.clock += dt;
 
-      // 刷怪前 1.5 秒先亮出该行提示
+      // 开局安全准备倒计时
+      if (this.wave === 0 && this.prepText) {
+        this.prepText.setVisible(true);
+        this.prepText.setText('安全准备 ' + Math.ceil(Math.max(0, this.timers.enemy)) + 's');
+      }
+
+      // 刷怪前 3 秒亮红光 + 文字警告
       this.timers.enemy -= dt;
-      if (this.pendingRow === null && this.timers.enemy <= 1.5) {
+      if (this.pendingRow === null && this.timers.enemy <= 3) {
         this.pendingRow = Phaser.Math.Between(0, G.rows - 1);
         this.showSpawnWarning(this.pendingRow);
       }
       if (this.timers.enemy <= 0) {
         this.spawnEnemy(this.pendingRow);
         this.pendingRow = null;
-        this.timers.enemy = 5;
+        if (this.prepText) this.prepText.setVisible(false);
+        this.timers.enemy = this.wave <= 2 ? 7 : 5;
       }
 
       // 天上掉玉米粒：频率小幅提高（2.6~4.2 秒一颗）
@@ -1220,17 +1292,30 @@ function bootGame() {
               onComplete: () => { if (e.body.active) e.body.x = e.x; }
             });
           }
-        } else {
-          e.x -= ENEMY.speed * dt;
+        } else if (e.x > G.x0 + 34) {
+          e.x -= (e.speed || ENEMY.speed) * dt;
           this.syncEnemy(e);
 
           // 走路时左右轻摆
           e.walkPhase += dt * 9;
           e.body.angle = Math.sin(e.walkPhase) * 2.6;
 
-          if (e.x <= G.x0 + 10) {
-            this.gameOver();
-            return;
+          if (e.x <= G.x0 + 34) {
+            e.x = G.x0 + 34;
+            this.syncEnemy(e);
+          }
+        } else {
+          // 走到鸡窝：开始啃基地
+          e.body.angle = 0;
+          e.attackCd -= dt;
+          if (e.attackCd <= 0) {
+            e.attackCd = BASE.peckRate;
+            this.damageBase(BASE.peckDmg);
+            this.tweens.add({
+              targets: e.body, x: e.x + 7, duration: 80, yoyo: true,
+              onComplete: () => { if (e.body.active) e.body.x = e.x; }
+            });
+            if (this.over) return;
           }
         }
       }
