@@ -76,17 +76,17 @@
 
   .card-bar {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 112px));
-    gap: 8px 12px;
+    grid-template-columns: repeat(4, minmax(0, 104px));
+    gap: 8px 10px;
     justify-content: center;
     width: 100%;
   }
   @media (min-width: 700px) {
-    .card-bar { grid-template-columns: repeat(6, minmax(0, 118px)); gap: 10px; }
+    .card-bar { grid-template-columns: repeat(8, minmax(0, 104px)); gap: 8px; }
   }
   .card {
     display: flex; align-items: center; gap: 6px;
-    height: 74px; padding: 0 8px; overflow: hidden;
+    height: 74px; padding: 0 6px; overflow: hidden;
     border-radius: 18px; border: 2px solid #ffe0a8;
     background: linear-gradient(180deg, #fffdf8, #fff6e2);
     color: #5c4326; font-family: inherit; text-align: left;
@@ -103,7 +103,7 @@
   }
   .card.off { opacity: 0.55; filter: saturate(0.7); }
   .card-ico {
-    flex: 0 0 auto; width: 26px; height: 26px; border-radius: 9px;
+    flex: 0 0 auto; width: 22px; height: 22px; border-radius: 8px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 2px 6px -3px rgba(0, 0, 0, 0.35);
   }
   .card-txt {
@@ -353,7 +353,9 @@ function bootGame() {
     rock: { name: '石头蛋', cost: 50, hp: 1500, size: 92, color: 0xe8edf2 },
     charger: { name: '冲锋小鸡', cost: 60, hp: 150, size: 84, color: 0x7fc4f0 },
     healer: { name: '治愈母鸡', cost: 120, hp: 280, size: 84, color: 0xffb3d1 },
-    bomber: { name: '炸弹小鸡', cost: 130, hp: 200, size: 84, color: 0x4a4a5a }
+    bomber: { name: '炸弹小鸡', cost: 130, hp: 200, size: 84, color: 0x4a4a5a },
+    gunner: { name: '高速连发鸡', cost: 75, hp: 200, size: 84, color: 0x8fd6b4 },
+    reflector: { name: '重甲反伤母鸡', cost: 150, hp: 3000, size: 92, color: 0xb9a7d9 }
   };
 
   /* 鸡窝基地：有血量，被啃空才算失守 */
@@ -366,14 +368,25 @@ function bootGame() {
   const PREP_TIME = 15;   // 开局安全准备时间（秒）
 
   /* 敌方（数值不动） */
-  const ENEMY = {
-    hp: 260,
-    w: 70,
-    h: 82,
-    speed: 26,
-    peckDmg: 30,
-    peckRate: 0.9
+  const ENEMY_TYPES = {
+    normal: {
+      name: '大公鸡', hp: 260, w: 70, h: 82, speed: 26,
+      peckDmg: 30, peckRate: 0.9,
+      body: 0xff7a59, light: 0xffa88c, line: 0xe0674a, comb: 0xe53935, tail: 0xd93b2b
+    },
+    raider: {
+      name: '突袭公鸡', hp: 150, w: 64, h: 76, speed: 39,
+      peckDmg: 22, peckRate: 0.8,
+      body: 0xe04a5c, light: 0xff7d8c, line: 0xb02b3c, comb: 0x8e1f34, tail: 0x8e1f34
+    },
+    giant: {
+      name: '巨型公鸡', hp: 900, w: 105, h: 123, speed: 12,
+      peckDmg: 30, peckRate: 1.0,
+      body: 0xb04a8c, light: 0xd07bb0, line: 0x7e2f62, comb: 0x6b1f4e, tail: 0x6b1f4e,
+      shockEvery: 3, shockDmg: 12
+    }
   };
+  const ENEMY = ENEMY_TYPES.normal;
 
   /* ---------------- 调试日志 ---------------- */
   const LOGS = [];
@@ -502,27 +515,29 @@ function bootGame() {
     g.fillCircle(-18, 18, 6);
   }
 
-  function drawRooster(g, w, h) {
+  function drawRooster(g, w, h, t) {
     const hw = w / 2;
     const hh = h / 2;
+    const P0 = t || ENEMY_TYPES.normal;
+    const combW = Math.max(26, w * 0.42);
 
     g.fillStyle(0x5c4326, 0.12);
     g.fillEllipse(0, hh - 4, w * 0.9, h * 0.22);
 
-    g.fillStyle(0xd93b2b, 1);
-    g.fillTriangle(hw - 6, -10, hw + 20, -26, hw + 16, 4);
+    g.fillStyle(P0.tail, 1);
+    g.fillTriangle(hw - 6, -10, hw + Math.round(w * 0.26), -26, hw + Math.round(w * 0.22), 4);
 
-    g.fillStyle(0xff7a59, 1);
+    g.fillStyle(P0.body, 1);
     g.fillRoundedRect(-hw, -hh + 6, w, h - 6, 16);
 
-    g.fillStyle(0xffa88c, 0.9);
+    g.fillStyle(P0.light, 0.9);
     g.fillRoundedRect(-hw + 8, -hh + 12, w - 16, (h - 6) * 0.44, 12);
 
-    g.lineStyle(2, 0xe0674a, 0.9);
+    g.lineStyle(2, P0.line, 0.9);
     g.strokeRoundedRect(-hw, -hh + 6, w, h - 6, 16);
 
-    g.fillStyle(0xe53935, 1);
-    g.fillRoundedRect(-16, -hh - 6, 32, 16, 8);
+    g.fillStyle(P0.comb, 1);
+    g.fillRoundedRect(-combW / 2, -hh - 6, combW, 16, 8);
 
     g.fillStyle(0xffc107, 1);
     g.fillTriangle(-hw + 4, -4, -hw - 16, 3, -hw + 4, 10);
@@ -604,6 +619,54 @@ function bootGame() {
     g.fillCircle(-16, -8, 5);
     g.fillStyle(0x2e2e3a, 1);
     g.fillCircle(-16, -8, 2.2);
+  }
+
+  function drawGunner(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0x8fd6b4, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
+    g.fillStyle(0xc4f0dd, 0.9);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.4, 14);
+    g.lineStyle(2, 0x4fae86, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    // 三连发弹丸
+    g.fillStyle(0xffffff, 0.95);
+    g.fillCircle(half - 14, -8, 5);
+    g.fillCircle(half + 2, -8, 5);
+    g.fillCircle(half + 18, -8, 5);
+
+    g.fillStyle(0x2f6b52, 1);
+    g.fillCircle(-16, 10, 5);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(-17.6, 8.4, 1.8);
+  }
+
+  function drawReflector(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.86, s * 0.24);
+
+    g.fillStyle(0xb9a7d9, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 18);
+    g.fillStyle(0xd8cdef, 0.9);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.38, 12);
+    g.lineStyle(3, 0x7f6aa8, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 18);
+
+    // 护盾弧
+    g.lineStyle(5, 0xffffff, 0.55);
+    g.beginPath();
+    g.arc(0, 2, half - 14, Phaser.Math.DegToRad(-60), Phaser.Math.DegToRad(60), false);
+    g.strokePath();
+
+    g.fillStyle(0x4a3a63, 1);
+    g.fillCircle(-18, -12, 5.5);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(-19.6, -13.6, 1.8);
   }
 
   class GameScene extends Phaser.Scene {
@@ -783,7 +846,9 @@ function bootGame() {
         { key: 'rock', label: '石头蛋', cost: UNIT_DEFS.rock.cost, color: UNIT_DEFS.rock.color },
         { key: 'charger', label: '冲锋小鸡', cost: UNIT_DEFS.charger.cost, color: UNIT_DEFS.charger.color },
         { key: 'healer', label: '治愈母鸡', cost: UNIT_DEFS.healer.cost, color: UNIT_DEFS.healer.color },
-        { key: 'bomber', label: '炸弹小鸡', cost: UNIT_DEFS.bomber.cost, color: UNIT_DEFS.bomber.color }
+        { key: 'bomber', label: '炸弹小鸡', cost: UNIT_DEFS.bomber.cost, color: UNIT_DEFS.bomber.color },
+        { key: 'gunner', label: '高速连发鸡', cost: UNIT_DEFS.gunner.cost, color: UNIT_DEFS.gunner.color },
+        { key: 'reflector', label: '重甲反伤母鸡', cost: UNIT_DEFS.reflector.cost, color: UNIT_DEFS.reflector.color }
       ];
 
       const bar = document.getElementById('card-bar');
@@ -994,7 +1059,9 @@ function bootGame() {
       else if (key === 'rock') drawRock(g, def.size);
       else if (key === 'charger') drawCharger(g, def.size);
       else if (key === 'healer') drawHealer(g, def.size);
-      else drawBomber(g, def.size);
+      else if (key === 'bomber') drawBomber(g, def.size);
+      else if (key === 'gunner') drawGunner(g, def.size);
+      else drawReflector(g, def.size);
       g.setPosition(x, y);
 
       g.setScale(0.6);
@@ -1119,10 +1186,20 @@ function bootGame() {
     }
 
     /* ---------------- 敌人 ---------------- */
-    spawnEnemy(rowArg) {
+    pickEnemyType() {
+      if (this.wave < 4) return 'normal';
+      const r = Math.random();
+      if (this.wave >= 6 && r < 0.12) return 'giant';
+      if (r < 0.38) return 'raider';
+      return 'normal';
+    }
+
+    spawnEnemy(rowArg, typeArg) {
       this.wave += 1;
       const early = this.wave <= 2;              // 前两波更慢
-      const spd = ENEMY.speed * (early ? 0.8 : 1);
+      const typeKey = typeArg || this.pickEnemyType();
+      const t = ENEMY_TYPES[typeKey] || ENEMY_TYPES.normal;
+
       const row = (typeof rowArg === 'number' && rowArg >= 0 && rowArg < G.rows)
         ? rowArg
         : Phaser.Math.Between(0, G.rows - 1);
@@ -1130,18 +1207,26 @@ function bootGame() {
       const x = 1250;
 
       const body = this.add.graphics();
-      drawRooster(body, ENEMY.w, ENEMY.h);
+      drawRooster(body, t.w, t.h, t);
       body.setPosition(x, y);
 
-      const barY = y - ENEMY.h / 2 - 30;
-      const bar = this.makeBar(x, barY, 64);
+      const barY = y - t.h / 2 - 26;
+      const bar = this.makeBar(x, barY, Math.max(56, t.w - 8));
 
       const e = {
+        type: typeKey,
         row, x, y,
-        hp: ENEMY.hp,
-        maxHp: ENEMY.hp,
+        hp: t.hp,
+        maxHp: t.hp,
         attackCd: 0,
-        speed: spd,
+        speed: (typeKey === 'normal' ? t.speed * (early ? 0.8 : 1) : t.speed),
+        w: t.w,
+        h: t.h,
+        peckDmg: t.peckDmg,
+        peckRate: t.peckRate,
+        shockEvery: t.shockEvery || 0,
+        shockDmg: t.shockDmg || 0,
+        peckCount: 0,
         body,
         barY,
         bar,
@@ -1151,8 +1236,8 @@ function bootGame() {
       this.syncEnemy(e);
       this.syncBar(bar, 0, x, barY);
 
-      pushLog('🦃 第' + this.wave + '波 · 第' + (row + 1) + '行 ｜ HP ' + ENEMY.hp +
-        ' ｜ 速度 ' + Math.round(spd));
+      pushLog('🦃 第' + this.wave + '波 · 第' + (row + 1) + '行 ｜ ' + t.name +
+        ' HP ' + t.hp + ' ｜ 速度 ' + Math.round(e.speed));
     }
 
     syncEnemy(e) {
@@ -1164,7 +1249,8 @@ function bootGame() {
       for (const u of this.units) {
         if (u.row !== e.row) continue;
         const gap = e.x - u.x;
-        if (gap <= 82 && gap >= -50) {
+        const reach = 46 + (e.w || 70) / 2;
+        if (gap <= reach && gap >= -50) {
           if (!best || u.x > best.x) best = u;
         }
       }
@@ -1187,13 +1273,13 @@ function bootGame() {
         pushLog('💥 公鸡倒下 第' + (e.row + 1) + '行');
       } else {
         this.setBarTarget(e.bar, e.hp, e.maxHp);
-        this.hitFlash(e.x, e.y, ENEMY.w * 0.9, ENEMY.h * 0.9);
+        this.hitFlash(e.x, e.y, (e.w || 70) * 0.9, (e.h || 82) * 0.9);
         this.tweens.add({ targets: e.body, scaleX: 1.08, scaleY: 0.94, duration: 70, yoyo: true });
         pushLog('🎯 命中 第' + (e.row + 1) + '行 ｜ -' + dmg + ' → 剩余 ' + Math.max(0, e.hp));
       }
     }
 
-    damageUnit(u, dmg) {
+    damageUnit(u, dmg, attacker) {
       u.hp -= dmg;
 
       if (u.hp <= 0) {
@@ -1214,15 +1300,58 @@ function bootGame() {
       } else {
         this.setBarTarget(u.bar, u.hp, u.maxHp);
         this.tweens.add({ targets: u.body, alpha: 0.5, duration: 60, yoyo: true });
+
+        // 重甲反伤：被啃时反弹伤害给公鸡
+        if (u.key === 'reflector' && attacker && attacker.hp > 0) {
+          const reflect = 25;
+          this.damageEnemy(attacker, reflect);
+          this.flash(attacker.x, attacker.y - 34, '-' + reflect, '#8e3b8e');
+          const ring = this.add.circle(u.x, u.y, 26, 0xe0d4ff, 0.30)
+            .setStrokeStyle(3, 0x7f6aa8, 0.9).setDepth(22);
+          this.tweens.add({
+            targets: ring, scale: 1.8, alpha: 0, duration: 280,
+            onComplete: () => ring.destroy()
+          });
+          pushLog('🛡 反伤 -' + reflect + ' → 公鸡剩余 ' + Math.max(0, attacker.hp));
+        }
       }
     }
 
+    giantShock(e) {
+      const victims = this.units.filter((u) =>
+        !u.removed && Math.abs(u.row - e.row) <= 1 && Math.abs(u.x - e.x) <= 180
+      );
+      victims.forEach((u) => this.damageUnit(u, e.shockDmg, null));
+
+      const ring = this.add.circle(e.x, e.y, 40, 0xe0c8ff, 0.16)
+        .setStrokeStyle(4, 0x8e5bb5, 0.75).setDepth(28);
+      this.tweens.add({
+        targets: ring, scale: 4.2, alpha: 0, duration: 520, ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy()
+      });
+      pushLog('💥 ' + ENEMY_TYPES[e.type].name + ' 震慑 · 命中 ' + victims.length + ' 个单位');
+    }
+
     /* ---------------- 子弹 ---------------- */
-    fireBullet(u) {
+    fireBullet(u, dmg, speed, radius) {
+      const damage = dmg || 26;
+      const spd = speed || 430;
+      const r = radius || 7.5;
       const x = u.x + 36;
-      const glow = this.add.circle(x, u.y, 13, 0xffd08a, 0.26).setDepth(16);
-      const core = this.add.circle(x, u.y, 7.5, 0xfff6e0).setStrokeStyle(2, 0xffa94d).setDepth(17);
-      this.bullets.push({ x, y: u.y, row: u.row, speed: 430, dmg: 26, core, glow, t: 0 });
+      const glow = this.add.circle(x, u.y, r + 5, 0xffd08a, 0.26).setDepth(16);
+      const core = this.add.circle(x, u.y, r, 0xfff6e0).setStrokeStyle(2, 0xffa94d).setDepth(17);
+      this.bullets.push({ x, y: u.y, row: u.row, speed: spd, dmg: damage, core, glow, t: 0 });
+    }
+
+    nearestEnemyInRange(u, range) {
+      let best = null;
+      for (const e of this.enemies) {
+        if (e.row !== u.row) continue;
+        if (e.x <= u.x + 10) continue;
+        if (e.x - u.x > range) continue;
+        if (!best || e.x < best.x) best = e;
+      }
+      return best;
     }
 
     nearestEnemyAhead(u) {
@@ -1520,6 +1649,17 @@ function bootGame() {
             this.dropHenCorn(u);
             u.cd = 5;
           }
+        } else if (u.key === 'gunner') {
+          u.cd -= dt;
+          if (u.cd <= 0) {
+            const target = this.nearestEnemyInRange(u, G.cell * 3);
+            if (target) {
+              this.fireBullet(u, 10, 640, 6);
+              u.cd = 0.6;
+            } else {
+              u.cd = 0;
+            }
+          }
         } else if (u.key === 'healer') {
           u.cd -= dt;
           if (u.cd <= 0) {
@@ -1562,8 +1702,11 @@ function bootGame() {
           e.body.angle = 0;
           e.attackCd -= dt;
           if (e.attackCd <= 0) {
-            e.attackCd = ENEMY.peckRate;
-            this.damageUnit(blocker, ENEMY.peckDmg);
+            e.attackCd = e.peckRate;
+            this.damageUnit(blocker, e.peckDmg, e);
+            e.peckCount += 1;
+            if (e.shockEvery && e.peckCount % e.shockEvery === 0) this.giantShock(e);
+            if (this.over || !e.body.active) continue;
             this.tweens.add({
               targets: e.body, x: e.x - 9, duration: 85, yoyo: true,
               onComplete: () => { if (e.body.active) e.body.x = e.x; }
@@ -1587,11 +1730,13 @@ function bootGame() {
           e.attackCd -= dt;
           if (e.attackCd <= 0) {
             e.attackCd = BASE.peckRate;
-            this.damageBase(BASE.peckDmg);
+            e.peckCount += 1;
+            this.damageBase(e.peckDmg || BASE.peckDmg);
             this.tweens.add({
               targets: e.body, x: e.x + 7, duration: 80, yoyo: true,
               onComplete: () => { if (e.body.active) e.body.x = e.x; }
             });
+            if (e.shockEvery && e.peckCount % e.shockEvery === 0) this.giantShock(e);
             if (this.over) return;
           }
         }
