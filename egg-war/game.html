@@ -96,7 +96,32 @@
     transition: transform 0.18s ease, box-shadow 0.22s ease, border-color 0.2s ease;
     -webkit-tap-highlight-color: transparent;
   }
+  .card { position: relative; }
   .card:active { transform: translateY(1px) scale(0.985); }
+
+  /* PVZ 式卡槽冷却：遮罩从下往上退去 */
+  .card-mask {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 0%;
+    background: linear-gradient(180deg, rgba(92, 67, 38, 0.30), rgba(92, 67, 38, 0.46));
+    pointer-events: none; z-index: 2;
+    border-radius: 0 0 16px 16px;
+  }
+  .card-cd {
+    position: absolute; left: 0; right: 0; bottom: 5px;
+    text-align: center; font-size: 10.5px; font-weight: 700;
+    color: #4a3a2a; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
+    pointer-events: none; z-index: 3; display: none;
+  }
+  .card.cooling { filter: saturate(0.35) brightness(0.94); }
+  .card.cooling .card-cd { display: block; }
+  .card.cooling .card-txt, .card.cooling .card-ico { opacity: 0.55; }
+  .card.locked { pointer-events: none; }
+  .card.glow { animation: cardReady 0.46s ease; }
+  @keyframes cardReady {
+    0%   { box-shadow: 0 0 0 0 rgba(255, 207, 92, 0); }
+    45%  { box-shadow: 0 0 0 4px rgba(255, 207, 92, 0.45), 0 0 18px rgba(255, 207, 92, 0.55); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 207, 92, 0); }
+  }
   .card.sel {
     border-color: #ffb63c;
     background: linear-gradient(180deg, #fff7de, #ffedc4);
@@ -493,6 +518,18 @@ function bootGame() {
   // 有主动循环技能的单位（仅用于决定“显示不显示冷却”，数值仍由各自 cd 字段决定）
   const CD_DISPLAY = { hen: 5, sniper: 1.2, healer: 3, gunner: 0.6 };
 
+  // 卡槽种植冷却（PVZ 式，与单位技能 cd、玉米粒费用彼此独立）
+  const PLANT_CD = {
+    hen: 5,
+    charger: 6,
+    gunner: 6,
+    sniper: 8,
+    healer: 10,
+    rock: 12,
+    bomber: 12,
+    reflector: 15
+  };
+
   /* 鸡窝基地：有血量，被啃空才算失守 */
   const BASE = {
     hp: 300,
@@ -841,6 +878,7 @@ function bootGame() {
       this.spawnTimer = 0;
       this.timers = { corn: 2.2 };
       this.pendingRow = null;
+      this.plantCd = {};          // 每张卡的剩余种植冷却（秒）
 
       this.drawArena();
       this.buildCards();
@@ -1031,8 +1069,16 @@ function bootGame() {
         txt.appendChild(nm);
         txt.appendChild(cost);
 
+        const mask = document.createElement('span');
+        mask.className = 'card-mask';
+
+        const cdTxt = document.createElement('span');
+        cdTxt.className = 'card-cd';
+
         btn.appendChild(ico);
         btn.appendChild(txt);
+        btn.appendChild(mask);
+        btn.appendChild(cdTxt);
         btn.addEventListener('click', () => this.selectCard(d.key));
         bar.appendChild(btn);
       });
@@ -1042,6 +1088,7 @@ function bootGame() {
 
     selectCard(key) {
       if (this.over || this.paused) return;
+      if ((this.plantCd[key] || 0) > 0) return;   // 卡槽冷却中，禁止选中
       this.selected = this.selected === key ? null : key;
       this.syncCards();
     }
@@ -1050,10 +1097,15 @@ function bootGame() {
       const bar = document.getElementById('card-bar');
       if (!bar) return;
       bar.querySelectorAll('.card').forEach((btn) => {
-        const def = UNIT_DEFS[btn.dataset.key];
+        const key = btn.dataset.key;
+        const def = UNIT_DEFS[key];
         if (!def) return;
-        btn.classList.toggle('sel', this.selected === btn.dataset.key);
-        btn.classList.toggle('off', this.corn < def.cost);
+        const cooling = (this.plantCd[key] || 0) > 0;
+        btn.classList.toggle('cooling', cooling);
+        btn.classList.toggle('locked', cooling);
+        btn.classList.toggle('sel', !cooling && this.selected === key);
+        // 冷却中优先拦截；冷却结束后再看玉米粒是否够
+        btn.classList.toggle('off', !cooling && this.corn < def.cost);
       });
     }
 
@@ -1136,8 +1188,10 @@ function bootGame() {
         return;
       }
 
+      const usedKey = this.selected;
       this.corn -= def.cost;
-      this.spawnUnit(this.selected, row, col);
+      this.spawnUnit(usedKey, row, col);
+      this.startCardCooldown(usedKey);
       this.selected = null;
       this.hoverCell.setVisible(false);
       this.refreshHud();
@@ -1787,6 +1841,58 @@ function bootGame() {
       });
     }
 
+    /* ---------------- 卡槽种植冷却 ---------------- */
+    startCardCooldown(key) {
+      const secs = PLANT_CD[key] || 0;
+      if (secs <= 0) return;
+      this.plantCd[key] = secs;
+      this.renderCardCooldown(key, secs, secs);
+      this.syncCards();
+    }
+
+    renderCardCooldown(key, left, total) {
+      const bar = document.getElementById('card-bar');
+      if (!bar) return;
+      const btn = bar.querySelector('.card[data-key="' + key + '"]');
+      if (!btn) return;
+
+      const mask = btn.querySelector('.card-mask');
+      const txt = btn.querySelector('.card-cd');
+      const frac = Math.max(0, Math.min(1, left / (total || 1)));
+
+      if (mask) mask.style.height = (frac * 100).toFixed(1) + '%';
+      if (txt) txt.textContent = left > 0 ? left.toFixed(1) + 's' : '';
+    }
+
+    updateCardCooldowns(dt) {
+      const keys = Object.keys(this.plantCd);
+      let anyFinished = false;
+
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        const left = this.plantCd[key];
+        if (left <= 0) continue;
+
+        const total = PLANT_CD[key] || 1;
+        const next = Math.max(0, left - dt);
+        this.plantCd[key] = next;
+        this.renderCardCooldown(key, next, total);
+
+        if (next <= 0) {
+          anyFinished = true;
+          const bar = document.getElementById('card-bar');
+          const btn = bar && bar.querySelector('.card[data-key="' + key + '"]');
+          if (btn) {
+            btn.classList.remove('cooling', 'locked');
+            btn.classList.add('glow');
+            setTimeout(function () { btn.classList.remove('glow'); }, 480);
+          }
+        }
+      }
+
+      if (anyFinished) this.syncCards();
+    }
+
     /* ---------------- 波次系统 ---------------- */
     buildQueue(cfg) {
       const list = [];
@@ -1928,6 +2034,7 @@ function bootGame() {
         if (this.prepLeft <= 0) this.startFighting();
       } else if (this.state === 'FIGHTING') {
         this.updateSpawner(dt);
+        this.updateCardCooldowns(dt);   // 准备阶段/弹窗/结算时冻结
       }
 
       // 天上掉玉米粒：频率小幅提高（2.6~4.2 秒一颗）
