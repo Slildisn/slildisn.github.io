@@ -189,119 +189,6 @@
     white-space: pre-line;
   }
 
-  /* ---------------- 调试面板 ---------------- */
-  #dbg-wrap {
-    position: fixed;
-    right: 10px;
-    bottom: calc(var(--band-bottom) + var(--safe-bottom) + 10px);
-    z-index: 20;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
-    pointer-events: none;
-  }
-  #dbg-wrap > * { pointer-events: auto; }
-
-  #dbg-toggle {
-    width: 46px;
-    height: 46px;
-    border-radius: 15px;
-    border: 2px solid #ffcf5c;
-    background: linear-gradient(180deg, #fffdf6 0%, #ffe9b8 100%);
-    color: #9a6f2a;
-    font-size: 19px;
-    line-height: 1;
-    box-shadow: 0 8px 18px -8px rgba(154, 111, 42, 0.55), inset 0 1px 0 #ffffff;
-    transition: transform 0.2s ease, box-shadow 0.25s ease;
-  }
-  #dbg-toggle:active {
-    transform: translateY(1px) scale(0.97);
-    box-shadow: 0 4px 10px -6px rgba(154, 111, 42, 0.5), inset 0 1px 0 #ffffff;
-  }
-  @media (hover: hover) {
-    #dbg-toggle:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 24px -10px rgba(154, 111, 42, 0.6), 0 0 0 5px rgba(255, 207, 92, 0.22), inset 0 1px 0 #ffffff;
-    }
-  }
-  #dbg-panel {
-    display: none;
-    width: min(70vw, 264px);
-    padding: 8px;
-    border-radius: 14px;
-    border: 1px solid #ffe0a8;
-    background: rgba(255, 253, 248, 0.97);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    color: #5c4326;
-    font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
-  }
-  #dbg-panel.open { display: block; }
-
-  .dbg-hd {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 13px;
-    font-weight: 700;
-    color: #9a6f2a;
-    padding: 2px 2px 6px;
-  }
-  #dbg-hide {
-    border: 0;
-    background: transparent;
-    color: #b08a5a;
-    font-size: 17px;
-    line-height: 1;
-    padding: 0 4px;
-  }
-  .dbg-row {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 6px;
-  }
-  .dbg-btn {
-    flex: 1;
-    min-height: 34px;
-    border-radius: 9px;
-    border: 1px solid #ffcf5c;
-    background: #fff3d8;
-    color: #6b4a22;
-    font-size: 12.5px;
-    font-family: inherit;
-    padding: 4px 6px;
-  }
-  .dbg-btn:active { background: #ffe9b8; }
-  .dbg-btn.dbg-warn {
-    border-color: #ffb08a;
-    background: #ffe6da;
-    color: #a8451f;
-  }
-  .dbg-input {
-    flex: 1;
-    min-width: 0;
-    min-height: 34px;
-    border-radius: 9px;
-    border: 1px solid #ffcf5c;
-    background: #fffdf6;
-    color: #a8651f;
-    font-size: 16px;
-    text-align: center;
-    font-family: inherit;
-  }
-  #dbg-log {
-    max-height: 118px;
-    overflow-y: auto;
-    padding: 6px 7px;
-    border-radius: 10px;
-    background: rgba(255, 246, 226, 0.92);
-    border: 1px solid rgba(224, 161, 47, 0.35);
-    font: 11.5px/1.55 ui-monospace, Menlo, Consolas, monospace;
-    color: #7b6650;
-    -webkit-overflow-scrolling: touch;
-  }
-  .dbg-line { white-space: normal; word-break: break-all; }
-  .dbg-line.time { color: #b59468; }
 </style>
 </head>
 <body>
@@ -325,29 +212,6 @@
 </div>
 
 <div id="boot-msg">正在加载 Phaser 3 …</div>
-
-<!-- 调试后台面板（默认折叠） -->
-<div id="dbg-wrap">
-  <button id="dbg-toggle" aria-label="调试后台">⚙</button>
-  <div id="dbg-panel">
-    <div class="dbg-hd">
-      <span>调试后台</span>
-      <button id="dbg-hide" aria-label="收起">×</button>
-    </div>
-    <div class="dbg-row">
-      <button id="dbg-pause" class="dbg-btn">⏸ 暂停</button>
-      <button id="dbg-spawn" class="dbg-btn">🦃 刷公鸡</button>
-    </div>
-    <div class="dbg-row">
-      <input id="dbg-corn" class="dbg-input" type="number" min="0" step="25" value="50" inputmode="numeric">
-      <button id="dbg-corn-set" class="dbg-btn">设定玉米粒</button>
-    </div>
-    <div class="dbg-row">
-      <button id="dbg-clear" class="dbg-btn dbg-warn">🧹 清空场上单位</button>
-    </div>
-    <div id="dbg-log"></div>
-  </div>
-</div>
 
 <script>
 (function () {
@@ -572,28 +436,8 @@ function bootGame() {
   };
   const ENEMY = ENEMY_TYPES.normal;
 
-  /* ---------------- 调试日志 ---------------- */
-  const LOGS = [];
-  const logBox = document.getElementById('dbg-log');
-
-  function stamp() {
-    const d = new Date();
-    const p = (n) => String(n).padStart(2, '0');
-    return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
-  }
-
-  function pushLog(msg) {
-    const text = '[' + stamp() + '] ' + msg;
-    LOGS.push(text);
-    if (LOGS.length > 60) LOGS.shift();
-    if (!logBox) return;
-    const line = document.createElement('div');
-    line.className = 'dbg-line';
-    line.textContent = text;
-    logBox.appendChild(line);
-    while (logBox.childElementCount > 60) logBox.removeChild(logBox.firstChild);
-    logBox.scrollTop = logBox.scrollHeight;
-  }
+  /* ---------------- 日志（正式版已移除调试面板，调用直接跳过） ---------------- */
+  function pushLog() { /* no-op */ }
 
   /* ---------------- 通用小工具 ---------------- */
   function makeRng(seed) {
@@ -890,9 +734,6 @@ function bootGame() {
       this.refreshHud();
       this.startPrep();
 
-      const pauseBtn = document.getElementById('dbg-pause');
-      if (pauseBtn) pauseBtn.textContent = '⏸ 暂停';
-
       pushLog('🎮 新一局开始');
       if (!this.game.registry.get('storySeen')) {
         this.game.registry.set('storySeen', true);
@@ -1126,9 +967,6 @@ function bootGame() {
         fontFamily: FONT, fontSize: '15px', color: '#7b6650'
       }).setOrigin(0.5);
 
-      this.pauseText = this.add.text(CANVAS_W / 2, CANVAS_H / 2, '⏸  已暂停', {
-        fontFamily: FONT, fontSize: '46px', color: '#5c4326', fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(70).setVisible(false).setShadow(0, 3, '#ffffff', 12);
     }
 
     setPrepLine(text) {
@@ -2265,45 +2103,6 @@ function bootGame() {
       }
     }
 
-    /* ---------------- 调试后台接口 ---------------- */
-    togglePause() {
-      if (this.over) return false;
-      this.paused = !this.paused;
-      if (this.pauseText) this.pauseText.setVisible(this.paused);
-      pushLog(this.paused ? '⏸ 游戏暂停' : '▶ 游戏继续');
-      return this.paused;
-    }
-
-    debugSpawnEnemy() {
-      if (this.over) return;
-      this.spawnEnemy();
-    }
-
-    setCorn(value) {
-      const n = Math.max(0, Math.floor(value));
-      this.corn = n;
-      this.refreshHud();
-      pushLog('⚙ 玉米粒手动设为 ' + n);
-    }
-
-    clearUnits() {
-      const n = this.units.length;
-      this.units.forEach((u) => {
-        u.body.destroy();
-        u.bar.bg.destroy();
-        u.bar.fg.destroy();
-      });
-      this.units = [];
-
-      this.bullets.forEach((b) => {
-        b.core.destroy();
-        b.glow.destroy();
-      });
-      this.bullets = [];
-
-      pushLog('🧹 清空场上单位（' + n + ' 个）');
-    }
-
     /* ---------------- 结束 ---------------- */
     gameOver() {
       if (this.over) return;
@@ -2333,41 +2132,6 @@ function bootGame() {
 
   window.__eggGame = new Phaser.Game(config);
 
-  /* ---------------- 调试面板 DOM 绑定 ---------------- */
-  const panel = document.getElementById('dbg-panel');
-  const pauseBtn = document.getElementById('dbg-pause');
-
-  document.getElementById('dbg-toggle').addEventListener('click', () => {
-    panel.classList.toggle('open');
-  });
-  document.getElementById('dbg-hide').addEventListener('click', () => {
-    panel.classList.remove('open');
-  });
-
-  pauseBtn.addEventListener('click', () => {
-    if (!activeScene) return;
-    const paused = activeScene.togglePause();
-    pauseBtn.textContent = paused ? '▶ 继续' : '⏸ 暂停';
-  });
-
-  document.getElementById('dbg-spawn').addEventListener('click', () => {
-    if (activeScene) activeScene.debugSpawnEnemy();
-  });
-
-  document.getElementById('dbg-clear').addEventListener('click', () => {
-    if (activeScene) activeScene.clearUnits();
-  });
-
-  document.getElementById('dbg-corn-set').addEventListener('click', () => {
-    const input = document.getElementById('dbg-corn');
-    const v = parseInt(input.value, 10);
-    if (!activeScene) return;
-    if (!Number.isFinite(v) || v < 0) {
-      pushLog('⚠ 玉米粒输入无效');
-      return;
-    }
-    activeScene.setCorn(v);
-  });
 }
 })();
 </script>
