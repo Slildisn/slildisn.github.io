@@ -67,6 +67,31 @@
     box-shadow: 0 -10px 20px -18px rgba(122, 86, 44, 0.9);
   }
 
+  /* 右下角玩法工具：铲子 / 倍速（不遮挡卡牌） */
+  #play-tools {
+    position: fixed; right: 10px;
+    bottom: calc(var(--band-bottom) + var(--safe-bottom) + 10px);
+    z-index: 7;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .tool-btn {
+    width: 46px; height: 46px; border-radius: 14px;
+    border: 2px solid #ffcf5c;
+    background: linear-gradient(180deg, #fffdf6 0%, #ffe9b8 100%);
+    color: #8a5a2b; font-family: inherit;
+    font-size: 15px; font-weight: 800; line-height: 1;
+    box-shadow: 0 8px 18px -8px rgba(154, 111, 42, 0.55), inset 0 1px 0 #ffffff;
+    transition: transform 0.18s ease, box-shadow 0.22s ease, border-color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tool-btn:active { transform: translateY(1px) scale(0.97); }
+  .tool-btn.sel {
+    border-color: #ff9f43;
+    background: linear-gradient(180deg, #fff3cf 0%, #ffd98a 100%);
+    box-shadow: 0 0 0 4px rgba(255, 207, 92, 0.35), 0 10px 20px -10px rgba(154, 111, 42, 0.7);
+    transform: translateY(-2px);
+  }
+
   /* 中间战场：固定在两条栏之间，画布等比填充，不被栏内容挤压 */
   #game {
     position: fixed; left: 0; right: 0;
@@ -209,6 +234,11 @@
 
 <div id="card-dock">
   <div class="card-bar" id="card-bar"></div>
+</div>
+
+<div id="play-tools">
+  <button id="speed-btn" class="tool-btn" type="button" aria-label="切换倍速">1×</button>
+  <button id="shovel-btn" class="tool-btn" type="button" aria-label="铲子（移除单位）">🧹</button>
 </div>
 
 <div id="boot-msg">正在加载 Phaser 3 …</div>
@@ -726,12 +756,15 @@ function bootGame() {
       this.timers = { corn: 2.2 };
       this.pendingRow = null;
       this.plantCd = {};          // 每张卡的剩余种植冷却（秒）
+      this.shovel = false;        // 铲子是否选中
+      this.speedScale = 1;        // 1× / 2× 倍速
 
       this.drawArena();
       this.buildCards();
       this.buildHud();
       this.bindInput();
       this.refreshHud();
+      this.syncTools();
       this.startPrep();
 
       pushLog('🎮 新一局开始');
@@ -933,6 +966,8 @@ function bootGame() {
     selectCard(key) {
       if (this.over || this.paused) return;
       if ((this.plantCd[key] || 0) > 0) return;   // 卡槽冷却中，禁止选中
+      this.shovel = false;                        // 选卡与铲子互斥
+      this.syncTools();
       this.selected = this.selected === key ? null : key;
       this.syncCards();
     }
@@ -1012,11 +1047,21 @@ function bootGame() {
     }
 
     onGridClick(pointer) {
-      if (this.over || this.paused || !this.selected) return;
+      if (this.over || this.paused) return;
 
       const col = Math.floor((pointer.x - G.x0) / G.cell);
       const row = Math.floor((pointer.y - G.y0) / G.cell);
       if (col < 0 || col >= G.cols || row < 0 || row >= G.rows) return;
+
+      // 铲子模式：点场上的单位即可移除并返还 30% 费用
+      if (this.shovel) {
+        const target = this.findUnit(row, col);
+        if (target) this.digUnit(target);
+        else this.flash(pointer.x, pointer.y, '这里没有单位', '#b35a1f');
+        return;
+      }
+
+      if (!this.selected) return;
 
       if (this.findUnit(row, col)) {
         this.flash(pointer.x, pointer.y, '这里已经有蛋了', '#d9673f');
@@ -1683,6 +1728,70 @@ function bootGame() {
       });
     }
 
+    /* ---------------- 铲子（移除单位，返还 30% 费用） ---------------- */
+    toggleShovel() {
+      if (this.over || this.paused) return;
+      this.shovel = !this.shovel;
+      this.selected = null;      // 与卡牌互斥
+      this.syncCards();
+      this.syncTools();
+      if (this.shovel) this.showToast('铲子已选中：点击场上单位即可移除');
+    }
+
+    digUnit(u) {
+      const def = UNIT_DEFS[u.key] || { cost: 0, name: '单位' };
+      const refund = Math.floor((def.cost || 0) * 0.3);
+
+      this.shatter(u.x, u.y, 0xffe6a8, 7, 30);
+      this.flash(u.x, u.y - 24, '返还 ' + refund + ' 玉米', '#c9842a');
+      this.removeUnit(u);
+
+      if (refund > 0) {
+        this.corn += refund;
+        this.refreshHud();
+      }
+
+      this.shovel = false;
+      this.syncTools();
+      this.syncCards();
+      pushLog('🧹 铲除 ' + def.name + '，返还 ' + refund);
+    }
+
+    /* ---------------- 倍速 ---------------- */
+    toggleSpeed() {
+      if (this.over || this.paused) return;
+      this.speedScale = this.speedScale === 1 ? 2 : 1;
+      this.syncTools();
+      this.showToast(this.speedScale === 2 ? '2 倍速' : '恢复 1 倍速');
+    }
+
+    syncTools() {
+      const sh = document.getElementById('shovel-btn');
+      const sp = document.getElementById('speed-btn');
+      if (sh) sh.classList.toggle('sel', !!this.shovel);
+      if (sp) {
+        sp.textContent = (this.speedScale || 1) + '×';
+        sp.classList.toggle('sel', (this.speedScale || 1) > 1);
+      }
+    }
+
+    /* ---------------- 波次横幅 ---------------- */
+    showWaveBanner(text, big) {
+      const t = this.add.text(CANVAS_W / 2, 74, text, {
+        fontFamily: FONT, fontSize: big ? '34px' : '26px',
+        color: '#b35a1f', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(72).setAlpha(0).setScale(0.86)
+        .setShadow(0, 2, '#ffffff', 10);
+
+      this.tweens.add({ targets: t, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' });
+      this.time.delayedCall(1500, () => {
+        this.tweens.add({
+          targets: t, alpha: 0, y: 52, duration: 420, ease: 'Cubic.easeIn',
+          onComplete: () => t.destroy()
+        });
+      });
+    }
+
     /* ---------------- 卡槽种植冷却 ---------------- */
     startCardCooldown(key) {
       const secs = PLANT_CD[key] || 0;
@@ -1768,6 +1877,7 @@ function bootGame() {
       this.state = 'FIGHTING';
       this.spawnTimer = 0.8;
       this.setPrepLine(null);
+      this.showWaveBanner('一大波公鸡来袭！', this.waveIndex >= 3);   // 第 4/5 波放大字号
       pushLog('⚔ 第 ' + (this.waveIndex + 1) + ' 波开战！');
     }
 
@@ -1865,7 +1975,7 @@ function bootGame() {
     /* ---------------- 帧更新 ---------------- */
     update(time, delta) {
       if (this.over || this.paused) return;
-      const dt = Math.min(delta, 120) / 1000;
+      const dt = (Math.min(delta, 120) / 1000) * (this.speedScale || 1);
       this.clock += dt;
 
       // 状态机：准备 / 战斗
@@ -2132,6 +2242,22 @@ function bootGame() {
 
   window.__eggGame = new Phaser.Game(config);
 
+
+  /* ---------------- 玩法工具按钮绑定 ---------------- */
+  const shovelEl = document.getElementById('shovel-btn');
+  const speedEl = document.getElementById('speed-btn');
+
+  if (shovelEl) {
+    shovelEl.addEventListener('click', () => {
+      if (activeScene) activeScene.toggleShovel();
+    });
+  }
+
+  if (speedEl) {
+    speedEl.addEventListener('click', () => {
+      if (activeScene) activeScene.toggleSpeed();
+    });
+  }
 }
 })();
 </script>
