@@ -14,7 +14,67 @@
     overflow: hidden;
     -webkit-tap-highlight-color: transparent;
   }
-  #game { width: 100%; height: 100%; }
+  #app { display: flex; flex-direction: column; height: 100%; }
+  #game { position: relative; flex: 1 1 auto; min-height: 0; width: 100%; }
+  #hud {
+    flex: 0 0 auto;
+    padding: 10px 14px 8px;
+    background: linear-gradient(180deg, #fff8ec 0%, #fff2dc 100%);
+    border-bottom: 1px solid rgba(255, 224, 168, 0.9);
+    box-shadow: 0 6px 16px -14px rgba(122, 86, 44, 0.7);
+  }
+  .hud-top { position: relative; display: flex; align-items: flex-start; justify-content: center; min-height: 56px; }
+  .hud-center { text-align: center; }
+  .hud-title {
+    margin: 0; font-size: clamp(20px, 3.6vw, 30px); line-height: 1.2;
+    color: #5c4326; letter-spacing: 0.04em; font-weight: 800;
+    text-shadow: 0 2px 0 #ffffff, 0 8px 16px rgba(196, 142, 63, 0.22);
+  }
+  .hud-prep { margin-top: 8px; font-size: 14px; font-weight: 700; color: #b35a1f; }
+  .hud-prep[hidden] { display: none; }
+  .hud-corn { position: absolute; right: 0; top: 2px; display: flex; align-items: center; gap: 6px; }
+  .corn-dot {
+    width: 20px; height: 20px; border-radius: 50%; flex: 0 0 auto;
+    background: radial-gradient(circle at 34% 32%, #fff3c4, #ffcf5c 55%, #e8a92c 100%);
+    box-shadow: 0 2px 6px -2px rgba(154, 111, 42, 0.7);
+  }
+  .corn-label { font-size: 13px; color: #7b6650; }
+  #corn-val { font-size: 22px; color: #c9842a; line-height: 1; display: inline-block; }
+  #corn-val.pulse { animation: cornPop 0.3s ease; }
+  @keyframes cornPop { 0% { transform: scale(1); } 45% { transform: scale(1.22); } 100% { transform: scale(1); } }
+
+  .card-bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 112px));
+    gap: 8px 12px;
+    justify-content: center;
+    margin: 10px auto 0;
+  }
+  .card {
+    display: flex; align-items: center; gap: 8px;
+    height: 74px; padding: 0 10px;
+    border-radius: 18px; border: 2px solid #ffe0a8;
+    background: linear-gradient(180deg, #fffdf8, #fff6e2);
+    color: #5c4326; font-family: inherit; text-align: left;
+    box-shadow: 0 10px 18px -12px rgba(92, 67, 38, 0.9), 0 3px 8px -5px rgba(92, 67, 38, 0.25), inset 0 1px 0 #ffffff;
+    transition: transform 0.18s ease, box-shadow 0.22s ease, border-color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .card:active { transform: translateY(1px) scale(0.985); }
+  .card.sel {
+    border-color: #ffb63c;
+    background: linear-gradient(180deg, #fff7de, #ffedc4);
+    box-shadow: 0 0 0 4px rgba(255, 207, 92, 0.26), 0 12px 22px -12px rgba(154, 111, 42, 0.9), inset 0 1px 0 #ffffff;
+    transform: translateY(-2px);
+  }
+  .card.off { opacity: 0.55; filter: saturate(0.7); }
+  .card-ico {
+    flex: 0 0 auto; width: 30px; height: 30px; border-radius: 10px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 2px 6px -3px rgba(0, 0, 0, 0.35);
+  }
+  .card-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .card-txt b { font-size: 14px; line-height: 1.15; white-space: nowrap; }
+  .card-txt i { font-style: normal; font-size: 12px; color: #c9842a; }
   canvas { display: block; }
 
   #boot-msg {
@@ -148,7 +208,23 @@
 </head>
 <body>
 
-<div id="game"></div>
+<div id="app">
+  <header id="hud">
+    <div class="hud-top">
+      <div class="hud-center">
+        <h1 class="hud-title">母鸡大战公鸡</h1>
+        <div class="hud-prep" id="prep-line" hidden>安全准备 15s</div>
+      </div>
+      <div class="hud-corn">
+        <span class="corn-dot"></span>
+        <span class="corn-label">玉米粒</span>
+        <b id="corn-val">50</b>
+      </div>
+    </div>
+    <div class="card-bar" id="card-bar"></div>
+  </header>
+  <div id="game"></div>
+</div>
 <div id="boot-msg">正在加载 Phaser 3 …</div>
 
 <!-- 调试后台面板（默认折叠） -->
@@ -214,10 +290,10 @@
 /* ================= 游戏本体 ================= */
 function bootGame() {
   const CANVAS_W = 1280;
-  const CANVAS_H = 720;
+  const CANVAS_H = 672;
 
   // 5 行 × 9 列草坪（数值不动）
-  const G = { x0: 100, y0: 90, cell: 120, cols: 9, rows: 5 };
+  const G = { x0: 100, y0: 20, cell: 120, cols: 9, rows: 5 };
   const GRID_W = G.cols * G.cell; // 1080
   const GRID_H = G.rows * G.cell; // 600
 
@@ -666,129 +742,88 @@ function bootGame() {
         { key: 'bomber', label: '炸弹小鸡', cost: UNIT_DEFS.bomber.cost, color: UNIT_DEFS.bomber.color }
       ];
 
-      defs.forEach((d, i) => {
-        const x = 10 + i * 118;
-        const y = 10;
-        const w = 112;
-        const h = 74;
+      const bar = document.getElementById('card-bar');
+      if (!bar) return;
+      bar.innerHTML = '';
 
-        const g = this.add.graphics();
+      defs.forEach((d) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'card';
+        btn.dataset.key = d.key;
 
-        const nameT = this.add.text(x + 40, y + 12, d.label, {
-          fontFamily: FONT, fontSize: '13px', color: '#5c4326'
-        });
-        const costT = this.add.text(x + 40, y + 40, d.cost + ' 玉米', {
-          fontFamily: FONT, fontSize: '12px', color: '#c9842a'
-        });
+        const ico = document.createElement('span');
+        ico.className = 'card-ico';
+        ico.style.background = '#' + d.color.toString(16).padStart(6, '0');
 
-        const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0xffffff, 0.001)
-          .setInteractive({ useHandCursor: true });
+        const txt = document.createElement('span');
+        txt.className = 'card-txt';
+        const nm = document.createElement('b');
+        nm.textContent = d.label;
+        const cost = document.createElement('i');
+        cost.textContent = d.cost + ' 玉米';
+        txt.appendChild(nm);
+        txt.appendChild(cost);
 
-        const card = {
-          key: d.key, cost: d.cost, color: d.color,
-          g, hit, nameT, costT,
-          x, y, w, h,
-          baseNameY: y + 12, baseCostY: y + 40,
-          hover: false
-        };
-
-        hit.on('pointerover', () => { card.hover = true; this.redrawCards(); });
-        hit.on('pointerout', () => { card.hover = false; this.redrawCards(); });
-        hit.on('pointerdown', () => this.selectCard(d.key));
-
-        this.cards.push(card);
+        btn.appendChild(ico);
+        btn.appendChild(txt);
+        btn.addEventListener('click', () => this.selectCard(d.key));
+        bar.appendChild(btn);
       });
+
+      this.syncCards();
     }
 
     selectCard(key) {
       if (this.over) return;
       this.selected = this.selected === key ? null : key;
-      this.redrawCards();
+      this.syncCards();
     }
 
-    redrawCards() {
-      this.cards.forEach((card) => {
-        const chosen = this.selected === card.key;
-        const hover = card.hover && !this.over;
-        const afford = this.corn >= card.cost;
-        const g = card.g;
-
-        const lift = chosen ? 4 : (hover ? 2 : 0);
-        const x = card.x;
-        const y = card.y - lift;
-        const w = card.w;
-        const h = card.h;
-
-        g.clear();
-
-        // 双层柔和投影
-        g.fillStyle(0x5c4326, 0.05);
-        g.fillRoundedRect(x - 3, card.y + 9, w + 6, h, 22);
-        g.fillStyle(0x5c4326, 0.09);
-        g.fillRoundedRect(x + 1, card.y + 4, w, h, 18);
-
-        if (chosen || hover) {
-          g.fillStyle(chosen ? 0xffcf5c : 0x8fd6b4, chosen ? 0.30 : 0.20);
-          g.fillRoundedRect(x - 6, y - 6, w + 12, h + 12, 28);
-        }
-
-        g.fillStyle(chosen ? 0xfff1cd : (hover ? 0xfffaf0 : 0xfffdf8), afford ? 0.98 : 0.62);
-        g.fillRoundedRect(x, y, w, h, 18);
-        g.lineStyle(chosen ? 3 : 2, chosen ? 0xffb63c : (hover ? 0x8fd6b4 : 0xffe0a8), afford ? 1 : 0.45);
-        g.strokeRoundedRect(x, y, w, h, 18);
-
-        g.fillStyle(card.color, afford ? 1 : 0.5);
-        g.fillRoundedRect(x + 8, y + h / 2 - 13, 26, 26, 9);
-        g.lineStyle(2, 0x5c4326, 0.12);
-        g.strokeRoundedRect(x + 8, y + h / 2 - 13, 26, 26, 9);
-
-        card.nameT.setAlpha(afford ? 1 : 0.5);
-        card.nameT.setY(card.baseNameY - lift);
-        card.costT.setAlpha(afford ? 1 : 0.45);
-        card.costT.setY(card.baseCostY - lift);
+    syncCards() {
+      const bar = document.getElementById('card-bar');
+      if (!bar) return;
+      bar.querySelectorAll('.card').forEach((btn) => {
+        const def = UNIT_DEFS[btn.dataset.key];
+        if (!def) return;
+        btn.classList.toggle('sel', this.selected === btn.dataset.key);
+        btn.classList.toggle('off', this.corn < def.cost);
       });
     }
 
     /* ---------------- HUD ---------------- */
     buildHud() {
-      this.add.text(890, 18, '母鸡大战公鸡', {
-        fontFamily: FONT, fontSize: '30px', color: '#5c4326', fontStyle: 'bold'
-      }).setOrigin(0.5, 0).setShadow(0, 3, '#ffffff', 12);
-
-      this.add.circle(1108, 44, 13, 0xffcf5c).setStrokeStyle(3, 0xe8a92c);
-      this.add.circle(1104, 39, 4, 0xfff2b0);
-      this.add.text(1132, 14, '玉米粒', { fontFamily: FONT, fontSize: '16px', color: '#7b6650' });
-      this.cornText = this.add.text(1132, 34, '50', {
-        fontFamily: FONT, fontSize: '28px', color: '#c9842a', fontStyle: 'bold'
-      });
-
       const pillW = 800;
       const pillH = 28;
       const pill = this.add.graphics();
       pill.fillStyle(0xfffdf8, 0.94);
-      pill.fillRoundedRect(640 - pillW / 2, 690, pillW, pillH, 14);
+      pill.fillRoundedRect(640 - pillW / 2, 634, pillW, pillH, 14);
       pill.lineStyle(2, 0xffcf5c, 0.95);
-      pill.strokeRoundedRect(640 - pillW / 2, 690, pillW, pillH, 14);
+      pill.strokeRoundedRect(640 - pillW / 2, 634, pillW, pillH, 14);
 
-      this.add.text(640, 704, '① 点卡牌选中   ② 点草坪格子放置   ③ 点掉落的玉米粒 +25', {
+      this.add.text(640, 648, '① 点卡牌选中   ② 点草坪格子放置   ③ 点掉落的玉米粒 +25', {
         fontFamily: FONT, fontSize: '15px', color: '#7b6650'
       }).setOrigin(0.5);
-
-      this.prepText = this.add.text(890, 62, '', {
-        fontFamily: FONT, fontSize: '20px', color: '#b35a1f', fontStyle: 'bold'
-      }).setOrigin(0.5).setVisible(false);
 
       this.pauseText = this.add.text(CANVAS_W / 2, CANVAS_H / 2, '⏸  已暂停', {
         fontFamily: FONT, fontSize: '46px', color: '#5c4326', fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(70).setVisible(false).setShadow(0, 3, '#ffffff', 12);
     }
 
-    refreshHud() {
-      this.cornText.setText(String(this.corn));
-      this.redrawCards();
+    setPrepLine(text) {
+      const el = document.getElementById('prep-line');
+      if (!el) return;
+      if (!text) { el.hidden = true; return; }
+      if (el.textContent !== text) el.textContent = text;
+      el.hidden = false;
     }
 
-    /* ---------------- 输入 ---------------- */
+    refreshHud() {
+      const el = document.getElementById('corn-val');
+      if (el) el.textContent = String(this.corn);
+      this.syncCards();
+    }
+
     bindInput() {
       this.hoverCell = this.add.rectangle(0, 0, G.cell - 10, G.cell - 10, 0xffffff, 0.10)
         .setVisible(false).setDepth(5);
@@ -1241,7 +1276,7 @@ function bootGame() {
         .setStrokeStyle(2, 0xe0a800).setDepth(45);
       this.tweens.add({
         targets: fly,
-        x: 1112, y: 44, scale: 0.4, alpha: 0.95,
+        x: 1240, y: 26, scale: 0.4, alpha: 0.95,
         duration: 430, ease: 'Cubic.easeIn',
         onComplete: () => { fly.destroy(); this.pulseCorn(); }
       });
@@ -1260,10 +1295,11 @@ function bootGame() {
     }
 
     pulseCorn() {
-      this.tweens.add({
-        targets: this.cornText, scale: 1.18, duration: 90, yoyo: true,
-        onComplete: () => this.cornText.setScale(1)
-      });
+      const el = document.getElementById('corn-val');
+      if (!el) return;
+      el.classList.remove('pulse');
+      void el.offsetWidth;
+      el.classList.add('pulse');
     }
 
     dropSkyCorn() {
@@ -1386,9 +1422,8 @@ function bootGame() {
       this.clock += dt;
 
       // 开局安全准备倒计时
-      if (this.wave === 0 && this.prepText) {
-        this.prepText.setVisible(true);
-        this.prepText.setText('安全准备 ' + Math.ceil(Math.max(0, this.timers.enemy)) + 's');
+      if (this.wave === 0) {
+        this.setPrepLine('安全准备 ' + Math.ceil(Math.max(0, this.timers.enemy)) + 's');
       }
 
       // 刷怪前 3 秒亮红光 + 文字警告
@@ -1400,7 +1435,7 @@ function bootGame() {
       if (this.timers.enemy <= 0) {
         this.spawnEnemy(this.pendingRow);
         this.pendingRow = null;
-        if (this.prepText) this.prepText.setVisible(false);
+        this.setPrepLine(null);
         this.timers.enemy = this.wave <= 2 ? 7 : 5;
       }
 
@@ -1639,7 +1674,7 @@ function bootGame() {
       this.over = true;
       this.selected = null;
       this.hoverCell.setVisible(false);
-      this.redrawCards();
+      this.syncCards();
       pushLog('🚨 公鸡攻破鸡窝，游戏结束');
 
       this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x5c4326, 0.55).setDepth(100);
