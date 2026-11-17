@@ -183,6 +183,19 @@
     scroll-snap-type: x proximity;
   }
   .card-bar::-webkit-scrollbar { display: none; }
+
+  /* 横屏：单行卡槽 + 高度收窄 */
+  @media (orientation: landscape) {
+    :root { --band-bottom: 84px; }
+    .card {
+      flex: 0 0 88px; width: 88px; height: 62px; padding: 3px 4px;
+    }
+    .card .card-ico { width: 20px; height: 20px; }
+    .card-txt b { font-size: 10.5px; }
+    .card-txt i { font-size: 9px; }
+    #play-tools { bottom: calc(var(--band-bottom) + var(--safe-bottom) + 8px); }
+    #play-tools .tool-btn { width: 40px; height: 40px; font-size: 13px; }
+  }
   .card {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 3px; text-align: center;
@@ -491,13 +504,32 @@ const isProduction = false;
 
 /* ================= 游戏本体 ================= */
 function bootGame() {
-  const CANVAS_W = 1280;
-  const CANVAS_H = 672;
+  // —— 横竖屏自适应 ——
+  const VIEW_W = (typeof window !== 'undefined' && window.innerWidth) || 1280;
+  const VIEW_H = (typeof window !== 'undefined' && window.innerHeight) || 672;
+  const IS_LANDSCAPE = VIEW_W > VIEW_H;
 
-  // 5 行 × 9 列草坪（数值不动）
-  const G = { x0: 100, y0: 20, cell: 120, cols: 9, rows: 5 };
-  const GRID_W = G.cols * G.cell; // 1080
-  const GRID_H = G.rows * G.cell; // 600
+  const SIDE_BAND = IS_LANDSCAPE ? 90 : 100;
+
+  let CANVAS_W = 1280;
+  let CANVAS_H = 672;
+  let GRID_X0 = 100;
+  let GRID_Y0 = 20;
+  let CELL = 120;
+  const COLS = IS_LANDSCAPE ? 10 : 9;
+
+  if (IS_LANDSCAPE) {
+    // 高度贴着屏幕比例算，再由高度反推格子边长（5 行铺满）
+    CANVAS_H = Math.round(1600 * (VIEW_H / VIEW_W));
+    CELL = Math.floor((CANVAS_H - 40) / 5);
+    CANVAS_W = CELL * COLS + SIDE_BAND * 2;
+    GRID_X0 = SIDE_BAND;
+    GRID_Y0 = 20;
+  }
+
+  const G = { x0: GRID_X0, y0: GRID_Y0, cell: CELL, cols: COLS, rows: 5 };
+  const GRID_W = G.cols * G.cell;
+  const GRID_H = G.rows * G.cell;
 
   const FONT = '"Yuanti SC", "YouYuan", "M PLUS Rounded 1c", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif';
 
@@ -1543,71 +1575,80 @@ function bootGame() {
 
       const cy = G.y0 + GRID_H / 2;
 
-      // 左侧暖黄鸡窝
+      // 左侧暖黄鸡窝（宽度 = 左侧留白 - 6）
+      const nestW = Math.max(64, G.x0 - 6);
+      const nestX = 2;
+      const nestCx = nestX + nestW / 2;
+
       const nest = this.add.graphics();
       nest.fillStyle(0x5c4326, 0.10);
-      nest.fillRoundedRect(6, G.y0 + 14, 92, GRID_H - 16, 18);
+      nest.fillRoundedRect(nestX + 4, G.y0 + 14, nestW, GRID_H - 16, 18);
 
       nest.fillStyle(0xffc94d, 1);
-      nest.fillRoundedRect(2, G.y0 + 8, 94, GRID_H - 16, 18);
+      nest.fillRoundedRect(nestX, G.y0 + 8, nestW, GRID_H - 16, 18);
       nest.fillStyle(0xffd97a, 0.85);
-      nest.fillRoundedRect(8, G.y0 + 16, 82, 120, 14);
+      nest.fillRoundedRect(nestX + 6, G.y0 + 16, nestW - 12, 120, 14);
       nest.lineStyle(2, 0xe0a12f, 0.9);
-      nest.strokeRoundedRect(2, G.y0 + 8, 94, GRID_H - 16, 18);
+      nest.strokeRoundedRect(nestX, G.y0 + 8, nestW, GRID_H - 16, 18);
 
       nest.lineStyle(3, 0xd9a03a, 0.45);
       for (let i = 0; i < 5; i++) {
         const y = G.y0 + 70 + i * 92;
         nest.beginPath();
-        nest.moveTo(12, y);
-        nest.lineTo(86, y + 14);
+        nest.moveTo(nestX + 10, y);
+        nest.lineTo(nestX + nestW - 8, y + 14);
         nest.strokePath();
         nest.beginPath();
-        nest.moveTo(86, y + 40);
-        nest.lineTo(12, y + 54);
+        nest.moveTo(nestX + nestW - 8, y + 40);
+        nest.lineTo(nestX + 10, y + 54);
         nest.strokePath();
       }
 
       nest.fillStyle(0xfff8e8, 1);
-      nest.fillCircle(49, cy + 84, 15);
+      nest.fillCircle(nestCx, cy + 84, 15);
       nest.lineStyle(2, 0xe8cfa0, 1);
-      nest.strokeCircle(49, cy + 84, 15);
+      nest.strokeCircle(nestCx, cy + 84, 15);
 
-      this.add.text(49, cy - 48, '鸡窝', {
+      this.add.text(nestCx, cy - 48, '鸡窝', {
         fontFamily: FONT, fontSize: '21px', color: '#5c4326', fontStyle: 'bold'
       }).setOrigin(0.5);
-      this.add.text(49, cy - 20, '基地', {
+      this.add.text(nestCx, cy - 20, '基地', {
         fontFamily: FONT, fontSize: '21px', color: '#5c4326', fontStyle: 'bold'
       }).setOrigin(0.5);
 
       // 基地血量
-      this.baseBarBg = this.add.rectangle(49, cy + 36, 68, 10, 0x5c4326, 0.20);
-      this.baseBarFg = this.add.rectangle(49 - 32, cy + 36, 64, 6, 0x7fd8a8).setOrigin(0, 0.5);
-      this.baseHpText = this.add.text(49, cy + 58, String(BASE.hp), {
+      this.baseBarBg = this.add.rectangle(nestCx, cy + 36, 68, 10, 0x5c4326, 0.20);
+      this.baseBarFg = this.add.rectangle(nestCx - 32, cy + 36, 64, 6, 0x7fd8a8).setOrigin(0, 0.5);
+      this.baseHpText = this.add.text(nestCx, cy + 58, String(BASE.hp), {
         fontFamily: FONT, fontSize: '18px', color: '#5a3b12', fontStyle: 'bold'
       }).setOrigin(0.5);
 
-      // 右侧橘红出兵口
+      // 右侧橘红出兵口（贴画布右边缘，随宽度自适应）
+      const gateW = Math.max(64, CANVAS_W - (G.x0 + GRID_W) - 6);
+      const gateX = CANVAS_W - gateW - 2;
+      const gateCx = gateX + gateW / 2;
+      this.gateCenterX = gateCx;
+
       const gate = this.add.graphics();
       gate.fillStyle(0x5c4326, 0.10);
-      gate.fillRoundedRect(1186, G.y0 + 14, 92, GRID_H - 16, 18);
+      gate.fillRoundedRect(gateX + 2, G.y0 + 14, gateW, GRID_H - 16, 18);
 
       gate.fillStyle(0xffb08a, 1);
-      gate.fillRoundedRect(1184, G.y0 + 8, 94, GRID_H - 16, 18);
+      gate.fillRoundedRect(gateX, G.y0 + 8, gateW, GRID_H - 16, 18);
       gate.fillStyle(0xffd6c0, 0.8);
-      gate.fillRoundedRect(1190, G.y0 + 16, 82, 120, 14);
+      gate.fillRoundedRect(gateX + 6, G.y0 + 16, gateW - 12, 120, 14);
       gate.lineStyle(2, 0xe8996f, 0.95);
-      gate.strokeRoundedRect(1184, G.y0 + 8, 94, GRID_H - 16, 18);
+      gate.strokeRoundedRect(gateX, G.y0 + 8, gateW, GRID_H - 16, 18);
 
       gate.fillStyle(0xfff0e4, 0.85);
       for (let i = 0; i < 4; i++) {
-        gate.fillRoundedRect(1208, G.y0 + 96 + i * 122, 46, 12, 6);
+        gate.fillRoundedRect(gateCx - 23, G.y0 + 96 + i * 122, 46, 12, 6);
       }
 
-      this.add.text(1231, cy - 48, '公鸡', {
+      this.add.text(gateCx, cy - 48, '公鸡', {
         fontFamily: FONT, fontSize: '21px', color: '#5c4326', fontStyle: 'bold'
       }).setOrigin(0.5);
-      this.add.text(1231, cy - 20, '来袭', {
+      this.add.text(gateCx, cy - 20, '来袭', {
         fontFamily: FONT, fontSize: '21px', color: '#5c4326', fontStyle: 'bold'
       }).setOrigin(0.5);
     }
@@ -1707,15 +1748,16 @@ function bootGame() {
 
     /* ---------------- HUD ---------------- */
     buildHud() {
-      const pillW = 800;
+      const pillW = Math.min(900, CANVAS_W - 80);
       const pillH = 28;
+      const pillY = CANVAS_H - 38;
       const pill = this.add.graphics();
       pill.fillStyle(0xfffdf8, 0.94);
-      pill.fillRoundedRect(640 - pillW / 2, 634, pillW, pillH, 14);
+      pill.fillRoundedRect(CANVAS_W / 2 - pillW / 2, pillY, pillW, pillH, 14);
       pill.lineStyle(2, 0xffcf5c, 0.95);
-      pill.strokeRoundedRect(640 - pillW / 2, 634, pillW, pillH, 14);
+      pill.strokeRoundedRect(CANVAS_W / 2 - pillW / 2, pillY, pillW, pillH, 14);
 
-      this.add.text(640, 648, '① 点卡牌选中   ② 点草坪格子放置   ③ 点掉落的玉米粒 +25', {
+      this.add.text(CANVAS_W / 2, pillY + 14, '① 点卡牌选中   ② 点草坪格子放置   ③ 点掉落的玉米粒 +25', {
         fontFamily: FONT, fontSize: '15px', color: '#7b6650'
       }).setOrigin(0.5);
 
@@ -2048,7 +2090,7 @@ function bootGame() {
         ? rowArg
         : Phaser.Math.Between(0, G.rows - 1);
       const y = cellY(row);
-      const x = xArg || 1250;
+      const x = xArg || (CANVAS_W - 26);
 
       const body = this.add.graphics();
       drawRooster(body, t.w, t.h, t);
@@ -2315,7 +2357,7 @@ function bootGame() {
         .setStrokeStyle(2, 0xe0a800).setDepth(45);
       this.tweens.add({
         targets: fly,
-        x: 1240, y: 26, scale: 0.4, alpha: 0.95,
+        x: CANVAS_W - 40, y: 26, scale: 0.4, alpha: 0.95,
         duration: 430, ease: 'Cubic.easeIn',
         onComplete: () => { fly.destroy(); this.pulseCorn(); }
       });
@@ -2363,7 +2405,7 @@ function bootGame() {
       halo.fillEllipse(0, 0, 96, 108);
       halo.lineStyle(4, 0xb97a3c, 0.7);
       halo.strokeEllipse(0, 0, 96, 108);
-      halo.setPosition(1231, y);
+      halo.setPosition(this.gateCenterX || (CANVAS_W - 46), y);
 
       this.tweens.add({
         targets: halo,
@@ -2377,7 +2419,7 @@ function bootGame() {
         }
       });
 
-      const tip = this.add.text(1231, y - 66, '公鸡来袭 3s', {
+      const tip = this.add.text(this.gateCenterX || (CANVAS_W - 46), y - 66, '公鸡来袭 3s', {
         fontFamily: FONT, fontSize: '19px', color: '#8a5a2b', fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(10);
 
@@ -2423,11 +2465,11 @@ function bootGame() {
       btnG.fillStyle(0xffcf5c, 1);
       btnG.fillRoundedRect(520, 392, 240, 60, 30);
 
-      const btnT = this.add.text(640, 422, '开始保卫', {
+      const btnT = this.add.text(CANVAS_W / 2, CANVAS_H / 2 + 86, '开始保卫', {
         fontFamily: FONT, fontSize: '24px', color: '#5c4326', fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(93);
 
-      const hit = this.add.rectangle(640, 422, 240, 60, 0xffffff, 0.001)
+      const hit = this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2 + 86, 240, 60, 0xffffff, 0.001)
         .setDepth(94).setInteractive({ useHandCursor: true });
 
       items.push(dim, card, title, body, btnG, btnT, hit);
@@ -2857,9 +2899,13 @@ function bootGame() {
 
       const card = this.add.graphics().setDepth(101);
       card.fillStyle(0xfffdf6, 0.98);
-      card.fillRoundedRect(320, 168, 640, 316, 28);
+      const cardW = Math.min(640, CANVAS_W - 80);
+      const cardH = 316;
+      const cardX = CANVAS_W / 2 - cardW / 2;
+      const cardY = CANVAS_H / 2 - cardH / 2;
+      card.fillRoundedRect(cardX, cardY, cardW, cardH, 28);
       card.lineStyle(3, 0xffcf5c, 1);
-      card.strokeRoundedRect(320, 168, 640, 316, 28);
+      card.strokeRoundedRect(cardX, cardY, cardW, cardH, 28);
 
       const title = this.add.text(640, 232, opts.title, {
         fontFamily: FONT, fontSize: '33px', color: '#5c4326', fontStyle: 'bold',
@@ -3127,7 +3173,7 @@ function bootGame() {
           e.summonLeft -= dt;
           if (e.summonLeft <= 0) {
             e.summonLeft = e.summonEvery;
-            this.spawnEnemy(e.row, e.summonType, Math.min(1240, e.x + 34));
+            this.spawnEnemy(e.row, e.summonType, Math.min(CANVAS_W - 36, e.x + 34));
           }
         }
 
@@ -3343,6 +3389,17 @@ function bootGame() {
       if (activeScene) activeScene.toggleSpeed();
     });
   }
+
+  // 横竖屏切换：画布尺寸在启动时锁定，旋转后重载以重排布局
+  let lastPortrait = window.innerWidth <= window.innerHeight;
+  window.addEventListener('resize', () => {
+    const nowPortrait = window.innerWidth <= window.innerHeight;
+    if (nowPortrait !== lastPortrait) {
+      lastPortrait = nowPortrait;
+      clearTimeout(window.__eggRotateT);
+      window.__eggRotateT = setTimeout(() => location.reload(), 220);
+    }
+  });
 
   const deckClearEl = document.getElementById('deck-clear');
   const deckStartEl = document.getElementById('deck-start');
