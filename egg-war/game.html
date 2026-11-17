@@ -415,7 +415,8 @@ function bootGame() {
       this.drops = [];
       this.cards = [];
 
-      this.timers = { enemy: 4, corn: 3 };
+      this.timers = { enemy: 4, corn: 2.2 };
+      this.pendingRow = null;
 
       this.drawArena();
       this.buildCards();
@@ -427,6 +428,7 @@ function bootGame() {
       if (pauseBtn) pauseBtn.textContent = '⏸ 暂停';
 
       pushLog('🎮 新一局开始');
+      if (this.showTutorial()) this.paused = true;
     }
 
     /* ---------------- 场地 ---------------- */
@@ -849,8 +851,10 @@ function bootGame() {
     }
 
     /* ---------------- 敌人 ---------------- */
-    spawnEnemy() {
-      const row = Phaser.Math.Between(0, G.rows - 1);
+    spawnEnemy(rowArg) {
+      const row = (typeof rowArg === 'number' && rowArg >= 0 && rowArg < G.rows)
+        ? rowArg
+        : Phaser.Math.Between(0, G.rows - 1);
       const y = cellY(row);
       const x = 1250;
 
@@ -965,17 +969,18 @@ function bootGame() {
 
     /* ---------------- 掉落玉米粒 ---------------- */
     dropCorn(x, y0, targetY, life, owner) {
+      const glow = this.add.circle(x, y0, 27, 0xfff0b8, 0.20).setDepth(18);
       const main = this.add.circle(x, y0, 15, 0xffd54a).setStrokeStyle(3, 0xe0a800).setDepth(20);
       const hi = this.add.circle(x - 5, y0 - 5, 4, 0xfff2b0).setDepth(21);
-      // 视觉半径 15 不变；点击热区放大到半径 30（直径 60px），更好点中
+      // 视觉半径 15 不变；点击热区放大到半径 36（直径 72px），更好点中
       main.setInteractive({
-        hitArea: new Phaser.Geom.Circle(15, 15, 30),
+        hitArea: new Phaser.Geom.Circle(15, 15, 36),
         hitAreaCallback: Phaser.Geom.Circle.Contains,
         useHandCursor: true
       });
 
       const d = {
-        x, y: y0, vy: 0, targetY, life, main, hi,
+        x, y: y0, vy: 0, targetY, life, main, hi, glow,
         owner: owner || null, alive: true,
         phase: Math.random() * Math.PI * 2,
         landed: false,
@@ -1014,7 +1019,16 @@ function bootGame() {
         onComplete: () => { fly.destroy(); this.pulseCorn(); }
       });
 
-      this.removeDrop(d);
+      // 轻快的缩小消失反馈
+      d.alive = false;
+      this.drops = this.drops.filter((x) => x !== d);
+      this.tweens.add({
+        targets: [d.main, d.hi, d.glow],
+        scale: 0.15, alpha: 0,
+        duration: 150, ease: 'Back.easeIn',
+        onComplete: () => { d.main.destroy(); d.hi.destroy(); d.glow.destroy(); }
+      });
+
       pushLog('🌽 拾取玉米粒 +25 → 当前 ' + this.corn);
     }
 
@@ -1037,22 +1051,124 @@ function bootGame() {
       this.dropCorn(u.x, u.y - 46, u.y - 76, 8, u);
     }
 
+    /* ---------------- 公鸡来袭预警 ---------------- */
+    showSpawnWarning(row) {
+      const y = cellY(row);
+
+      const halo = this.add.graphics().setDepth(9);
+      halo.fillStyle(0xffb066, 0.30);
+      halo.fillEllipse(0, 0, 92, 104);
+      halo.lineStyle(3, 0xff9a4d, 0.55);
+      halo.strokeEllipse(0, 0, 92, 104);
+      halo.setPosition(1231, y);
+
+      this.tweens.add({
+        targets: halo,
+        scaleX: 1.12, scaleY: 1.12, alpha: 0.55,
+        duration: 380, yoyo: true, repeat: 2, ease: 'Sine.easeInOut',
+        onComplete: () => {
+          this.tweens.add({
+            targets: halo, alpha: 0, duration: 200,
+            onComplete: () => halo.destroy()
+          });
+        }
+      });
+
+      const tip = this.add.text(1231, y - 62, '公鸡来袭', {
+        fontFamily: FONT, fontSize: '17px', color: '#b35a1f', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(10);
+
+      this.tweens.add({
+        targets: tip, y: y - 76, alpha: 0,
+        duration: 1500, ease: 'Cubic.easeOut',
+        onComplete: () => tip.destroy()
+      });
+
+      pushLog('⚠ 预警：第' + (row + 1) + '行即将出鸡');
+    }
+
+    /* ---------------- 新手引导 ---------------- */
+    showTutorial() {
+      let seen = false;
+      try { seen = localStorage.getItem('eggwar_tut_v1') === '1'; } catch (e) { /* ignore */ }
+      if (seen) return false;
+
+      const items = [];
+      const dim = this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x5c4326, 0.45)
+        .setDepth(90);
+
+      const card = this.add.graphics().setDepth(91);
+      card.fillStyle(0xfffdf6, 0.98);
+      card.fillRoundedRect(300, 220, 680, 270, 28);
+      card.lineStyle(3, 0xffcf5c, 1);
+      card.strokeRoundedRect(300, 220, 680, 270, 28);
+
+      const title = this.add.text(640, 268, '🐣 先记住一句话', {
+        fontFamily: FONT, fontSize: '30px', color: '#5c4326', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(92);
+
+      const body = this.add.text(640, 348, '放置单位守住左边鸡窝，\n点击玉米粒收集资源。', {
+        fontFamily: FONT, fontSize: '27px', color: '#7b6650', align: 'center', lineSpacing: 14
+      }).setOrigin(0.5).setDepth(92);
+
+      const btn = this.add.graphics().setDepth(92);
+      btn.fillStyle(0xffcf5c, 1);
+      btn.fillRoundedRect(530, 408, 220, 58, 29);
+
+      const btnText = this.add.text(640, 437, '开始防守', {
+        fontFamily: FONT, fontSize: '23px', color: '#5c4326', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(93);
+
+      const hit = this.add.rectangle(640, 437, 220, 58, 0xffffff, 0.001)
+        .setDepth(94)
+        .setInteractive({ useHandCursor: true });
+
+      items.push(dim, card, title, body, btn, btnText, hit);
+
+      const close = () => {
+        if (this.tutClosed) return;
+        this.tutClosed = true;
+        try { localStorage.setItem('eggwar_tut_v1', '1'); } catch (e) { /* ignore */ }
+        this.paused = false;
+        const pauseBtn = document.getElementById('dbg-pause');
+        if (pauseBtn) pauseBtn.textContent = '⏸ 暂停';
+        items.forEach((o) => { if (o && o.destroy) o.destroy(); });
+        pushLog('📖 新手引导已关闭');
+      };
+
+      this.tutClosed = false;
+      hit.on('pointerdown', (p, x, y, ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); close(); });
+      // 兜底：点遮罩任意位置也能关掉，避免卡住
+      dim.setInteractive();
+      dim.on('pointerdown', () => close());
+
+      pushLog('📖 首次进入：显示新手引导');
+      return true;
+    }
+
     /* ---------------- 帧更新 ---------------- */
     update(time, delta) {
       if (this.over || this.paused) return;
       const dt = Math.min(delta, 120) / 1000;
       this.clock += dt;
 
+      // 刷怪前 1.5 秒先亮出该行提示
       this.timers.enemy -= dt;
+      if (this.pendingRow === null && this.timers.enemy <= 1.5) {
+        this.pendingRow = Phaser.Math.Between(0, G.rows - 1);
+        this.showSpawnWarning(this.pendingRow);
+      }
       if (this.timers.enemy <= 0) {
-        this.spawnEnemy();
+        this.spawnEnemy(this.pendingRow);
+        this.pendingRow = null;
         this.timers.enemy = 5;
       }
 
+      // 天上掉玉米粒：频率小幅提高（2.6~4.2 秒一颗）
       this.timers.corn -= dt;
       if (this.timers.corn <= 0) {
         this.dropSkyCorn();
-        this.timers.corn = 3.5 + Math.random() * 2;
+        this.timers.corn = 2.6 + Math.random() * 1.6;
       }
 
       this.updateUnits(dt);
@@ -1148,6 +1264,11 @@ function bootGame() {
       for (const d of this.drops.slice()) {
         d.life -= dt;
 
+        // 呼吸光晕：始终轻微起伏，帮助玩家一眼看到
+        const breath = Math.sin(this.clock * 2.4 + d.phase);
+        d.glow.setScale(1 + 0.14 * breath);
+        d.glow.setAlpha(0.16 + 0.10 * (0.5 + 0.5 * breath));
+
         if (!d.landed) {
           d.vy = Math.min(320, d.vy + 900 * dt);
           d.y = Math.min(d.targetY, d.y + d.vy * dt);
@@ -1155,6 +1276,7 @@ function bootGame() {
           const sway = Math.sin(d.phase) * 3;
           d.main.setPosition(d.x + sway, d.y);
           d.hi.setPosition(d.x + sway - 5, d.y - 5);
+          d.glow.setPosition(d.x + sway, d.y);
 
           if (d.y >= d.targetY) {
             d.landed = true;
@@ -1164,9 +1286,12 @@ function bootGame() {
               onComplete: () => { d.main.setScale(1); d.settling = false; }
             });
           }
-        } else if (!d.settling) {
-          const b = 1 + Math.sin(d.life * 4) * 0.04;
-          d.main.setScale(b);
+        } else {
+          if (!d.settling) {
+            const b = 1 + Math.sin(d.life * 4) * 0.04;
+            d.main.setScale(b);
+          }
+          d.glow.setPosition(d.x, d.y);
         }
 
         if (d.life <= 2) {
@@ -1174,7 +1299,15 @@ function bootGame() {
           d.main.setAlpha(a);
           d.hi.setAlpha(a);
         }
-        if (d.life <= 0) this.removeDrop(d);
+        if (d.life <= 0) {
+          d.alive = false;
+          this.drops = this.drops.filter((x) => x !== d);
+          this.tweens.add({
+            targets: [d.main, d.hi, d.glow], scale: 0.2, alpha: 0,
+            duration: 160,
+            onComplete: () => { d.main.destroy(); d.hi.destroy(); d.glow.destroy(); }
+          });
+        }
       }
     }
 
