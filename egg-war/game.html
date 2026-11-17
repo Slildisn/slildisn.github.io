@@ -533,7 +533,49 @@ function bootGame() {
 
     // ===== 爆破 / 突进 =====
     mine:     { name: '地雷蛋',   cost: 110, hp: 180, size: 84, color: 0x8a8f7a, ai: 'bomber', deco: 'mine', blast: 110, plantCd: 11, unlock: 3 },
-    dash:     { name: '疾冲小鸡', cost: 90,  hp: 160, size: 80, color: 0x8fd6f0, ai: 'charger', deco: 'dash', dashDmg: 160, plantCd: 9, unlock: 3 }
+    dash:     { name: '疾冲小鸡', cost: 90,  hp: 160, size: 80, color: 0x8fd6f0, ai: 'charger', deco: 'dash', dashDmg: 160, plantCd: 9, unlock: 3 },
+
+    // ===== 扩容花名册（新 40 只，参数化复用现有 AI） =====
+    straw: { name: '稻草母鸡', cost: 45, hp: 170, size: 76, color: 0xffe0a0, ai: 'economy', deco: 'grain', cycle: 7, plantCd: 6, unlock: 1 },
+    silver: { name: '银羽母鸡', cost: 95, hp: 250, size: 84, color: 0xf0f0f0, ai: 'economy', deco: 'feather', cycle: 4.2, plantCd: 8, unlock: 2 },
+    copper: { name: '铜羽母鸡', cost: 130, hp: 280, size: 84, color: 0xd9a05a, ai: 'economy', deco: 'feather', cycle: 4.5, plantCd: 9, unlock: 2 },
+    orchard: { name: '果园母鸡', cost: 150, hp: 300, size: 88, color: 0xa8d98a, ai: 'economy', deco: 'leaf', cycle: 4, plantCd: 11, unlock: 3 },
+    mill: { name: '磨坊母鸡', cost: 200, hp: 320, size: 88, color: 0xc9a06a, ai: 'economy', deco: 'silo', cycle: 3.6, plantCd: 12, unlock: 4 },
+    treasury: { name: '金库母鸡', cost: 240, hp: 360, size: 90, color: 0xffd45c, ai: 'economy', deco: 'grain', cycle: 3.2, plantCd: 14, unlock: 5 },
+    spitter: { name: '吐籽小鸡', cost: 55, hp: 150, size: 76, color: 0xb8e09a, ai: 'ranged', deco: 'leaf', dmg: 14, atkCd: 1.1, plantCd: 5, unlock: 2 },
+    twinpea: { name: '双发豌豆', cost: 110, hp: 190, size: 80, color: 0x9fd88a, ai: 'ranged', deco: 'leaf', dmg: 16, atkCd: 1.0, plantCd: 7, unlock: 2 },
+    ember2: { name: '火弩射手', cost: 140, hp: 200, size: 80, color: 0xffb07a, ai: 'ranged', deco: 'flame', dmg: 26, atkCd: 1.3, plantCd: 9, unlock: 3 },
+    scout: { name: '侦察射手', cost: 160, hp: 210, size: 84, color: 0x9fc4e8, ai: 'ranged', deco: 'scope', dmg: 40, atkCd: 1.6, plantCd: 10, unlock: 3 },
+    longbow: { name: '长弓手', cost: 170, hp: 220, size: 84, color: 0xc0a8e8, ai: 'ranged', deco: 'scope', dmg: 55, atkCd: 2.0, plantCd: 11, unlock: 3 },
+    heavy: { name: '重型炮手', cost: 200, hp: 250, size: 92, color: 0xa88a6a, ai: 'ranged', deco: 'cannon', dmg: 75, atkCd: 2.3, plantCd: 13, unlock: 4 },
+    frost2: { name: '霜冻射手', cost: 175, hp: 200, size: 80, color: 0xa8e0ff, ai: 'ranged', deco: 'ice', dmg: 14, atkCd: 0.9, slow: 0.6, slowTime: 1.5, plantCd: 10, unlock: 4 },
+    stormbow: { name: '雷弓手', cost: 185, hp: 220, size: 84, color: 0xc9b0ff, ai: 'ranged', deco: 'bolt', dmg: 45, atkCd: 1.8, plantCd: 12, unlock: 4 },
+    sniper2: { name: '鹰眼狙击', cost: 230, hp: 230, size: 88, color: 0x8fa8c8, ai: 'ranged', deco: 'scope', dmg: 95, atkCd: 2.8, plantCd: 15, unlock: 5 },
+    gatling: { name: '加特林小鸡', cost: 250, hp: 260, size: 88, color: 0xd8c8b0, ai: 'ranged', deco: 'bolt', dmg: 9, atkCd: 0.4, range: 4, plantCd: 16, unlock: 5 },
+    meteor: { name: '流星母鸡', cost: 240, hp: 260, size: 88, color: 0xe0b0ff, ai: 'chain', deco: 'bolt', dmg: 40, atkCd: 2.0, chain: 2, chainRange: 150, plantCd: 16, unlock: 5 },
+    nut: { name: '坚果蛋', cost: 60, hp: 1100, size: 84, color: 0xd9a05a, ai: 'tank', deco: 'wood',  plantCd: 7, unlock: 2 },
+    stone2: { name: '岩甲蛋', cost: 95, hp: 1500, size: 88, color: 0x9aa0a8, ai: 'tank', deco: 'plate',  plantCd: 9, unlock: 2 },
+    iron2: { name: '钢壁蛋', cost: 140, hp: 2400, size: 92, color: 0x9fb0c8, ai: 'tank', deco: 'plate',  plantCd: 12, unlock: 3 },
+    spike2: { name: '荆棘蛋', cost: 150, hp: 1700, size: 92, color: 0xb0a090, ai: 'tank', deco: 'spike',  plantCd: 12, unlock: 3 },
+    magma: { name: '熔岩蛋', cost: 180, hp: 2000, size: 92, color: 0xd07a4a, ai: 'tank', deco: 'flame',  plantCd: 13, unlock: 4 },
+    crystal: { name: '水晶蛋', cost: 190, hp: 2600, size: 92, color: 0xa8d8e8, ai: 'tank', deco: 'ice',  plantCd: 14, unlock: 4 },
+    obsidian: { name: '黑曜蛋', cost: 220, hp: 3200, size: 96, color: 0x6a6a7a, ai: 'tank', deco: 'plate',  plantCd: 15, unlock: 5 },
+    thornking: { name: '荆棘王蛋', cost: 240, hp: 3600, size: 96, color: 0x8a7a6a, ai: 'tank', deco: 'spike',  plantCd: 16, unlock: 5 },
+    bunker: { name: '堡垒蛋', cost: 260, hp: 4200, size: 96, color: 0x8a98a8, ai: 'tank', deco: 'plate',  plantCd: 16, unlock: 5 },
+    granite: { name: '花岗蛋', cost: 210, hp: 3000, size: 96, color: 0x9a9a9a, ai: 'tank', deco: 'wood',  plantCd: 15, unlock: 4 },
+    sprout: { name: '嫩芽母鸡', cost: 90, hp: 220, size: 84, color: 0xb8e8b0, ai: 'healer', deco: 'herb', heal: 6, cycle: 4, plantCd: 9, unlock: 2 },
+    pollen: { name: '花粉母鸡', cost: 120, hp: 240, size: 84, color: 0xffe0a0, ai: 'healer', deco: 'herb', heal: 9, cycle: 3.8, plantCd: 10, unlock: 2 },
+    moon: { name: '月露母鸡', cost: 140, hp: 250, size: 84, color: 0xd0e0ff, ai: 'healer', deco: 'halo', heal: 11, cycle: 3.5, plantCd: 11, unlock: 3 },
+    sunflower: { name: '朝阳母鸡', cost: 160, hp: 260, size: 84, color: 0xffd880, ai: 'healer', deco: 'halo', heal: 12, cycle: 3.2, plantCd: 12, unlock: 3 },
+    spring: { name: '泉心母鸡', cost: 180, hp: 270, size: 84, color: 0xa8e0e0, ai: 'healer', deco: 'herb', heal: 14, cycle: 3.0, plantCd: 13, unlock: 4 },
+    grace: { name: '恩泽母鸡', cost: 200, hp: 280, size: 88, color: 0xfff0b0, ai: 'healer', deco: 'halo', heal: 16, cycle: 2.8, plantCd: 14, unlock: 4 },
+    dawn: { name: '晨曦母鸡', cost: 220, hp: 290, size: 88, color: 0xffe0c0, ai: 'healer', deco: 'halo', heal: 18, cycle: 2.6, plantCd: 15, unlock: 5 },
+    sanct: { name: '圣所母鸡', cost: 240, hp: 300, size: 88, color: 0xfff6d0, ai: 'healer', deco: 'halo', heal: 20, cycle: 2.4, plantCd: 16, unlock: 5 },
+    renew: { name: '复苏母鸡', cost: 260, hp: 320, size: 90, color: 0xc0f0c0, ai: 'healer', deco: 'herb', heal: 22, cycle: 2.2, plantCd: 16, unlock: 5 },
+    bomb2: { name: '爆裂蛋', cost: 90, hp: 160, size: 80, color: 0x9a8f6a, ai: 'bomber', deco: 'mine', blast: 100, plantCd: 9, unlock: 3 },
+    bomb3: { name: '高爆蛋', cost: 150, hp: 190, size: 84, color: 0x8a7f5a, ai: 'bomber', deco: 'mine', blast: 160, plantCd: 11, unlock: 4 },
+    bomb4: { name: '核爆蛋', cost: 200, hp: 220, size: 88, color: 0x7a6f4a, ai: 'bomber', deco: 'mine', blast: 200, plantCd: 14, unlock: 5 },
+    ram: { name: '冲角小鸡', cost: 120, hp: 180, size: 80, color: 0xa8d0f0, ai: 'charger', deco: 'dash', dashDmg: 220, plantCd: 10, unlock: 4 },
   };
 
   // 有主动循环技能的单位（仅用于决定“显示不显示冷却”，数值仍由各自 cd 字段决定）
@@ -574,11 +616,21 @@ function bootGame() {
 
   // 波次配置：改这里就能调难度
   const WAVES = [
-    { normal: 5,  raider: 0, gale: 0, helmet: 0, flame: 0, flyer: 0, giant: 0, interval: 4.0, prep: PREP_TIME },
-    { normal: 7,  raider: 2, gale: 2, helmet: 0, flame: 0, flyer: 0, giant: 0, interval: 3.6, prep: PREP_TIME },
-    { normal: 9,  raider: 4, gale: 3, helmet: 2, flame: 0, flyer: 0, venom: 1, frenzy: 0, summon: 0, giant: 0, interval: 3.2, prep: PREP_TIME },
-    { normal: 11, raider: 5, gale: 3, helmet: 3, flame: 2, flyer: 2, venom: 2, frenzy: 2, summon: 1, giant: 1, interval: 2.8, prep: PREP_TIME },
-    { normal: 12, raider: 6, gale: 4, helmet: 4, flame: 3, flyer: 3, venom: 2, frenzy: 3, summon: 1, giant: 2, interval: 2.4, prep: PREP_TIME, boss: true }
+    { normal: 5,  raider: 0, interval: 4.0, prep: PREP_TIME },
+
+    { normal: 7,  raider: 2, gale: 2, grunt: 2, swift: 1,
+      interval: 3.6, prep: PREP_TIME },
+
+    { normal: 9,  raider: 4, gale: 3, helmet: 2, venom: 1, militia: 2, zipper: 1, ironclad: 1,
+      interval: 3.2, prep: PREP_TIME },
+
+    { normal: 11, raider: 5, gale: 3, helmet: 3, flame: 2, flyer: 2, venom: 2, frenzy: 2, summon: 1, giant: 1,
+      brute: 1, runner: 1, bulwark: 1, pyro: 1, wisp: 1, berserk: 1,
+      interval: 2.8, prep: PREP_TIME },
+
+    { normal: 8,  raider: 4, gale: 4, helmet: 4, flame: 3, flyer: 3, venom: 2, frenzy: 3, summon: 1, giant: 2,
+      bolt: 1, veteran: 1, warlord: 1, tanker: 1, fortress: 1, toxic: 1, sky: 1, colossus: 1, shaman: 1,
+      interval: 2.4, prep: PREP_TIME, boss: true }
   ];
 
   /* 敌方（数值不动） */
@@ -608,6 +660,28 @@ function bootGame() {
       peckDmg: 26, peckRate: 0.9, burnDmg: 8, burnCd: 1.5, deco: 'flame',
       body: 0xff8a5c, light: 0xffb98c, line: 0xcc5a30, comb: 0xb33a1f, tail: 0xb33a1f
     },
+    // ===== 扩容敌人（新 20 种） =====
+    grunt: { name: '杂兵公鸡', hp: 200, w: 70, h: 82, speed: 24, peckDmg: 24, peckRate: 0.9,  deco: 'gale', body: 0xf0a070, light: 0xffc9a8, line: 0xc07a4a, comb: 0xc07a4a, tail: 0xc07a4a },
+    militia: { name: '民兵公鸡', hp: 240, w: 72, h: 84, speed: 26, peckDmg: 26, peckRate: 0.9,  deco: 'gale', body: 0xe09060, light: 0xffb890, line: 0xb06840, comb: 0xb06840, tail: 0xb06840 },
+    brute: { name: '壮汉公鸡', hp: 380, w: 78, h: 88, speed: 20, peckDmg: 34, peckRate: 1, dr: 0.1, deco: 'plate', body: 0xd08050, light: 0xf0a878, line: 0x9a5030, comb: 0x9a5030, tail: 0x9a5030 },
+    veteran: { name: '老兵公鸡', hp: 300, w: 74, h: 84, speed: 24, peckDmg: 28, peckRate: 0.85, dr: 0.15, deco: 'plate', body: 0xc87848, light: 0xe8a070, line: 0x945028, comb: 0x945028, tail: 0x945028 },
+    warlord: { name: '军阀公鸡', hp: 460, w: 80, h: 90, speed: 18, peckDmg: 36, peckRate: 1.1, dr: 0.2, deco: 'plate', body: 0xb86840, light: 0xd89068, line: 0x84401f, comb: 0x84401f, tail: 0x84401f },
+    colossus: { name: '巨像公鸡', hp: 700, w: 96, h: 110, speed: 14, peckDmg: 40, peckRate: 1.2, dr: 0.25, deco: 'plate', body: 0xa05838, light: 0xc88058, line: 0x703828, comb: 0x703828, tail: 0x703828 },
+    swift: { name: '迅捷公鸡', hp: 130, w: 62, h: 74, speed: 44, peckDmg: 14, peckRate: 0.5,  deco: 'gale', body: 0xffc070, light: 0xffdca8, line: 0xd09040, comb: 0xd09040, tail: 0xd09040 },
+    zipper: { name: '疾行公鸡', hp: 150, w: 62, h: 74, speed: 46, peckDmg: 16, peckRate: 0.5,  deco: 'gale', body: 0xffb060, light: 0xffd090, line: 0xc88030, comb: 0xc88030, tail: 0xc88030 },
+    runner: { name: '长跑公鸡', hp: 170, w: 64, h: 76, speed: 42, peckDmg: 18, peckRate: 0.55,  deco: 'gale', body: 0xffa850, light: 0xffc880, line: 0xc87828, comb: 0xc87828, tail: 0xc87828 },
+    bolt: { name: '闪电公鸡', hp: 190, w: 64, h: 76, speed: 48, peckDmg: 20, peckRate: 0.5,  deco: 'gale', body: 0xffb870, light: 0xffd8a0, line: 0xc89040, comb: 0xc89040, tail: 0xc89040 },
+    ironclad: { name: '重甲公鸡', hp: 420, w: 76, h: 86, speed: 18, peckDmg: 30, peckRate: 1, dr: 0.35, slowResist: 0.5, deco: 'plate', body: 0x9aa6b4, light: 0xc3ccd8, line: 0x6e7885, comb: 0x6e7885, tail: 0x6e7885 },
+    bulwark: { name: '壁垒公鸡', hp: 520, w: 80, h: 90, speed: 16, peckDmg: 32, peckRate: 1, dr: 0.4, slowResist: 0.6, deco: 'plate', body: 0x8a94a2, light: 0xb0bcc8, line: 0x5c6673, comb: 0x5c6673, tail: 0x5c6673 },
+    tanker: { name: '要塞公鸡', hp: 600, w: 84, h: 94, speed: 15, peckDmg: 34, peckRate: 1.1, dr: 0.45, slowResist: 0.7, deco: 'plate', body: 0x7a8492, light: 0xa0aab8, line: 0x4c5663, comb: 0x4c5663, tail: 0x4c5663 },
+    fortress: { name: '堡垒公鸡', hp: 780, w: 90, h: 100, speed: 13, peckDmg: 38, peckRate: 1.2, dr: 0.5, slowResist: 0.8, deco: 'plate', body: 0x6a7482, light: 0x909aa8, line: 0x3c4653, comb: 0x3c4653, tail: 0x3c4653 },
+    pyro: { name: '烈炬公鸡', hp: 300, w: 74, h: 86, speed: 23, peckDmg: 28, peckRate: 1, burnDmg: 10, burnCd: 1.4, deco: 'flame', body: 0xff8a5c, light: 0xffb98c, line: 0xcc5a30, comb: 0xcc5a30, tail: 0xcc5a30 },
+    toxic: { name: '毒瘴公鸡', hp: 280, w: 74, h: 86, speed: 22, peckDmg: 24, peckRate: 1, poisonDmg: 8, deco: 'venom', body: 0x9ac06a, light: 0xc8e39a, line: 0x6d8f45, comb: 0x6d8f45, tail: 0x6d8f45 },
+    wisp: { name: '浮空公鸡', hp: 220, w: 66, h: 76, speed: 36, peckDmg: 22, peckRate: 0.9, flying: true, deco: 'wing', body: 0xb28cff, light: 0xd6c2ff, line: 0x7f5ad9, comb: 0x7f5ad9, tail: 0x7f5ad9 },
+    sky: { name: '天翔公鸡', hp: 260, w: 68, h: 78, speed: 38, peckDmg: 24, peckRate: 0.9, flying: true, deco: 'wing', body: 0xa878ff, light: 0xcbb0ff, line: 0x7448d0, comb: 0x7448d0, tail: 0x7448d0 },
+    berserk: { name: '狂战公鸡', hp: 360, w: 76, h: 88, speed: 24, peckDmg: 32, peckRate: 0.7, rage: true, deco: 'rage', body: 0xe04a3c, light: 0xff8a70, line: 0xa82a20, comb: 0xa82a20, tail: 0xa82a20 },
+    shaman: { name: '巫祭公鸡', hp: 340, w: 76, h: 88, speed: 20, peckDmg: 26, peckRate: 1, summonEvery: 7, summonType: "gale", deco: 'summon', body: 0x8a6ad9, light: 0xb9a0ff, line: 0x5f43a8, comb: 0x5f43a8, tail: 0x5f43a8 },
+
     flyer: {
       name: '飞行公鸡', hp: 200, w: 66, h: 74, speed: 34,
       peckDmg: 24, peckRate: 0.9, flying: true, deco: 'wing',
@@ -794,6 +868,23 @@ function bootGame() {
       g.fillStyle(0xd6c2ff, 0.95);
       g.fillTriangle(-8, -hh - 4, 26, -hh - 26, 10, -hh + 12);
       g.fillTriangle(10, -hh + 4, 40, -hh - 10, 22, -hh + 20);
+    } else if (P0.deco === 'plate') {
+      g.fillStyle(0xdfe6ef, 0.9);
+      g.fillRoundedRect(-hw + 6, -hh - 6, w - 12, 12, 6);
+      g.lineStyle(2, 0x6e7885, 0.8);
+      g.strokeRoundedRect(-hw + 6, -hh - 6, w - 12, 12, 6);
+    } else if (P0.deco === 'venom') {
+      g.fillStyle(0x6d8f45, 0.95);
+      g.fillCircle(-hw - 8, 4, 5);
+      g.fillStyle(0xc8e39a, 0.9);
+      g.fillCircle(-hw - 12, 12, 3.5);
+    } else if (P0.deco === 'rage') {
+      g.lineStyle(3, 0xff6a4a, 0.85);
+      g.strokeCircle(0, 6, hw + 8);
+    } else if (P0.deco === 'summon') {
+      g.fillStyle(0xd6c2ff, 0.95);
+      g.fillTriangle(0, -hh - 18, 6, -hh - 6, -6, -hh - 6);
+      g.fillCircle(0, -hh - 4, 3);
     } else if (P0.deco === 'gale') {
       g.lineStyle(3, 0xffffff, 0.75);
       g.lineBetween(hw + 8, -14, hw + 28, -14);
@@ -2499,23 +2590,20 @@ function bootGame() {
     /* ---------------- 波次系统 ---------------- */
     buildQueue(cfg) {
       const list = [];
-      for (let i = 0; i < cfg.normal; i++) list.push('normal');
-      for (let i = 0; i < cfg.raider; i++) list.push('raider');
-      for (let i = 0; i < (cfg.gale || 0); i++) list.push('gale');
-      for (let i = 0; i < (cfg.helmet || 0); i++) list.push('helmet');
-      for (let i = 0; i < (cfg.flame || 0); i++) list.push('flame');
-      for (let i = 0; i < (cfg.flyer || 0); i++) list.push('flyer');
-      for (let i = 0; i < (cfg.venom || 0); i++) list.push('venom');
-      for (let i = 0; i < (cfg.frenzy || 0); i++) list.push('frenzy');
-      for (let i = 0; i < (cfg.summon || 0); i++) list.push('summon');
+      Object.keys(cfg).forEach((k) => {
+        if (k === 'interval' || k === 'prep' || k === 'boss') return;
+        const n = cfg[k] || 0;
+        for (let i = 0; i < n; i++) list.push(k);
+      });
 
-      for (let i = list.length - 1; i > 0; i--) {
+      // 打乱（巨型留在最后，避免开局撞 BOSS）
+      const normalish = list.filter((k) => k !== 'giant');
+      const bosses = list.filter((k) => k === 'giant');
+      for (let i = normalish.length - 1; i > 0; i--) {
         const j = Phaser.Math.Between(0, i);
-        const t = list[i]; list[i] = list[j]; list[j] = t;
+        const t = normalish[i]; normalish[i] = normalish[j]; normalish[j] = t;
       }
-
-      for (let i = 0; i < cfg.giant; i++) list.push('giant');
-      return list;
+      return normalish.concat(bosses);
     }
 
     startPrep() {
