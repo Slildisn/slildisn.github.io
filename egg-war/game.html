@@ -219,7 +219,10 @@ function bootGame() {
   const UNIT_DEFS = {
     hen: { name: '母鸡', cost: 50, hp: 320, size: 84, color: 0xffc93c },
     sniper: { name: '小鸡狙击手', cost: 100, hp: 220, size: 76, color: 0xffd8a8 },
-    rock: { name: '石头蛋', cost: 50, hp: 1500, size: 92, color: 0xe8edf2 }
+    rock: { name: '石头蛋', cost: 50, hp: 1500, size: 92, color: 0xe8edf2 },
+    charger: { name: '冲锋小鸡', cost: 60, hp: 150, size: 84, color: 0x7fc4f0 },
+    healer: { name: '治愈母鸡', cost: 120, hp: 280, size: 84, color: 0xffb3d1 },
+    bomber: { name: '炸弹小鸡', cost: 130, hp: 200, size: 84, color: 0x4a4a5a }
   };
 
   /* 鸡窝基地：有血量，被啃空才算失守 */
@@ -404,6 +407,74 @@ function bootGame() {
 
   let activeScene = null;
 
+  function drawCharger(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0x7fc4f0, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
+    g.fillStyle(0xd6efff, 0.9);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.4, 14);
+    g.lineStyle(2, 0x4f9bd0, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    // 向右的冲刺箭头
+    g.fillStyle(0xffffff, 0.95);
+    g.fillTriangle(-6, -12, 18, 0, -6, 12);
+    g.fillTriangle(10, -8, 26, 0, 10, 8);
+
+    g.fillStyle(0x2e5c78, 1);
+    g.fillCircle(-20, -8, 5);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(-21.6, -9.6, 1.8);
+  }
+
+  function drawHealer(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0xffb3d1, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
+    g.fillStyle(0xffd6e6, 0.9);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.4, 14);
+    g.lineStyle(2, 0xe88bb0, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    // 白色十字
+    g.fillStyle(0xffffff, 0.95);
+    g.fillRoundedRect(-7, -18, 14, 36, 6);
+    g.fillRoundedRect(-18, -7, 36, 14, 6);
+
+    g.fillStyle(0x8c3f5c, 1);
+    g.fillCircle(-24, -22, 4.5);
+  }
+
+  function drawBomber(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0x4a4a5a, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
+    g.fillStyle(0x63637a, 0.85);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.4, 14);
+    g.lineStyle(2, 0x2e2e3a, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    // 引线红点
+    g.fillStyle(0xff5540, 1);
+    g.fillCircle(16, -half - 2, 9);
+    g.fillStyle(0xffd166, 0.95);
+    g.fillCircle(16, -half - 2, 4);
+
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(-16, -8, 5);
+    g.fillStyle(0x2e2e3a, 1);
+    g.fillCircle(-16, -8, 2.2);
+  }
+
   class GameScene extends Phaser.Scene {
     constructor() {
       super('GameScene');
@@ -578,22 +649,25 @@ function bootGame() {
       const defs = [
         { key: 'hen', label: '母鸡', cost: UNIT_DEFS.hen.cost, color: UNIT_DEFS.hen.color },
         { key: 'sniper', label: '小鸡狙击手', cost: UNIT_DEFS.sniper.cost, color: UNIT_DEFS.sniper.color },
-        { key: 'rock', label: '石头蛋', cost: UNIT_DEFS.rock.cost, color: UNIT_DEFS.rock.color }
+        { key: 'rock', label: '石头蛋', cost: UNIT_DEFS.rock.cost, color: UNIT_DEFS.rock.color },
+        { key: 'charger', label: '冲锋小鸡', cost: UNIT_DEFS.charger.cost, color: UNIT_DEFS.charger.color },
+        { key: 'healer', label: '治愈母鸡', cost: UNIT_DEFS.healer.cost, color: UNIT_DEFS.healer.color },
+        { key: 'bomber', label: '炸弹小鸡', cost: UNIT_DEFS.bomber.cost, color: UNIT_DEFS.bomber.color }
       ];
 
       defs.forEach((d, i) => {
-        const x = 14 + i * 164;
+        const x = 10 + i * 118;
         const y = 10;
-        const w = 154;
-        const h = 76;
+        const w = 112;
+        const h = 74;
 
         const g = this.add.graphics();
 
-        const nameT = this.add.text(x + 62, y + 15, d.label, {
-          fontFamily: FONT, fontSize: '17px', color: '#5c4326'
+        const nameT = this.add.text(x + 40, y + 12, d.label, {
+          fontFamily: FONT, fontSize: '13px', color: '#5c4326'
         });
-        const costT = this.add.text(x + 62, y + 46, d.cost + ' 玉米粒', {
-          fontFamily: FONT, fontSize: '14px', color: '#c9842a'
+        const costT = this.add.text(x + 40, y + 40, d.cost + ' 玉米', {
+          fontFamily: FONT, fontSize: '12px', color: '#c9842a'
         });
 
         const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0xffffff, 0.001)
@@ -603,7 +677,7 @@ function bootGame() {
           key: d.key, cost: d.cost, color: d.color,
           g, hit, nameT, costT,
           x, y, w, h,
-          baseNameY: y + 15, baseCostY: y + 46,
+          baseNameY: y + 12, baseCostY: y + 40,
           hover: false
         };
 
@@ -637,7 +711,7 @@ function bootGame() {
         g.clear();
 
         g.fillStyle(0x5c4326, 0.10);
-        g.fillRoundedRect(x + 2, card.y + 5, w, h, 22);
+        g.fillRoundedRect(x + 2, card.y + 5, w, h, 18);
 
         if (chosen || hover) {
           g.fillStyle(chosen ? 0xffcf5c : 0x8fd6b4, chosen ? 0.30 : 0.20);
@@ -645,14 +719,14 @@ function bootGame() {
         }
 
         g.fillStyle(chosen ? 0xfff1cd : (hover ? 0xfffaf0 : 0xfffdf8), afford ? 0.98 : 0.62);
-        g.fillRoundedRect(x, y, w, h, 22);
+        g.fillRoundedRect(x, y, w, h, 18);
         g.lineStyle(chosen ? 3 : 2, chosen ? 0xffb63c : (hover ? 0x8fd6b4 : 0xffe0a8), afford ? 1 : 0.45);
-        g.strokeRoundedRect(x, y, w, h, 22);
+        g.strokeRoundedRect(x, y, w, h, 18);
 
         g.fillStyle(card.color, afford ? 1 : 0.5);
-        g.fillRoundedRect(x + 16, y + h / 2 - 19, 38, 38, 12);
+        g.fillRoundedRect(x + 8, y + h / 2 - 13, 26, 26, 9);
         g.lineStyle(2, 0x5c4326, 0.12);
-        g.strokeRoundedRect(x + 16, y + h / 2 - 19, 38, 38, 12);
+        g.strokeRoundedRect(x + 8, y + h / 2 - 13, 26, 26, 9);
 
         card.nameT.setAlpha(afford ? 1 : 0.5);
         card.nameT.setY(card.baseNameY - lift);
@@ -663,8 +737,8 @@ function bootGame() {
 
     /* ---------------- HUD ---------------- */
     buildHud() {
-      this.add.text(640, 16, '母鸡大战公鸡', {
-        fontFamily: FONT, fontSize: '38px', color: '#5c4326', fontStyle: 'bold'
+      this.add.text(890, 18, '母鸡大战公鸡', {
+        fontFamily: FONT, fontSize: '30px', color: '#5c4326', fontStyle: 'bold'
       }).setOrigin(0.5, 0).setShadow(0, 3, '#ffffff', 12);
 
       this.add.circle(1108, 44, 13, 0xffcf5c).setStrokeStyle(3, 0xe8a92c);
@@ -686,7 +760,7 @@ function bootGame() {
         fontFamily: FONT, fontSize: '15px', color: '#7b6650'
       }).setOrigin(0.5);
 
-      this.prepText = this.add.text(640, 60, '', {
+      this.prepText = this.add.text(890, 62, '', {
         fontFamily: FONT, fontSize: '20px', color: '#b35a1f', fontStyle: 'bold'
       }).setOrigin(0.5).setVisible(false);
 
@@ -824,7 +898,10 @@ function bootGame() {
       const g = this.add.graphics();
       if (key === 'hen') drawHen(g, def.size);
       else if (key === 'sniper') drawSniper(g, def.size);
-      else drawRock(g, def.size);
+      else if (key === 'rock') drawRock(g, def.size);
+      else if (key === 'charger') drawCharger(g, def.size);
+      else if (key === 'healer') drawHealer(g, def.size);
+      else drawBomber(g, def.size);
       g.setPosition(x, y);
 
       g.setScale(0.6);
@@ -841,12 +918,88 @@ function bootGame() {
         barY,
         bar,
         phase: Math.random() * Math.PI * 2,
-        cd: key === 'hen' ? 2.5 : 0.4
+        cd: key === 'hen' ? 2.5 : (key === 'healer' ? 3 : 0.4),
+        removed: false,
+        dashSpeed: 520,
+        dashEnd: x + G.cell
       };
       this.units.push(unit);
       this.syncBar(bar, 0, x, barY);
 
       pushLog('🥚 放置 ' + def.name + ' → 第' + (row + 1) + '行 / 第' + (col + 1) + '列');
+    }
+
+    /* ---------------- 新单位：治愈 / 炸弹 / 冲锋 ---------------- */
+    removeUnit(u) {
+      if (!u || u.removed) return;
+      u.removed = true;
+      this.units = this.units.filter((x) => x !== u);
+      if (u.body) u.body.destroy();
+      if (u.bar && u.bar.bg) {
+        u.bar.bg.destroy();
+        u.bar.fg.destroy();
+        u.bar.bg = null;
+      }
+    }
+
+    healAround(u, amount) {
+      let healed = 0;
+      for (const o of this.units) {
+        if (o === u || o.removed) continue;
+        if (Math.abs(o.row - u.row) > 1 || Math.abs(o.col - u.col) > 1) continue;
+        if (o.hp >= o.maxHp) continue;
+        o.hp = Math.min(o.maxHp, o.hp + amount);
+        this.setBarTarget(o.bar, o.hp, o.maxHp);
+        healed += 1;
+        this.flash(o.x, o.y - 26, '+' + amount, '#5fae7a');
+      }
+
+      const ring = this.add.circle(u.x, u.y, 38, 0xffffff, 0.10)
+        .setStrokeStyle(3, 0x7fd8a8, 0.9).setDepth(12);
+      this.tweens.add({
+        targets: ring, scale: 2.0, alpha: 0, duration: 460, ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy()
+      });
+
+      if (healed) pushLog('💗 治愈母鸡回复 ' + healed + ' 个单位 +' + amount);
+    }
+
+    detonate(u) {
+      if (!u || u.removed) return;
+      const dmg = 140;
+      const cx = u.x;
+
+      const victims = this.enemies.filter((e) =>
+        Math.abs(e.row - u.row) <= 1 && Math.abs(e.x - cx) <= 180
+      );
+      victims.forEach((e) => this.damageEnemy(e, dmg));
+
+      const ring = this.add.circle(cx, u.y, 26, 0xfff1c9, 0.30)
+        .setStrokeStyle(4, 0xffb066, 0.9).setDepth(35);
+      this.tweens.add({
+        targets: ring, scale: 7, alpha: 0, duration: 440, ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy()
+      });
+
+      const core = this.add.circle(cx, u.y, 16, 0xffffff, 0.55).setDepth(36);
+      this.tweens.add({
+        targets: core, scale: 2.6, alpha: 0, duration: 260,
+        onComplete: () => core.destroy()
+      });
+
+      this.shatter(cx, u.y, 0x4a4a5a, 7, 30);
+      pushLog('💣 炸弹小鸡引爆 · 命中 ' + victims.length + ' 只公鸡');
+      this.removeUnit(u);
+    }
+
+    chargeBurst(u) {
+      const ring = this.add.circle(u.x, u.y, 16, 0xdfefff, 0.45)
+        .setStrokeStyle(3, 0x7fc4f0, 0.9).setDepth(30);
+      this.tweens.add({
+        targets: ring, scale: 2.4, alpha: 0, duration: 260,
+        onComplete: () => ring.destroy()
+      });
+      this.shatter(u.x, u.y, 0x7fc4f0, 5, 30);
     }
 
     /* ---------------- 血条 ---------------- */
@@ -951,12 +1104,13 @@ function bootGame() {
       u.hp -= dmg;
 
       if (u.hp <= 0) {
+        u.removed = true;
         this.units = this.units.filter((x) => x !== u);
         u.bar.bg.destroy();
         u.bar.fg.destroy();
         u.bar.bg = null;
 
-        const color = u.key === 'rock' ? 0xd7dee2 : (u.key === 'hen' ? 0xffc93c : 0xffd8a8);
+        const color = (UNIT_DEFS[u.key] && UNIT_DEFS[u.key].color) || 0xffd8a8;
         this.shatter(u.x, u.y, color, u.key === 'rock' ? 9 : 6, 30);
         this.tweens.add({
           targets: u.body, alpha: 0, scaleX: 1.15, scaleY: 1.15, duration: 180,
@@ -1250,7 +1404,8 @@ function bootGame() {
     }
 
     updateUnits(dt) {
-      for (const u of this.units) {
+      for (const u of this.units.slice()) {
+        if (u.removed) continue;
         this.syncBar(u.bar, dt, u.x, u.barY);
 
         // 待机轻微上下浮动，让画面有呼吸感
@@ -1271,6 +1426,35 @@ function bootGame() {
           if (u.cd <= 0) {
             this.dropHenCorn(u);
             u.cd = 5;
+          }
+        } else if (u.key === 'healer') {
+          u.cd -= dt;
+          if (u.cd <= 0) {
+            u.cd = 3;
+            this.healAround(u, 10);
+          }
+        } else if (u.key === 'bomber') {
+          const near = this.enemies.find((e) =>
+            e.row === u.row && Math.abs(e.x - u.x) <= 118
+          );
+          if (near) this.detonate(u);
+        } else if (u.key === 'charger') {
+          u.x += u.dashSpeed * dt;
+          u.body.x = u.x;
+
+          let hit = null;
+          for (const e of this.enemies) {
+            if (e.row !== u.row) continue;
+            if (Math.abs(e.x - u.x) <= 42) { hit = e; break; }
+          }
+
+          if (hit) {
+            this.damageEnemy(hit, 120);
+            this.chargeBurst(u);
+            this.removeUnit(u);
+          } else if (u.x >= u.dashEnd) {
+            this.chargeBurst(u);
+            this.removeUnit(u);
           }
         }
       }
