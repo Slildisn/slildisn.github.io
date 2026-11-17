@@ -967,7 +967,12 @@ function bootGame() {
     dropCorn(x, y0, targetY, life, owner) {
       const main = this.add.circle(x, y0, 15, 0xffd54a).setStrokeStyle(3, 0xe0a800).setDepth(20);
       const hi = this.add.circle(x - 5, y0 - 5, 4, 0xfff2b0).setDepth(21);
-      main.setInteractive({ useHandCursor: true });
+      // 视觉半径 15 不变；点击热区放大到半径 30（直径 60px），更好点中
+      main.setInteractive({
+        hitArea: new Phaser.Geom.Circle(15, 15, 30),
+        hitAreaCallback: Phaser.Geom.Circle.Contains,
+        useHandCursor: true
+      });
 
       const d = {
         x, y: y0, vy: 0, targetY, life, main, hi,
