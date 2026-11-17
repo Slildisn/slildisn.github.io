@@ -46,15 +46,26 @@
   #dbg-wrap > * { pointer-events: auto; }
 
   #dbg-toggle {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
+    width: 46px;
+    height: 46px;
+    border-radius: 15px;
     border: 2px solid #ffcf5c;
-    background: rgba(255, 253, 248, 0.95);
+    background: linear-gradient(180deg, #fffdf6 0%, #ffe9b8 100%);
     color: #9a6f2a;
     font-size: 19px;
     line-height: 1;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 8px 18px -8px rgba(154, 111, 42, 0.55), inset 0 1px 0 #ffffff;
+    transition: transform 0.2s ease, box-shadow 0.25s ease;
+  }
+  #dbg-toggle:active {
+    transform: translateY(1px) scale(0.97);
+    box-shadow: 0 4px 10px -6px rgba(154, 111, 42, 0.5), inset 0 1px 0 #ffffff;
+  }
+  @media (hover: hover) {
+    #dbg-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px -10px rgba(154, 111, 42, 0.6), 0 0 0 5px rgba(255, 207, 92, 0.22), inset 0 1px 0 #ffffff;
+    }
   }
   #dbg-panel {
     display: none;
@@ -555,7 +566,7 @@ function bootGame() {
 
       // 极淡网格线
       const lines = this.add.graphics();
-      lines.lineStyle(1, 0xffffff, 0.22);
+      lines.lineStyle(1, 0xffffff, 0.10);
       for (let c = 0; c <= G.cols; c++) {
         lines.lineBetween(G.x0 + c * G.cell, G.y0, G.x0 + c * G.cell, G.y0 + GRID_H);
       }
@@ -606,10 +617,10 @@ function bootGame() {
       nest.strokeCircle(49, cy + 84, 15);
 
       this.add.text(49, cy - 48, '鸡窝', {
-        fontFamily: FONT, fontSize: '21px', color: '#5a3b12', fontStyle: 'bold'
+        fontFamily: FONT, fontSize: '21px', color: '#5c4326', fontStyle: 'bold'
       }).setOrigin(0.5);
       this.add.text(49, cy - 20, '基地', {
-        fontFamily: FONT, fontSize: '21px', color: '#5a3b12', fontStyle: 'bold'
+        fontFamily: FONT, fontSize: '21px', color: '#5c4326', fontStyle: 'bold'
       }).setOrigin(0.5);
 
       // 基地血量
@@ -637,10 +648,10 @@ function bootGame() {
       }
 
       this.add.text(1231, cy - 48, '公鸡', {
-        fontFamily: FONT, fontSize: '21px', color: '#6b3a1e', fontStyle: 'bold'
+        fontFamily: FONT, fontSize: '21px', color: '#5c4326', fontStyle: 'bold'
       }).setOrigin(0.5);
       this.add.text(1231, cy - 20, '来袭', {
-        fontFamily: FONT, fontSize: '21px', color: '#6b3a1e', fontStyle: 'bold'
+        fontFamily: FONT, fontSize: '21px', color: '#5c4326', fontStyle: 'bold'
       }).setOrigin(0.5);
     }
 
@@ -710,8 +721,11 @@ function bootGame() {
 
         g.clear();
 
-        g.fillStyle(0x5c4326, 0.10);
-        g.fillRoundedRect(x + 2, card.y + 5, w, h, 18);
+        // 双层柔和投影
+        g.fillStyle(0x5c4326, 0.05);
+        g.fillRoundedRect(x - 3, card.y + 9, w + 6, h, 22);
+        g.fillStyle(0x5c4326, 0.09);
+        g.fillRoundedRect(x + 1, card.y + 4, w, h, 18);
 
         if (chosen || hover) {
           g.fillStyle(chosen ? 0xffcf5c : 0x8fd6b4, chosen ? 0.30 : 0.20);
