@@ -10,7 +10,7 @@
     padding: 0;
     width: 100%;
     height: 100%;
-    background: #0b201c;
+    background: linear-gradient(180deg, #fff8ec 0%, #ffefd5 55%, #d8f3e3 100%);
     overflow: hidden;
     -webkit-tap-highlight-color: transparent;
   }
@@ -25,7 +25,7 @@
     justify-content: center;
     text-align: center;
     padding: 24px;
-    color: #9fd8c8;
+    color: #8a7256;
     font: 16px/1.7 "Noto Sans SC", "Microsoft YaHei", sans-serif;
     pointer-events: none;
     white-space: pre-line;
@@ -49,9 +49,9 @@
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    border: 2px solid #3f9b86;
-    background: rgba(9, 30, 26, 0.9);
-    color: #9fe3cc;
+    border: 2px solid #ffcf5c;
+    background: rgba(255, 253, 248, 0.95);
+    color: #9a6f2a;
     font-size: 19px;
     line-height: 1;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
@@ -61,10 +61,10 @@
     width: min(70vw, 264px);
     padding: 8px;
     border-radius: 14px;
-    border: 1px solid #2f7c69;
-    background: rgba(7, 26, 22, 0.95);
+    border: 1px solid #ffe0a8;
+    background: rgba(255, 253, 248, 0.97);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    color: #cfeee3;
+    color: #5c4326;
     font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
   }
   #dbg-panel.open { display: block; }
@@ -75,13 +75,13 @@
     justify-content: space-between;
     font-size: 13px;
     font-weight: 700;
-    color: #9fe3cc;
+    color: #9a6f2a;
     padding: 2px 2px 6px;
   }
   #dbg-hide {
     border: 0;
     background: transparent;
-    color: #7fc3b2;
+    color: #b08a5a;
     font-size: 17px;
     line-height: 1;
     padding: 0 4px;
@@ -95,27 +95,27 @@
     flex: 1;
     min-height: 34px;
     border-radius: 9px;
-    border: 1px solid #2f7c69;
-    background: #10382f;
-    color: #d7f4ea;
+    border: 1px solid #ffcf5c;
+    background: #fff3d8;
+    color: #6b4a22;
     font-size: 12.5px;
     font-family: inherit;
     padding: 4px 6px;
   }
-  .dbg-btn:active { background: #1b5347; }
+  .dbg-btn:active { background: #ffe9b8; }
   .dbg-btn.dbg-warn {
-    border-color: #a8553f;
-    background: #3a1f18;
-    color: #ffcbbd;
+    border-color: #ffb08a;
+    background: #ffe6da;
+    color: #a8451f;
   }
   .dbg-input {
     flex: 1;
     min-width: 0;
     min-height: 34px;
     border-radius: 9px;
-    border: 1px solid #2f7c69;
-    background: #0a2621;
-    color: #ffe9a8;
+    border: 1px solid #ffcf5c;
+    background: #fffdf6;
+    color: #a8651f;
     font-size: 16px;
     text-align: center;
     font-family: inherit;
@@ -125,14 +125,14 @@
     overflow-y: auto;
     padding: 6px 7px;
     border-radius: 10px;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(63, 155, 134, 0.35);
+    background: rgba(255, 246, 226, 0.92);
+    border: 1px solid rgba(224, 161, 47, 0.35);
     font: 11.5px/1.55 ui-monospace, Menlo, Consolas, monospace;
-    color: #a8dccb;
+    color: #7b6650;
     -webkit-overflow-scrolling: touch;
   }
   .dbg-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dbg-line.time { color: #6fa99a; }
+  .dbg-line.time { color: #b59468; }
 </style>
 </head>
 <body>
@@ -274,9 +274,9 @@ function bootGame() {
   }
 
   function hpColor(ratio) {
-    const HEALTHY = 0x6ee7a8;
-    const WARN = 0xf6c453;
-    const DANGER = 0xef5b4c;
+    const HEALTHY = 0x7fd8a8;
+    const WARN = 0xffcf5c;
+    const DANGER = 0xff9a72;
     if (ratio > 0.5) return lerpColor(WARN, HEALTHY, (ratio - 0.5) * 2);
     return lerpColor(DANGER, WARN, ratio * 2);
   }
@@ -284,10 +284,10 @@ function bootGame() {
   /* ---------------- 单位色块绘制（原点居中） ---------------- */
   function drawHen(g, s) {
     const half = s / 2;
-    g.fillStyle(0x000000, 0.15);
+    g.fillStyle(0x5c4326, 0.12);
     g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
 
-    g.fillStyle(0xffc93c, 1);
+    g.fillStyle(0xffd873, 1);
     g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
 
     g.fillStyle(0xffe28a, 0.85);
@@ -299,7 +299,7 @@ function bootGame() {
     g.lineStyle(2, 0xe0a12f, 0.9);
     g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
 
-    g.fillStyle(0xe8452c, 1);
+    g.fillStyle(0xe8633f, 1);
     g.fillRoundedRect(-15, -half - 12, 30, 18, 9);
 
     g.fillStyle(0xff8c42, 1);
@@ -313,7 +313,7 @@ function bootGame() {
 
   function drawSniper(g, s) {
     const r = s / 2;
-    g.fillStyle(0x000000, 0.15);
+    g.fillStyle(0x5c4326, 0.12);
     g.fillEllipse(0, r - 2, s * 0.8, s * 0.24);
 
     g.fillStyle(0xffd8a8, 1);
@@ -341,7 +341,7 @@ function bootGame() {
 
   function drawRock(g, s) {
     const half = s / 2;
-    g.fillStyle(0x000000, 0.15);
+    g.fillStyle(0x5c4326, 0.12);
     g.fillEllipse(0, half - 1, s * 0.85, s * 0.24);
 
     g.fillStyle(0xe8edf2, 1);
@@ -363,19 +363,19 @@ function bootGame() {
     const hw = w / 2;
     const hh = h / 2;
 
-    g.fillStyle(0x000000, 0.15);
+    g.fillStyle(0x5c4326, 0.12);
     g.fillEllipse(0, hh - 4, w * 0.9, h * 0.22);
 
     g.fillStyle(0xd93b2b, 1);
     g.fillTriangle(hw - 6, -10, hw + 20, -26, hw + 16, 4);
 
-    g.fillStyle(0xff6a4d, 1);
+    g.fillStyle(0xff7a59, 1);
     g.fillRoundedRect(-hw, -hh + 6, w, h - 6, 16);
 
-    g.fillStyle(0xff9a7d, 0.9);
+    g.fillStyle(0xffa88c, 0.9);
     g.fillRoundedRect(-hw + 8, -hh + 12, w - 16, (h - 6) * 0.44, 12);
 
-    g.lineStyle(2, 0xd0442b, 0.9);
+    g.lineStyle(2, 0xe0674a, 0.9);
     g.strokeRoundedRect(-hw, -hh + 6, w, h - 6, 16);
 
     g.fillStyle(0xe53935, 1);
@@ -432,20 +432,20 @@ function bootGame() {
     /* ---------------- 场地 ---------------- */
     drawArena() {
       const bg = this.add.graphics();
-      bg.fillGradientStyle(0x17463c, 0x17463c, 0x0b201c, 0x0b201c, 1);
+      bg.fillGradientStyle(0xfff8ec, 0xfff8ec, 0xffeed2, 0xffeed2, 1);
       bg.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
       const panel = this.add.graphics();
-      panel.fillStyle(0x2f7c69, 0.5);
+      panel.fillStyle(0x8fd6b4, 0.42);
       panel.fillRoundedRect(G.x0 - 10, G.y0 - 10, GRID_W + 20, GRID_H + 20, 22);
-      panel.fillStyle(0x0b201c, 0.16);
+      panel.fillStyle(0x5c4326, 0.06);
       panel.fillRoundedRect(G.x0 - 4, G.y0 - 4, GRID_W + 8, GRID_H + 8, 18);
 
       // 圆角格子
       const cells = this.add.graphics();
       for (let r = 0; r < G.rows; r++) {
         for (let c = 0; c < G.cols; c++) {
-          const color = (r + c) % 2 === 0 ? 0x3c8a75 : 0x37816d;
+          const color = (r + c) % 2 === 0 ? 0x9adfc0 : 0x8ad6b4;
           cells.fillStyle(color, 1);
           cells.fillRoundedRect(
             cellX(c) - (G.cell - 8) / 2,
@@ -465,13 +465,13 @@ function bootGame() {
         const y = G.y0 + rnd() * GRID_H;
         const light = rnd() > 0.42;
         const len = 4 + rnd() * 7;
-        tex.lineStyle(2, light ? 0xa8f0d2 : 0x1f5347, light ? 0.07 : 0.09);
+        tex.lineStyle(2, light ? 0xffffff : 0x4fae86, light ? 0.20 : 0.10);
         tex.lineBetween(x, y, x + (rnd() - 0.5) * 5, y - len);
       }
 
       // 极淡网格线
       const lines = this.add.graphics();
-      lines.lineStyle(1, 0xffffff, 0.03);
+      lines.lineStyle(1, 0xffffff, 0.22);
       for (let c = 0; c <= G.cols; c++) {
         lines.lineBetween(G.x0 + c * G.cell, G.y0, G.x0 + c * G.cell, G.y0 + GRID_H);
       }
@@ -479,11 +479,21 @@ function bootGame() {
         lines.lineBetween(G.x0, G.y0 + r * G.cell, G.x0 + GRID_W, G.y0 + r * G.cell);
       }
 
+      // 首页同款鸡蛋装饰（纯装饰，不参与任何玩法逻辑）
+      const deco = this.add.graphics();
+      deco.fillStyle(0xfffdf6, 0.55);
+      deco.fillEllipse(G.x0 + 38, G.y0 + 34, 24, 32);
+      deco.fillEllipse(G.x0 + GRID_W - 44, G.y0 + 38, 20, 26);
+      deco.fillEllipse(G.x0 + 34, G.y0 + GRID_H - 34, 18, 24);
+      deco.fillStyle(0xfff3c4, 0.45);
+      deco.fillCircle(G.x0 + 30, G.y0 + 28, 6);
+      deco.fillCircle(G.x0 + GRID_W - 52, G.y0 + 32, 5);
+
       const cy = G.y0 + GRID_H / 2;
 
       // 左侧暖黄鸡窝
       const nest = this.add.graphics();
-      nest.fillStyle(0x000000, 0.16);
+      nest.fillStyle(0x5c4326, 0.10);
       nest.fillRoundedRect(6, G.y0 + 14, 92, GRID_H - 16, 18);
 
       nest.fillStyle(0xffc94d, 1);
@@ -520,26 +530,26 @@ function bootGame() {
 
       // 右侧橘红出兵口
       const gate = this.add.graphics();
-      gate.fillStyle(0x000000, 0.16);
+      gate.fillStyle(0x5c4326, 0.10);
       gate.fillRoundedRect(1186, G.y0 + 14, 92, GRID_H - 16, 18);
 
-      gate.fillStyle(0xff7a4d, 1);
+      gate.fillStyle(0xffb08a, 1);
       gate.fillRoundedRect(1184, G.y0 + 8, 94, GRID_H - 16, 18);
-      gate.fillStyle(0xffa07a, 0.7);
+      gate.fillStyle(0xffd6c0, 0.8);
       gate.fillRoundedRect(1190, G.y0 + 16, 82, 120, 14);
-      gate.lineStyle(2, 0xd85c33, 0.9);
+      gate.lineStyle(2, 0xe8996f, 0.95);
       gate.strokeRoundedRect(1184, G.y0 + 8, 94, GRID_H - 16, 18);
 
-      gate.fillStyle(0xffe3d3, 0.75);
+      gate.fillStyle(0xfff0e4, 0.85);
       for (let i = 0; i < 4; i++) {
         gate.fillRoundedRect(1208, G.y0 + 96 + i * 122, 46, 12, 6);
       }
 
       this.add.text(1231, cy - 48, '公鸡', {
-        fontFamily: FONT, fontSize: '21px', color: '#fff6f0', fontStyle: 'bold'
+        fontFamily: FONT, fontSize: '21px', color: '#6b3a1e', fontStyle: 'bold'
       }).setOrigin(0.5);
       this.add.text(1231, cy - 20, '来袭', {
-        fontFamily: FONT, fontSize: '21px', color: '#fff6f0', fontStyle: 'bold'
+        fontFamily: FONT, fontSize: '21px', color: '#6b3a1e', fontStyle: 'bold'
       }).setOrigin(0.5);
     }
 
@@ -560,10 +570,10 @@ function bootGame() {
         const g = this.add.graphics();
 
         const nameT = this.add.text(x + 62, y + 15, d.label, {
-          fontFamily: FONT, fontSize: '17px', color: '#eafaf4'
+          fontFamily: FONT, fontSize: '17px', color: '#5c4326'
         });
         const costT = this.add.text(x + 62, y + 46, d.cost + ' 玉米粒', {
-          fontFamily: FONT, fontSize: '14px', color: '#ffd54a'
+          fontFamily: FONT, fontSize: '14px', color: '#c9842a'
         });
 
         const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0xffffff, 0.001)
@@ -606,22 +616,22 @@ function bootGame() {
 
         g.clear();
 
-        g.fillStyle(0x000000, 0.22);
+        g.fillStyle(0x5c4326, 0.10);
         g.fillRoundedRect(x + 2, card.y + 5, w, h, 22);
 
         if (chosen || hover) {
-          g.fillStyle(chosen ? 0xffd54a : 0x7fecd0, chosen ? 0.14 : 0.10);
+          g.fillStyle(chosen ? 0xffcf5c : 0x8fd6b4, chosen ? 0.30 : 0.20);
           g.fillRoundedRect(x - 6, y - 6, w + 12, h + 12, 28);
         }
 
-        g.fillStyle(chosen ? 0x1f6052 : (hover ? 0x1b5548 : 0x14443b), afford ? 1 : 0.6);
+        g.fillStyle(chosen ? 0xfff1cd : (hover ? 0xfffaf0 : 0xfffdf8), afford ? 0.98 : 0.62);
         g.fillRoundedRect(x, y, w, h, 22);
-        g.lineStyle(chosen ? 3 : 2, chosen ? 0xffd54a : (hover ? 0x7fecd0 : 0x3f9b86), afford ? 1 : 0.45);
+        g.lineStyle(chosen ? 3 : 2, chosen ? 0xffb63c : (hover ? 0x8fd6b4 : 0xffe0a8), afford ? 1 : 0.45);
         g.strokeRoundedRect(x, y, w, h, 22);
 
         g.fillStyle(card.color, afford ? 1 : 0.5);
         g.fillRoundedRect(x + 16, y + h / 2 - 19, 38, 38, 12);
-        g.lineStyle(2, 0xffffff, 0.22);
+        g.lineStyle(2, 0x5c4326, 0.12);
         g.strokeRoundedRect(x + 16, y + h / 2 - 19, 38, 38, 12);
 
         card.nameT.setAlpha(afford ? 1 : 0.5);
@@ -634,31 +644,31 @@ function bootGame() {
     /* ---------------- HUD ---------------- */
     buildHud() {
       this.add.text(640, 16, '母鸡大战公鸡', {
-        fontFamily: FONT, fontSize: '38px', color: '#ffe9a8', fontStyle: 'bold'
-      }).setOrigin(0.5, 0).setShadow(0, 4, '#00000088', 12);
+        fontFamily: FONT, fontSize: '38px', color: '#5c4326', fontStyle: 'bold'
+      }).setOrigin(0.5, 0).setShadow(0, 3, '#ffffff', 12);
 
-      this.add.circle(1108, 44, 13, 0xffd54a).setStrokeStyle(3, 0xe0a800);
+      this.add.circle(1108, 44, 13, 0xffcf5c).setStrokeStyle(3, 0xe8a92c);
       this.add.circle(1104, 39, 4, 0xfff2b0);
-      this.add.text(1132, 14, '玉米粒', { fontFamily: FONT, fontSize: '16px', color: '#bfe8dc' });
+      this.add.text(1132, 14, '玉米粒', { fontFamily: FONT, fontSize: '16px', color: '#7b6650' });
       this.cornText = this.add.text(1132, 34, '50', {
-        fontFamily: FONT, fontSize: '28px', color: '#ffd54a', fontStyle: 'bold'
+        fontFamily: FONT, fontSize: '28px', color: '#c9842a', fontStyle: 'bold'
       });
 
       const pillW = 800;
       const pillH = 28;
       const pill = this.add.graphics();
-      pill.fillStyle(0x08201b, 0.85);
+      pill.fillStyle(0xfffdf8, 0.94);
       pill.fillRoundedRect(640 - pillW / 2, 690, pillW, pillH, 14);
-      pill.lineStyle(2, 0x2f7c69, 0.9);
+      pill.lineStyle(2, 0xffcf5c, 0.95);
       pill.strokeRoundedRect(640 - pillW / 2, 690, pillW, pillH, 14);
 
       this.add.text(640, 704, '① 点卡牌选中   ② 点草坪格子放置   ③ 点掉落的玉米粒 +25', {
-        fontFamily: FONT, fontSize: '15px', color: '#9fd8c8'
+        fontFamily: FONT, fontSize: '15px', color: '#7b6650'
       }).setOrigin(0.5);
 
       this.pauseText = this.add.text(CANVAS_W / 2, CANVAS_H / 2, '⏸  已暂停', {
-        fontFamily: FONT, fontSize: '46px', color: '#ffe9a8', fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(70).setVisible(false).setShadow(0, 4, '#000000aa', 12);
+        fontFamily: FONT, fontSize: '46px', color: '#5c4326', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(70).setVisible(false).setShadow(0, 3, '#ffffff', 12);
     }
 
     refreshHud() {
@@ -690,7 +700,7 @@ function bootGame() {
         return;
       }
       const busy = !!this.findUnit(row, col);
-      this.hoverCell.setFillStyle(busy ? 0xff8a70 : 0x9cf5d2, 0.13);
+      this.hoverCell.setFillStyle(busy ? 0xffa27a : 0xbdf3d8, 0.32);
       this.hoverCell.setPosition(cellX(col), cellY(row));
       this.hoverCell.setVisible(true);
     }
@@ -703,13 +713,13 @@ function bootGame() {
       if (col < 0 || col >= G.cols || row < 0 || row >= G.rows) return;
 
       if (this.findUnit(row, col)) {
-        this.flash(pointer.x, pointer.y, '这里已经有蛋了', '#ffb4a2');
+        this.flash(pointer.x, pointer.y, '这里已经有蛋了', '#d9673f');
         return;
       }
 
       const def = UNIT_DEFS[this.selected];
       if (this.corn < def.cost) {
-        this.flash(pointer.x, pointer.y, '玉米粒不够', '#ffb4a2');
+        this.flash(pointer.x, pointer.y, '玉米粒不够', '#d9673f');
         return;
       }
 
@@ -777,7 +787,7 @@ function bootGame() {
     }
 
     hitFlash(x, y, w, h) {
-      const f = this.add.rectangle(x, y, w, h, 0xffffff, 0.5).setDepth(25);
+      const f = this.add.rectangle(x, y, w, h, 0xfff3c4, 0.55).setDepth(25);
       this.tweens.add({ targets: f, alpha: 0, duration: 130, onComplete: () => f.destroy() });
     }
 
@@ -817,8 +827,8 @@ function bootGame() {
 
     /* ---------------- 血条 ---------------- */
     makeBar(x, y, w) {
-      const bg = this.add.rectangle(x, y, w + 6, 9, 0x000000, 0.34);
-      const fg = this.add.rectangle(x - w / 2, y, w, 5, 0x6ee7a8).setOrigin(0, 0.5);
+      const bg = this.add.rectangle(x, y, w + 6, 9, 0x5c4326, 0.16);
+      const fg = this.add.rectangle(x - w / 2, y, w, 5, 0x7fd8a8).setOrigin(0, 0.5);
       return { bg, fg, w, target: 1, shown: 1 };
     }
 
@@ -921,7 +931,7 @@ function bootGame() {
           targets: u.body, alpha: 0, scaleX: 1.15, scaleY: 1.15, duration: 180,
           onComplete: () => u.body.destroy()
         });
-        this.flash(u.x, u.y - 20, '碎了！', '#ffb4a2');
+        this.flash(u.x, u.y - 20, '碎了！', '#d9673f');
         pushLog('💔 ' + UNIT_DEFS[u.key].name + ' 被啄碎（第' + (u.row + 1) + '行）');
       } else {
         this.setBarTarget(u.bar, u.hp, u.maxHp);
@@ -1211,12 +1221,12 @@ function bootGame() {
       this.redrawCards();
       pushLog('🚨 公鸡攻破鸡窝，游戏结束');
 
-      this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x000000, 0.75).setDepth(100);
+      this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x5c4326, 0.55).setDepth(100);
       this.add.text(CANVAS_W / 2, CANVAS_H / 2 - 70, '公鸡攻破了鸡窝！', {
-        fontFamily: FONT, fontSize: '54px', color: '#ffb4a2', fontStyle: 'bold'
+        fontFamily: FONT, fontSize: '54px', color: '#fff8ec', fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(101);
       this.add.text(CANVAS_W / 2, CANVAS_H / 2 + 10, '游戏结束 · 点击屏幕重新开始', {
-        fontFamily: FONT, fontSize: '28px', color: '#e8f5ef'
+        fontFamily: FONT, fontSize: '28px', color: '#ffe9b8'
       }).setOrigin(0.5).setDepth(101);
 
       this.time.delayedCall(350, () => {
@@ -1230,7 +1240,7 @@ function bootGame() {
     width: CANVAS_W,
     height: CANVAS_H,
     parent: 'game',
-    backgroundColor: '#0b201c',
+    backgroundColor: '#fff8ec',
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
