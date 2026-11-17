@@ -1237,10 +1237,71 @@ function bootGame() {
         dashSpeed: 520,
         dashEnd: x + G.cell
       };
+      unit.size = def.size;
+
+      // 母鸡专属：技能冷却环 + 读秒（纯视觉，不参与任何判定）
+      if (key === 'hen' || key === 'healer') {
+        unit.cdMax = key === 'hen' ? 5 : 3;   // 只用于画环，不改任何 cd 数值
+        unit.ring = this.add.graphics().setDepth(15);
+        unit.cdText = this.add.text(x, barY - 14, '', {
+          fontFamily: FONT, fontSize: '13px', color: '#b35a1f', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(16);
+        this.drawHenCd(unit);
+      }
+
       this.units.push(unit);
       this.syncBar(bar, 0, x, barY);
 
       pushLog('🥚 放置 ' + def.name + ' → 第' + (row + 1) + '行 / 第' + (col + 1) + '列');
+    }
+
+    /* ---------------- 母鸡冷却环（只读取 u.cd，不改数值） ---------------- */
+    drawHenCd(u) {
+      if (!u || !u.ring || !u.ring.active) return;
+
+      const g = u.ring;
+      const maxCd = u.cdMax || 5;
+      const frac = Phaser.Math.Clamp(u.cd / maxCd, 0, 1);   // 1 = 刚开始冷却，0 = 就绪
+      const r = (u.size || 84) / 2 + 7;
+
+      g.clear();
+
+      // 底圈
+      g.lineStyle(4, 0xffffff, 0.45);
+      g.strokeCircle(u.x, u.y, r);
+
+      if (frac <= 0.001) {
+        // 就绪：整圈柔绿
+        g.lineStyle(4, 0x7fd8a8, 0.9);
+        g.strokeCircle(u.x, u.y, r);
+      } else {
+        // 冷却中：暖金弧，从 12 点顺时针消耗
+        g.lineStyle(4, 0xffb63c, 0.95);
+        g.beginPath();
+        g.arc(
+          u.x, u.y, r,
+          Phaser.Math.DegToRad(-90),
+          Phaser.Math.DegToRad(-90 + 360 * frac),
+          false
+        );
+        g.strokePath();
+      }
+
+      if (u.cdText) {
+        if (frac <= 0.001) {
+          u.cdText.setText('');
+        } else {
+          // 右上角小徽章，避开上方血条
+          const bx = u.x + r * 0.72;
+          const by = u.y - r * 0.72;
+          g.fillStyle(0xfffdf6, 0.96);
+          g.fillCircle(bx, by, 9.5);
+          g.lineStyle(2, 0xffb63c, 0.9);
+          g.strokeCircle(bx, by, 9.5);
+          u.cdText.setText(String(Math.ceil(u.cd)));
+          u.cdText.setPosition(bx, by + 0.5);
+        }
+      }
     }
 
     /* ---------------- 新单位：治愈 / 炸弹 / 冲锋 ---------------- */
@@ -1254,6 +1315,8 @@ function bootGame() {
         u.bar.fg.destroy();
         u.bar.bg = null;
       }
+      if (u.ring) { u.ring.destroy(); u.ring = null; }
+      if (u.cdText) { u.cdText.destroy(); u.cdText = null; }
     }
 
     healAround(u, amount) {
@@ -1432,6 +1495,8 @@ function bootGame() {
         u.bar.bg.destroy();
         u.bar.fg.destroy();
         u.bar.bg = null;
+        if (u.ring) { u.ring.destroy(); u.ring = null; }
+        if (u.cdText) { u.cdText.destroy(); u.cdText = null; }
 
         const color = (UNIT_DEFS[u.key] && UNIT_DEFS[u.key].color) || 0xffd8a8;
         this.shatter(u.x, u.y, color, u.key === 'rock' ? 9 : 6, 30);
@@ -1916,6 +1981,7 @@ function bootGame() {
           }
         } else if (u.key === 'hen') {
           u.cd -= dt;
+          this.drawHenCd(u);
           if (u.cd <= 0) {
             this.dropHenCorn(u);
             u.cd = 5;
@@ -1933,6 +1999,7 @@ function bootGame() {
           }
         } else if (u.key === 'healer') {
           u.cd -= dt;
+          this.drawHenCd(u);
           if (u.cd <= 0) {
             u.cd = 3;
             this.healAround(u, 10);
