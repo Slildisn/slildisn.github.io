@@ -17,11 +17,8 @@
   }
   :root {
     --band-top: 56px;
-    --band-bottom: 172px;
+    --band-bottom: 100px;
     --safe-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  @media (min-width: 700px) {
-    :root { --band-bottom: 96px; }
   }
 
   /* 顶部信息栏：独立绝对层，不参与画布布局 */
@@ -101,19 +98,23 @@
   }
 
   .card-bar {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 104px));
-    gap: 8px 10px;
-    justify-content: center;
+    display: flex;
+    gap: 10px;
     width: 100%;
+    padding: 2px 12px 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
   }
-  @media (min-width: 700px) {
-    .card-bar { grid-template-columns: repeat(8, minmax(0, 104px)); gap: 8px; }
-  }
+  .card-bar::-webkit-scrollbar { display: none; }
   .card {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 3px; text-align: center;
-    height: 74px; padding: 4px 4px; overflow: hidden;
+    flex: 0 0 104px; width: 104px; height: 74px; padding: 4px 4px; overflow: hidden;
+    scroll-snap-align: start;
     border-radius: 18px; border: 2px solid #ffe0a8;
     background: linear-gradient(180deg, #fffdf8, #fff6e2);
     color: #5c4326; font-family: inherit;
@@ -406,11 +407,18 @@ function bootGame() {
     healer: { name: '治愈母鸡', cost: 120, hp: 280, size: 84, color: 0xffb3d1 },
     bomber: { name: '炸弹小鸡', cost: 130, hp: 200, size: 84, color: 0x4a4a5a },
     gunner: { name: '高速连发鸡', cost: 75, hp: 200, size: 84, color: 0x8fd6b4 },
-    reflector: { name: '重甲反伤母鸡', cost: 150, hp: 3000, size: 92, color: 0xb9a7d9 }
+    reflector: { name: '重甲反伤母鸡', cost: 150, hp: 3000, size: 92, color: 0xb9a7d9 },
+
+    // —— 新增 5 种 ——
+    ice:    { name: '寒冰小鸡', cost: 90,  hp: 200,  size: 80, color: 0x9fd8ff, dmg: 16, atkCd: 1.4, slow: 0.55, slowTime: 1.8 },
+    horn:   { name: '号角母鸡', cost: 140, hp: 260,  size: 84, color: 0xffc98a, haste: 0.8 },
+    storm:  { name: '闪电母鸡', cost: 160, hp: 240,  size: 84, color: 0xd8b6ff, dmg: 22, atkCd: 2.0, chain: 2, chainRange: 150 },
+    cannon: { name: '重炮母鸡', cost: 175, hp: 240,  size: 92, color: 0xd9a06a, dmg: 90, atkCd: 2.6 },
+    shield: { name: '盾卫石母鸡', cost: 150, hp: 1200, size: 92, color: 0xc9d4e8, shieldReduce: 0.25 }
   };
 
   // 有主动循环技能的单位（仅用于决定“显示不显示冷却”，数值仍由各自 cd 字段决定）
-  const CD_DISPLAY = { hen: 5, sniper: 1.2, healer: 3, gunner: 0.6 };
+  const CD_DISPLAY = { hen: 5, sniper: 1.2, healer: 3, gunner: 0.6, ice: 1.4, storm: 2.0, cannon: 2.6 };
 
   // 玉米粒落地后的自动收取停留时间（秒）；设为 0 即落地立刻收
   const AUTO_COLLECT_DELAY = 1.2;
@@ -424,7 +432,12 @@ function bootGame() {
     healer: 10,
     rock: 12,
     bomber: 12,
-    reflector: 15
+    reflector: 15,
+    ice: 8,
+    horn: 12,
+    storm: 12,
+    cannon: 14,
+    shield: 16
   };
 
   /* 鸡窝基地：有血量，被啃空才算失守 */
@@ -438,11 +451,11 @@ function bootGame() {
 
   // 波次配置：改这里就能调难度
   const WAVES = [
-    { normal: 5,  raider: 0, giant: 0, interval: 4.0, prep: PREP_TIME },
-    { normal: 8,  raider: 2, giant: 0, interval: 3.5, prep: PREP_TIME },
-    { normal: 10, raider: 4, giant: 0, interval: 3.0, prep: PREP_TIME },
-    { normal: 12, raider: 6, giant: 1, interval: 2.5, prep: PREP_TIME },
-    { normal: 15, raider: 8, giant: 2, interval: 2.0, prep: PREP_TIME, boss: true }
+    { normal: 5,  raider: 0, gale: 0, helmet: 0, flame: 0, flyer: 0, giant: 0, interval: 4.0, prep: PREP_TIME },
+    { normal: 7,  raider: 2, gale: 2, helmet: 0, flame: 0, flyer: 0, giant: 0, interval: 3.6, prep: PREP_TIME },
+    { normal: 9,  raider: 4, gale: 3, helmet: 2, flame: 0, flyer: 0, giant: 0, interval: 3.2, prep: PREP_TIME },
+    { normal: 11, raider: 5, gale: 3, helmet: 3, flame: 2, flyer: 2, giant: 1, interval: 2.8, prep: PREP_TIME },
+    { normal: 12, raider: 6, gale: 4, helmet: 4, flame: 3, flyer: 3, giant: 2, interval: 2.4, prep: PREP_TIME, boss: true }
   ];
 
   /* 敌方（数值不动） */
@@ -456,6 +469,26 @@ function bootGame() {
       name: '突袭公鸡', hp: 150, w: 64, h: 76, speed: 39,
       peckDmg: 22, peckRate: 0.8,
       body: 0xe04a5c, light: 0xff7d8c, line: 0xb02b3c, comb: 0x8e1f34, tail: 0x8e1f34
+    },
+    gale: {
+      name: '疾风小公鸡', hp: 140, w: 64, h: 76, speed: 40,
+      peckDmg: 16, peckRate: 0.6, deco: 'gale',
+      body: 0xffb066, light: 0xffd6a3, line: 0xd98a3f, comb: 0xd9663f, tail: 0xd9663f
+    },
+    helmet: {
+      name: '铁盔公鸡', hp: 320, w: 72, h: 84, speed: 22,
+      peckDmg: 28, peckRate: 0.9, dr: 0.3, deco: 'helmet',
+      body: 0x9aa6b4, light: 0xc3ccd8, line: 0x6e7885, comb: 0x7f5a4a, tail: 0x7f5a4a
+    },
+    flame: {
+      name: '喷火公鸡', hp: 260, w: 72, h: 84, speed: 24,
+      peckDmg: 26, peckRate: 0.9, burnDmg: 8, burnCd: 1.5, deco: 'flame',
+      body: 0xff8a5c, light: 0xffb98c, line: 0xcc5a30, comb: 0xb33a1f, tail: 0xb33a1f
+    },
+    flyer: {
+      name: '飞行公鸡', hp: 200, w: 66, h: 74, speed: 34,
+      peckDmg: 24, peckRate: 0.9, flying: true, deco: 'wing',
+      body: 0xb28cff, light: 0xd6c2ff, line: 0x7f5ad9, comb: 0x6b3fc0, tail: 0x6b3fc0
     },
     giant: {
       name: '巨型公鸡', hp: 900, w: 105, h: 123, speed: 12,
@@ -607,6 +640,28 @@ function bootGame() {
     g.fillCircle(-hw + 18, -16, 6);
     g.fillStyle(0x3e2723, 1);
     g.fillCircle(-hw + 18, -16, 2.8);
+
+    // 类型装饰
+    if (P0.deco === 'helmet') {
+      g.fillStyle(0x6e7885, 1);
+      g.fillRoundedRect(-hw + 6, -hh - 12, w - 10, 14, 7);
+      g.fillStyle(0xc3ccd8, 1);
+      g.fillRect(-hw + 10, -hh - 10, 8, 10);
+    } else if (P0.deco === 'flame') {
+      g.fillStyle(0xffb066, 1);
+      g.fillTriangle(-hw - 10, -6, -hw - 22, 2, -hw - 10, 10);
+      g.fillStyle(0xffe0b0, 1);
+      g.fillCircle(-hw - 12, 2, 3.5);
+    } else if (P0.deco === 'wing') {
+      g.fillStyle(0xd6c2ff, 0.95);
+      g.fillTriangle(-8, -hh - 4, 26, -hh - 26, 10, -hh + 12);
+      g.fillTriangle(10, -hh + 4, 40, -hh - 10, 22, -hh + 20);
+    } else if (P0.deco === 'gale') {
+      g.lineStyle(3, 0xffffff, 0.75);
+      g.lineBetween(hw + 8, -14, hw + 28, -14);
+      g.lineBetween(hw + 12, 0, hw + 32, 0);
+      g.lineBetween(hw + 8, 14, hw + 26, 14);
+    }
   }
 
   let activeScene = null;
@@ -725,6 +780,125 @@ function bootGame() {
     g.fillCircle(-18, -12, 5.5);
     g.fillStyle(0xffffff, 0.9);
     g.fillCircle(-19.6, -13.6, 1.8);
+  }
+
+  function drawIce(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0x9fd8ff, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 18);
+    g.fillStyle(0xdff2ff, 0.9);
+    g.fillRoundedRect(-half + 7, -half + 9, s - 14, (s - 8) * 0.42, 12);
+    g.lineStyle(2, 0x5aa8d8, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 18);
+
+    // 冰锥
+    g.fillStyle(0xffffff, 0.95);
+    g.fillTriangle(-8, -half - 14, 0, -half + 2, 8, -half - 14);
+    g.fillTriangle(6, -half - 8, 14, -half + 2, 22, -half - 8);
+
+    g.fillStyle(0x2e5c78, 1);
+    g.fillCircle(-16, 4, 5);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(-17.6, 2.4, 1.8);
+  }
+
+  function drawHorn(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0xffc98a, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
+    g.fillStyle(0xffe3bf, 0.9);
+    g.fillRoundedRect(-half + 7, -half + 9, s - 14, (s - 8) * 0.4, 13);
+    g.lineStyle(2, 0xd99a52, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    // 喇叭
+    g.fillStyle(0xff9f43, 1);
+    g.fillTriangle(half - 12, -6, half + 16, -18, half + 16, 10);
+    g.fillStyle(0xfff1de, 0.9);
+    g.fillRect(half - 14, -4, 12, 8);
+
+    g.fillStyle(0x7a4a1e, 1);
+    g.fillCircle(-16, -6, 5);
+  }
+
+  function drawStorm(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0xd8b6ff, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
+    g.fillStyle(0xefe2ff, 0.9);
+    g.fillRoundedRect(-half + 7, -half + 9, s - 14, (s - 8) * 0.4, 13);
+    g.lineStyle(2, 0x9c78d8, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    // 电弧
+    g.lineStyle(3, 0xffffff, 0.95);
+    g.beginPath();
+    g.moveTo(-14, -half - 12);
+    g.lineTo(-4, -half + 4);
+    g.lineTo(6, -half - 4);
+    g.lineTo(16, -half + 10);
+    g.strokePath();
+
+    g.fillStyle(0x4a3a63, 1);
+    g.fillCircle(-14, 8, 5);
+  }
+
+  function drawCannon(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.86, s * 0.24);
+
+    g.fillStyle(0xd9a06a, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 18);
+    g.fillStyle(0xf0c99f, 0.9);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.36, 12);
+    g.lineStyle(2, 0xa8703e, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 18);
+
+    // 炮管
+    g.fillStyle(0x6b4a2a, 1);
+    g.fillRoundedRect(half - 8, -10, 26, 20, 8);
+    g.fillStyle(0x3e2a18, 1);
+    g.fillCircle(half + 18, 0, 7);
+
+    g.fillStyle(0x4a2c18, 1);
+    g.fillCircle(-18, -4, 5);
+  }
+
+  function drawShield(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.86, s * 0.24);
+
+    g.fillStyle(0xc9d4e8, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 16);
+    g.fillStyle(0xe6ecf7, 0.9);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.36, 12);
+    g.lineStyle(2, 0x8a99b5, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 16);
+
+    // 盾牌
+    g.fillStyle(0xffffff, 0.85);
+    g.beginPath();
+    g.arc(half - 18, 0, 16, Phaser.Math.DegToRad(-90), Phaser.Math.DegToRad(90), false);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(3, 0x7f8ea8, 0.95);
+    g.beginPath();
+    g.arc(half - 18, 0, 16, Phaser.Math.DegToRad(-90), Phaser.Math.DegToRad(90), false);
+    g.strokePath();
+
+    g.fillStyle(0x4a5568, 1);
+    g.fillCircle(-22, -2, 5);
   }
 
   class GameScene extends Phaser.Scene {
@@ -920,7 +1094,12 @@ function bootGame() {
         { key: 'healer', label: '治愈母鸡', cost: UNIT_DEFS.healer.cost, color: UNIT_DEFS.healer.color },
         { key: 'bomber', label: '炸弹小鸡', cost: UNIT_DEFS.bomber.cost, color: UNIT_DEFS.bomber.color },
         { key: 'gunner', label: '高速连发鸡', cost: UNIT_DEFS.gunner.cost, color: UNIT_DEFS.gunner.color },
-        { key: 'reflector', label: '重甲反伤母鸡', cost: UNIT_DEFS.reflector.cost, color: UNIT_DEFS.reflector.color }
+        { key: 'reflector', label: '重甲反伤母鸡', cost: UNIT_DEFS.reflector.cost, color: UNIT_DEFS.reflector.color },
+        { key: 'ice', label: '寒冰小鸡', cost: UNIT_DEFS.ice.cost, color: UNIT_DEFS.ice.color },
+        { key: 'horn', label: '号角母鸡', cost: UNIT_DEFS.horn.cost, color: UNIT_DEFS.horn.color },
+        { key: 'storm', label: '闪电母鸡', cost: UNIT_DEFS.storm.cost, color: UNIT_DEFS.storm.color },
+        { key: 'cannon', label: '重炮母鸡', cost: UNIT_DEFS.cannon.cost, color: UNIT_DEFS.cannon.color },
+        { key: 'shield', label: '盾卫石母鸡', cost: UNIT_DEFS.shield.cost, color: UNIT_DEFS.shield.color }
       ];
 
       const bar = document.getElementById('card-bar');
@@ -1158,7 +1337,12 @@ function bootGame() {
       else if (key === 'healer') drawHealer(g, def.size);
       else if (key === 'bomber') drawBomber(g, def.size);
       else if (key === 'gunner') drawGunner(g, def.size);
-      else drawReflector(g, def.size);
+      else if (key === 'reflector') drawReflector(g, def.size);
+      else if (key === 'ice') drawIce(g, def.size);
+      else if (key === 'horn') drawHorn(g, def.size);
+      else if (key === 'storm') drawStorm(g, def.size);
+      else if (key === 'cannon') drawCannon(g, def.size);
+      else drawShield(g, def.size);
       g.setPosition(x, y);
 
       g.setScale(0.6);
@@ -1359,6 +1543,13 @@ function bootGame() {
         peckRate: t.peckRate,
         shockEvery: t.shockEvery || 0,
         shockDmg: t.shockDmg || 0,
+        dr: t.dr || 0,
+        burnDmg: t.burnDmg || 0,
+        burnCd: t.burnCd || 0,
+        burnLeft: t.burnCd || 0,
+        flying: !!t.flying,
+        slowT: 0,
+        slowFactor: 1,
         peckCount: 0,
         body,
         barY,
@@ -1391,7 +1582,8 @@ function bootGame() {
     }
 
     damageEnemy(e, dmg) {
-      e.hp -= dmg;
+      const real = e.dr ? dmg * (1 - e.dr) : dmg;   // 铁盔 30% 减伤
+      e.hp -= real;
 
       if (e.hp <= 0) {
         this.enemies = this.enemies.filter((x) => x !== e);
@@ -1413,6 +1605,8 @@ function bootGame() {
     }
 
     damageUnit(u, dmg, attacker) {
+      const red = this.shieldReduceFor(u);          // 盾卫光环：相邻友军减伤
+      if (red > 0) dmg = dmg * (1 - red);
       u.hp -= dmg;
 
       if (u.hp <= 0) {
@@ -1467,14 +1661,18 @@ function bootGame() {
     }
 
     /* ---------------- 子弹 ---------------- */
-    fireBullet(u, dmg, speed, radius) {
+    fireBullet(u, dmg, speed, radius, extra) {
       const damage = dmg || 26;
       const spd = speed || 430;
       const r = radius || 7.5;
       const x = u.x + 36;
       const glow = this.add.circle(x, u.y, r + 5, 0xffd08a, 0.26).setDepth(16);
       const core = this.add.circle(x, u.y, r, 0xfff6e0).setStrokeStyle(2, 0xffa94d).setDepth(17);
-      this.bullets.push({ x, y: u.y, row: u.row, speed: spd, dmg: damage, core, glow, t: 0 });
+      this.bullets.push({
+        x, y: u.y, row: u.row, speed: spd, dmg: damage, core, glow, t: 0,
+        slow: (extra && extra.slow) || 0,
+        slowTime: (extra && extra.slowTime) || 0
+      });
     }
 
     nearestEnemyInRange(u, range) {
@@ -1728,6 +1926,75 @@ function bootGame() {
       });
     }
 
+    burnAround(e) {
+      let n = 0;
+      const list = this.units.slice();
+      for (const u of list) {
+        if (u.removed) continue;
+        if (Math.abs(u.row - e.row) > 1) continue;
+        if (Math.abs(u.x - e.x) > 110) continue;
+        this.damageUnit(u, e.burnDmg, e);
+        n += 1;
+      }
+      if (!n) return;
+
+      const ring = this.add.circle(e.x, e.y, 34, 0xffb066, 0.20)
+        .setStrokeStyle(3, 0xff7a3c, 0.85).setDepth(26);
+      this.tweens.add({ targets: ring, scale: 1.8, alpha: 0, duration: 320,
+        onComplete: () => ring.destroy() });
+    }
+
+    /* ---------------- 光环：号角攻速 / 盾卫减伤 ---------------- */
+    hasteFor(u) {
+      for (const o of this.units) {
+        if (o.removed || o.key !== 'horn') continue;
+        if (Math.abs(o.row - u.row) <= 1 && Math.abs(o.col - u.col) <= 1) return o.haste || 0.8;
+      }
+      return 1;
+    }
+
+    shieldReduceFor(u) {
+      for (const o of this.units) {
+        if (o.removed || o.key !== 'shield') continue;
+        if (Math.abs(o.row - u.row) <= 1 && Math.abs(o.col - u.col) <= 1) {
+          return UNIT_DEFS.shield.shieldReduce;
+        }
+      }
+      return 0;
+    }
+
+    chainLightning(u, first) {
+      const def = UNIT_DEFS.storm;
+      const hit = [first];
+      let last = first;
+
+      for (let i = 0; i < def.chain; i++) {
+        let next = null;
+        for (const e of this.enemies) {
+          if (hit.indexOf(e) >= 0) continue;
+          const d = Math.abs(e.x - last.x) + Math.abs(e.row - last.row) * 60;
+          if (d <= def.chainRange && (!next || d < Math.abs(next.x - last.x))) next = e;
+        }
+        if (!next) break;
+        hit.push(next);
+        last = next;
+      }
+
+      const g = this.add.graphics().setDepth(29);
+      let prev = { x: u.x, y: u.y };
+      hit.forEach((e) => {
+        g.lineStyle(3, 0xd8b6ff, 0.9);
+        g.lineBetween(prev.x, prev.y, e.x, e.y);
+        g.lineStyle(1.5, 0xffffff, 0.85);
+        g.lineBetween(prev.x, prev.y, e.x, e.y);
+        prev = { x: e.x, y: e.y };
+        this.damageEnemy(e, def.dmg);
+      });
+
+      this.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() });
+      pushLog('⚡ 闪电母鸡连锁 ' + hit.length + ' 只');
+    }
+
     /* ---------------- 铲子（移除单位，返还 30% 费用） ---------------- */
     toggleShovel() {
       if (this.over || this.paused) return;
@@ -1849,6 +2116,10 @@ function bootGame() {
       const list = [];
       for (let i = 0; i < cfg.normal; i++) list.push('normal');
       for (let i = 0; i < cfg.raider; i++) list.push('raider');
+      for (let i = 0; i < (cfg.gale || 0); i++) list.push('gale');
+      for (let i = 0; i < (cfg.helmet || 0); i++) list.push('helmet');
+      for (let i = 0; i < (cfg.flame || 0); i++) list.push('flame');
+      for (let i = 0; i < (cfg.flyer || 0); i++) list.push('flyer');
 
       for (let i = list.length - 1; i > 0; i--) {
         const j = Phaser.Math.Between(0, i);
@@ -2013,8 +2284,10 @@ function bootGame() {
         // 待机轻微上下浮动，让画面有呼吸感
         u.body.y = u.y + Math.sin(this.clock * 2.2 + u.phase) * 1.6;
 
+        const haste = this.hasteFor(u);
+
         if (u.key === 'sniper') {
-          u.cd -= dt;
+          u.cd -= dt * haste;
           this.updateCdLabel(u);
           if (u.cd <= 0) {
             if (this.nearestEnemyAhead(u)) {
@@ -2032,7 +2305,7 @@ function bootGame() {
             u.cd = 5;
           }
         } else if (u.key === 'gunner') {
-          u.cd -= dt;
+          u.cd -= dt * haste;
           this.updateCdLabel(u);
           if (u.cd <= 0) {
             const target = this.nearestEnemyInRange(u, G.cell * 3);
@@ -2042,6 +2315,32 @@ function bootGame() {
             } else {
               u.cd = 0;
             }
+          }
+        } else if (u.key === 'ice') {
+          u.cd -= dt * haste;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) {
+            const tgt = this.nearestEnemyAhead(u);
+            if (tgt) {
+              this.fireBullet(u, UNIT_DEFS.ice.dmg, 470, 8, { slow: UNIT_DEFS.ice.slow, slowTime: UNIT_DEFS.ice.slowTime });
+              u.cd = UNIT_DEFS.ice.atkCd;
+            } else { u.cd = 0; }
+          }
+        } else if (u.key === 'storm') {
+          u.cd -= dt * haste;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) {
+            const tgt = this.nearestEnemyAhead(u);
+            if (tgt) { this.chainLightning(u, tgt); u.cd = UNIT_DEFS.storm.atkCd; }
+            else { u.cd = 0; }
+          }
+        } else if (u.key === 'cannon') {
+          u.cd -= dt * haste;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) {
+            const tgt = this.nearestEnemyAhead(u);
+            if (tgt) { this.fireBullet(u, UNIT_DEFS.cannon.dmg, 540, 10); u.cd = UNIT_DEFS.cannon.atkCd; }
+            else { u.cd = 0; }
           }
         } else if (u.key === 'healer') {
           u.cd -= dt;
@@ -2081,7 +2380,17 @@ function bootGame() {
       for (const e of this.enemies.slice()) {
         this.syncBar(e.bar, dt, e.x, e.barY);
 
-        const blocker = this.findBlocker(e);
+        // 喷火公鸡：周期性灼烧相邻格的我方单位
+        if (e.burnDmg) {
+          e.burnLeft -= dt;
+          if (e.burnLeft <= 0) {
+            e.burnLeft = e.burnCd || 1.5;
+            this.burnAround(e);
+          }
+        }
+
+        // 飞行公鸡：越过前排，不被单位阻挡
+        const blocker = e.flying ? null : this.findBlocker(e);
         if (blocker) {
           e.body.angle = 0;
           e.attackCd -= dt;
@@ -2097,7 +2406,9 @@ function bootGame() {
             });
           }
         } else if (e.x > G.x0 + 34) {
-          e.x -= (e.speed || ENEMY.speed) * dt;
+          if (e.slowT > 0) e.slowT -= dt;
+          const slowMul = e.slowT > 0 ? (e.slowFactor || 0.55) : 1;
+          e.x -= (e.speed || ENEMY.speed) * dt * slowMul;
           this.syncEnemy(e);
 
           // 走路时左右轻摆
@@ -2143,6 +2454,14 @@ function bootGame() {
         }
 
         if (hit) {
+          if (b.slow > 0) {
+            hit.slowT = b.slowTime;
+            hit.slowFactor = b.slow;
+            const ring = this.add.circle(hit.x, hit.y, 26, 0xbfe6ff, 0.28)
+              .setStrokeStyle(3, 0x7fc4f0, 0.9).setDepth(24);
+            this.tweens.add({ targets: ring, scale: 1.7, alpha: 0, duration: 260,
+              onComplete: () => ring.destroy() });
+          }
           this.damageEnemy(hit, b.dmg);
           this.removeBullet(b);
         } else if (b.x > CANVAS_W + 20) {
