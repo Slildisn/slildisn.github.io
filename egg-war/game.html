@@ -64,6 +64,79 @@
     box-shadow: 0 -10px 20px -18px rgba(122, 86, 44, 0.9);
   }
 
+  /* 开局选牌页（PVZ 式卡组） */
+  #deck-screen {
+    position: fixed; inset: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: center;
+    padding: 12px;
+    background:
+      radial-gradient(900px 520px at 20% -10%, rgba(255, 219, 138, 0.55), transparent 65%),
+      linear-gradient(180deg, #fff8ec 0%, #ffefd5 60%, #d8f3e3 100%);
+  }
+  #deck-screen[hidden] { display: none; }
+  .deck-panel {
+    width: min(760px, 100%); height: min(92vh, 100%);
+    display: flex; flex-direction: column;
+    background: rgba(255, 253, 248, 0.96);
+    border: 2px solid #ffe0a8; border-radius: 22px;
+    box-shadow: 0 18px 40px -24px rgba(122, 86, 44, 0.8);
+    padding: 12px 12px 10px;
+  }
+  .deck-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 2px 4px 8px;
+  }
+  .deck-title { font-size: 18px; font-weight: 800; color: #5c4326; }
+  .deck-count { font-size: 15px; font-weight: 700; color: #c9842a; }
+  .deck-grid {
+    flex: 1 1 auto; min-height: 0;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px; overflow-y: auto; padding: 4px 2px 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .deck-card {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; padding: 6px 4px; min-height: 76px;
+    border-radius: 16px; border: 2px solid #ffe0a8;
+    background: linear-gradient(180deg, #fffdf8, #fff6e2);
+    color: #5c4326; font-family: inherit; text-align: center;
+    box-shadow: 0 8px 16px -12px rgba(92, 67, 38, 0.9), inset 0 1px 0 #fff;
+    transition: transform 0.16s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .deck-card .dc-ico {
+    width: 26px; height: 26px; border-radius: 9px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 2px 6px -3px rgba(0, 0, 0, 0.35);
+  }
+  .deck-card .dc-name { font-size: 12px; font-weight: 700; line-height: 1.2; }
+  .deck-card .dc-cost { font-size: 10.5px; color: #c9842a; }
+  .deck-card.sel {
+    border-color: #ffb63c;
+    background: linear-gradient(180deg, #fff3cf, #ffd98a);
+    box-shadow: 0 0 0 4px rgba(255, 207, 92, 0.35), 0 10px 20px -12px rgba(154, 111, 42, 0.8);
+    transform: translateY(-2px);
+  }
+  .deck-card.lock {
+    opacity: 0.42; filter: grayscale(0.9);
+  }
+  .deck-card.lock .dc-cost { color: #6b5a44; }
+  .deck-actions {
+    display: flex; gap: 10px; justify-content: center;
+    padding: 8px 2px calc(2px + env(safe-area-inset-bottom, 0px));
+  }
+  .deck-btn {
+    min-height: 46px; padding: 0 22px; border-radius: 999px;
+    border: 2px solid #ffe0a8; background: #fffdf8;
+    color: #6b4a22; font-family: inherit; font-size: 15px; font-weight: 700;
+  }
+  .deck-btn.primary {
+    border-color: #ffb63c;
+    background: linear-gradient(180deg, #ffe9a8, #ffc94d);
+    color: #5c4326;
+    box-shadow: 0 10px 22px -12px rgba(180, 120, 30, 0.9);
+  }
+  .deck-btn:disabled { opacity: 0.45; filter: saturate(0.6); }
+
   /* 右下角玩法工具：铲子 / 倍速（不遮挡卡牌） */
   #play-tools {
     position: fixed; right: 10px;
@@ -240,6 +313,20 @@
 
 <div id="card-dock">
   <div class="card-bar" id="card-bar"></div>
+</div>
+
+<div id="deck-screen" hidden>
+  <div class="deck-panel">
+    <div class="deck-head">
+      <span class="deck-title">选择本局卡组</span>
+      <span class="deck-count" id="deck-count">已选 0 / 10</span>
+    </div>
+    <div class="deck-grid" id="deck-grid"></div>
+    <div class="deck-actions">
+      <button class="deck-btn" type="button" id="deck-clear">清空重选</button>
+      <button class="deck-btn primary" type="button" id="deck-start" disabled>开始战斗</button>
+    </div>
+  </div>
 </div>
 
 <div id="play-tools">
@@ -1083,6 +1170,8 @@ function bootGame() {
       this.plantCd = {};          // 每张卡的剩余种植冷却（秒）
       this.shovel = false;        // 铲子是否选中
       this.speedScale = 1;        // 1× / 2× 倍速
+      this.deck = this.loadDeck();       // 已保存的 10 只卡组
+      this.deckPicking = false;
 
       this.drawArena();
       this.buildCards();
@@ -1090,12 +1179,24 @@ function bootGame() {
       this.bindInput();
       this.refreshHud();
       this.syncTools();
-      this.startPrep();
+
+      this.state = 'PREPARING';
+      this.paused = true;          // 选牌 / 剧情期间冻结
 
       pushLog('🎮 新一局开始');
+
+      const quick = this.game.registry.get('quickDeck');
+      if (quick) this.game.registry.set('quickDeck', false);
+
       if (!this.game.registry.get('storySeen')) {
         this.game.registry.set('storySeen', true);
-        this.showStory();
+        this.showStory();          // 剧情关闭 → 打开选牌
+      } else if (quick && this.deck.length === 10) {
+        this.closeDeck();
+        this.paused = false;
+        this.startPrep();          // 沿用卡组，直接进准备阶段
+      } else {
+        this.openDeck();
       }
     }
 
@@ -1237,8 +1338,11 @@ function bootGame() {
 
     /* ---------------- 卡牌 ---------------- */
     buildCards() {
-      // 卡牌直接由 UNIT_DEFS 生成：加单位只需加配置
-      const defs = Object.keys(UNIT_DEFS).map((k) => ({
+      // 只渲染本局卡组（未选牌时留空）
+      const keys = (this.deck && this.deck.length)
+        ? this.deck.slice(0, 10)
+        : [];
+      const defs = keys.map((k) => ({
         key: k,
         label: UNIT_DEFS[k].name,
         cost: UNIT_DEFS[k].cost,
@@ -2068,10 +2172,9 @@ function bootGame() {
         if (ev && ev.stopPropagation) ev.stopPropagation();
         if (this.storyClosed) return;
         this.storyClosed = true;
-        this.paused = false;
         items.forEach((o) => { if (o && o.destroy) o.destroy(); });
         pushLog('📖 开场剧情已关闭');
-        this.showToast('布置母鸡军团，保卫玉米！');
+        this.openDeck();
       });
 
       pushLog('📖 开场剧情弹出（游戏已暂停）');
@@ -2158,6 +2261,123 @@ function bootGame() {
 
       this.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() });
       pushLog('⚡ 闪电母鸡连锁 ' + hit.length + ' 只');
+    }
+
+    /* ---------------- 开局选牌（卡组 10 只） ---------------- */
+    deckStorageKey() { return 'eggwar_deck_v1'; }
+    bestWaveKey() { return 'eggwar_best_wave_v1'; }
+
+    loadDeck() {
+      try {
+        const raw = localStorage.getItem(this.deckStorageKey());
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return [];
+        return arr.filter((k) => UNIT_DEFS[k]).slice(0, 10);
+      } catch (e) { return []; }
+    }
+
+    saveDeck(arr) {
+      try { localStorage.setItem(this.deckStorageKey(), JSON.stringify(arr)); } catch (e) { /* ignore */ }
+    }
+
+    unlockedWave() {
+      const cur = this.waveIndex + 1;
+      let best = 1;
+      try { best = parseInt(localStorage.getItem(this.bestWaveKey()) || '1', 10) || 1; } catch (e) { /* ignore */ }
+      return Math.max(cur, best, 1);
+    }
+
+    openDeck() {
+      this.deckPicking = true;
+      this.paused = true;
+      this.selected = null;
+      this.shovel = false;
+      this.syncCards();
+      this.syncTools();
+      this.renderDeck();
+      const el = document.getElementById('deck-screen');
+      if (el) el.hidden = false;
+    }
+
+    closeDeck() {
+      this.deckPicking = false;
+      const el = document.getElementById('deck-screen');
+      if (el) el.hidden = true;
+    }
+
+    renderDeck() {
+      const grid = document.getElementById('deck-grid');
+      const countEl = document.getElementById('deck-count');
+      const startBtn = document.getElementById('deck-start');
+      if (!grid) return;
+
+      const unlocked = this.unlockedWave();
+      const picked = this.deck || [];
+      grid.innerHTML = '';
+
+      Object.keys(UNIT_DEFS).forEach((key) => {
+        const def = UNIT_DEFS[key];
+        const need = def.unlock || 1;
+        const locked = need > unlocked;
+        const on = picked.indexOf(key) >= 0;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'deck-card' + (on ? ' sel' : '') + (locked ? ' lock' : '');
+        btn.dataset.key = key;
+
+        const ico = document.createElement('span');
+        ico.className = 'dc-ico';
+        ico.style.background = '#' + def.color.toString(16).padStart(6, '0');
+
+        const nm = document.createElement('span');
+        nm.className = 'dc-name';
+        nm.textContent = def.name;
+
+        const cost = document.createElement('span');
+        cost.className = 'dc-cost';
+        cost.textContent = locked ? ('第 ' + need + ' 波解锁') : (def.cost + ' 玉米');
+
+        btn.appendChild(ico);
+        btn.appendChild(nm);
+        btn.appendChild(cost);
+        if (!locked) btn.addEventListener('click', () => this.toggleDeckPick(key));
+
+        grid.appendChild(btn);
+      });
+
+      if (countEl) countEl.textContent = '已选 ' + picked.length + ' / 10';
+      if (startBtn) startBtn.disabled = picked.length !== 10;
+    }
+
+    toggleDeckPick(key) {
+      if (!this.deckPicking) return;
+      const idx = this.deck.indexOf(key);
+      if (idx >= 0) this.deck.splice(idx, 1);
+      else if (this.deck.length < 10) this.deck.push(key);
+      else this.showToast('卡组已满 10 只，先取消一只');
+      this.renderDeck();
+    }
+
+    clearDeck() {
+      if (!this.deckPicking) return;
+      this.deck = [];
+      this.renderDeck();
+    }
+
+    confirmDeck() {
+      if (!this.deckPicking) return;
+      if (this.deck.length !== 10) { this.showToast('请选满 10 只'); return; }
+
+      this.saveDeck(this.deck);
+      this.closeDeck();
+      this.paused = false;
+      this.state = 'PREPARING';
+      this.buildCards();          // 只渲染这 10 只
+      this.refreshHud();
+      this.startPrep();
+      this.showToast('卡组已就绪，布置母鸡军团！');
     }
 
     /* ---------------- 铲子（移除单位，返还 30% 费用） ---------------- */
@@ -2300,6 +2520,10 @@ function bootGame() {
 
     startPrep() {
       const cfg = WAVES[this.waveIndex];
+      try {
+        const best = parseInt(localStorage.getItem(this.bestWaveKey()) || '1', 10) || 1;
+        if (this.waveIndex + 1 > best) localStorage.setItem(this.bestWaveKey(), String(this.waveIndex + 1));
+      } catch (e) { /* ignore */ }
       this.state = 'PREPARING';
       this.over = false;
       this.paused = false;
@@ -2397,6 +2621,31 @@ function bootGame() {
         .setDepth(104).setInteractive({ useHandCursor: true });
 
       items.push(dim, card, title, body, btnG, btnT, hit);
+
+      // 失败时提供「重新选牌」
+      if (opts.secondary) {
+        const btn2 = this.add.graphics().setDepth(102);
+        btn2.fillStyle(0xfff3d8, 1);
+        btn2.fillRoundedRect(430, 466, 180, 46, 23);
+        btn2.lineStyle(2, 0xffcf5c, 1);
+        btn2.strokeRoundedRect(430, 466, 180, 46, 23);
+
+        const t2 = this.add.text(520, 489, opts.secondary.label, {
+          fontFamily: FONT, fontSize: '19px', color: '#6b4a22', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(103);
+
+        const h2 = this.add.rectangle(520, 489, 180, 46, 0xffffff, 0.001)
+          .setDepth(104).setInteractive({ useHandCursor: true });
+
+        h2.on('pointerdown', (p, x, y, ev) => {
+          if (ev && ev.stopPropagation) ev.stopPropagation();
+          items.forEach((o) => { if (o && o.destroy) o.destroy(); });
+          t2.destroy(); h2.destroy(); btn2.destroy();
+          opts.secondary.onClick();
+        });
+
+        items.push(btn2, t2, h2);
+      }
 
       hit.on('pointerdown', (p, x, y, ev) => {
         if (ev && ev.stopPropagation) ev.stopPropagation();
@@ -2785,8 +3034,18 @@ function bootGame() {
       this.showEndModal({
         title: '💧 玉米村失守了……',
         body: '再试一次吧！',
-        button: '重新挑战',
-        onClose: null
+        button: '沿用卡组再战',
+        onClose: () => {
+          this.game.registry.set('quickDeck', true);
+          this.scene.restart();
+        },
+        secondary: {
+          label: '重新选牌',
+          onClick: () => {
+            try { localStorage.removeItem('eggwar_deck_v1'); } catch (e) { /* ignore */ }
+            this.scene.restart();
+          }
+        }
       });
     }
   }
@@ -2820,6 +3079,21 @@ function bootGame() {
   if (speedEl) {
     speedEl.addEventListener('click', () => {
       if (activeScene) activeScene.toggleSpeed();
+    });
+  }
+
+  const deckClearEl = document.getElementById('deck-clear');
+  const deckStartEl = document.getElementById('deck-start');
+
+  if (deckClearEl) {
+    deckClearEl.addEventListener('click', () => {
+      if (activeScene) activeScene.clearDeck();
+    });
+  }
+
+  if (deckStartEl) {
+    deckStartEl.addEventListener('click', () => {
+      if (activeScene) activeScene.confirmDeck();
     });
   }
 }
