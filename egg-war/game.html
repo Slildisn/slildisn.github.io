@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="author" content="CYRENE_Original">
 <title>母鸡大战公鸡</title>
 <style>
   html, body {
@@ -126,6 +127,28 @@
     .card-txt i { font-size: 9px; }
   }
     canvas { display: block; }
+
+  /* 自毁处决层 */
+  #egg-fatal {
+    position: fixed; inset: 0; z-index: 2147483000;
+    background: #000; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px;
+    padding: 24px; text-align: center;
+    font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  }
+  #egg-fatal .q {
+    font-size: min(42vw, 240px); line-height: 1;
+    animation: eggBlink 0.42s steps(2, end) infinite;
+  }
+  #egg-fatal .t {
+    color: #ff2d55; font-size: clamp(14px, 4vw, 22px);
+    font-weight: 700; letter-spacing: 0.06em; line-height: 1.6;
+  }
+  #egg-fatal .s {
+    color: #cfc7e0; font-size: clamp(11px, 3vw, 15px);
+    line-height: 1.6; word-break: break-all;
+  }
+  @keyframes eggBlink { 50% { color: #ffffff; transform: scale(0.96); } }
 
   #boot-msg {
     position: fixed;
@@ -302,7 +325,109 @@
 </div>
 
 <script>
+(function () {
 'use strict';
+
+/* ================= 全局开关 ================= */
+// 测试期间保持 false：关闭全部拦截；发布前改 true
+const isProduction = false;
+
+/* ================= 安全体系（五层） ================= */
+(function security() {
+  const OFFICIAL = 'https://slildisn.github.io/egg-war/';
+  const ALLOWED_HOSTS = ['slildisn.github.io', 'localhost', '127.0.0.1'];
+
+  // 第二层：域名白名单（file:// 时 hostname 为空，放行）
+  function hostAllowed() {
+    const h = String(location.hostname || '').toLowerCase();
+    if (!h) return true;
+    for (let i = 0; i < ALLOWED_HOSTS.length; i++) {
+      if (h === ALLOWED_HOSTS[i]) return true;
+    }
+    return false;
+  }
+
+  // 第三层：版权标记
+  function authorIntact() {
+    const m = document.querySelector('meta[name="author"]');
+    return !!m && String(m.getAttribute('content')) === 'CYRENE_Original';
+  }
+
+  // 第四层：自毁处决
+  function selfDestruct(reason) {
+    if (window.__eggKilled) return;
+    window.__eggKilled = true;
+
+    try {
+      if (window.__eggGame && window.__eggGame.destroy) window.__eggGame.destroy(true);
+    } catch (e) { /* ignore */ }
+
+    try {
+      document.querySelectorAll('canvas').forEach(function (c) {
+        try {
+          const ctx = c.getContext('2d');
+          if (ctx) ctx.clearRect(0, 0, c.width, c.height);
+        } catch (e2) { /* ignore */ }
+      });
+    } catch (e3) { /* ignore */ }
+
+    const box = document.createElement('div');
+    box.id = 'egg-fatal';
+    box.innerHTML = '<div class="q">❓</div>' +
+      '<div class="t">FATAL ERROR: 核心记忆缺失，系统已自毁。</div>' +
+      '<div class="s">正版地址：' + OFFICIAL + '</div>';
+    document.body.appendChild(box);
+
+    const kill = function (e) { e.preventDefault(); e.stopPropagation(); };
+    ['click', 'pointerdown', 'touchstart', 'touchmove', 'keydown', 'contextmenu', 'wheel']
+      .forEach(function (ev) { document.addEventListener(ev, kill, { capture: true }); });
+
+    try { console.warn('[SECURITY] fatal:', reason || 'unknown'); } catch (e4) { /* ignore */ }
+  }
+
+  // 第一层：物理拦截
+  function lockInputs() {
+    document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    document.addEventListener('keydown', function (e) {
+      const k = String(e.key || '').toLowerCase();
+      const devtools = k === 'f12' ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && (k === 'i' || k === 'j' || k === 'c')) ||
+        ((e.ctrlKey || e.metaKey) && (k === 'u' || k === 's'));
+      if (devtools) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+    try {
+      document.documentElement.style.webkitUserSelect = 'none';
+      document.documentElement.style.userSelect = 'none';
+      document.body.style.webkitUserSelect = 'none';
+      document.body.style.userSelect = 'none';
+    } catch (e) { /* ignore */ }
+  }
+
+  window.__eggSecurity = {
+    isProduction: isProduction,
+    hostAllowed: hostAllowed,
+    authorIntact: authorIntact,
+    selfDestruct: selfDestruct
+  };
+
+  // 仅在发布模式启用全部拦截，本地测试零干扰
+  if (!isProduction) return;
+
+  if (!hostAllowed()) {
+    try { location.replace(OFFICIAL); } catch (e) { /* ignore */ }
+    return;
+  }
+
+  if (!authorIntact()) {
+    selfDestruct('meta');
+    return;
+  }
+
+  lockInputs();
+  setInterval(function () {
+    if (!authorIntact()) selfDestruct('meta-tampered');
+  }, 4000);
+})();
 
 /* ================= Phaser CDN 多源加载 ================= */
 (function () {
@@ -790,6 +915,11 @@ function bootGame() {
       deco.fillStyle(0xfff3c4, 0.45);
       deco.fillCircle(G.x0 + 30, G.y0 + 28, 6);
       deco.fillCircle(G.x0 + GRID_W - 52, G.y0 + 32, 5);
+
+      // 第三层：隐藏版权水印（最底层，几乎透明）
+      this.add.text(CANVAS_W / 2, CANVAS_H / 2, 'CYRENE', {
+        fontFamily: FONT, fontSize: '150px', color: '#5c4326', fontStyle: 'bold'
+      }).setOrigin(0.5).setAlpha(0.05).setDepth(-10);
 
       const cy = G.y0 + GRID_H / 2;
 
@@ -2025,7 +2155,7 @@ function bootGame() {
     scene: [GameScene]
   };
 
-  new Phaser.Game(config);
+  window.__eggGame = new Phaser.Game(config);
 
   /* ---------------- 调试面板 DOM 绑定 ---------------- */
   const panel = document.getElementById('dbg-panel');
@@ -2063,6 +2193,7 @@ function bootGame() {
     activeScene.setCorn(v);
   });
 }
+})();
 </script>
 
 </body>
