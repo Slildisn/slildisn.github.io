@@ -372,8 +372,16 @@ function bootGame() {
     peckRate: 0.9
   };
 
-  const PREP_TIME = 15;   // 开局安全准备时间（秒）
-  const WIN_WAVE = 10;    // 撑过第 10 波即胜利
+  const PREP_TIME = 15;   // 每波准备时间（秒）
+
+  // 波次配置：改这里就能调难度
+  const WAVES = [
+    { normal: 5,  raider: 0, giant: 0, interval: 4.0, prep: PREP_TIME },
+    { normal: 8,  raider: 2, giant: 0, interval: 3.5, prep: PREP_TIME },
+    { normal: 10, raider: 4, giant: 0, interval: 3.0, prep: PREP_TIME },
+    { normal: 12, raider: 6, giant: 1, interval: 2.5, prep: PREP_TIME },
+    { normal: 15, raider: 8, giant: 2, interval: 2.0, prep: PREP_TIME, boss: true }
+  ];
 
   /* 敌方（数值不动） */
   const ENEMY_TYPES = {
@@ -698,8 +706,12 @@ function bootGame() {
       this.cards = [];
 
       this.baseHp = BASE.hp;
-      this.wave = 0;
-      this.timers = { enemy: PREP_TIME, corn: 2.2 };
+      this.state = 'PREPARING';
+      this.waveIndex = 0;
+      this.prepLeft = WAVES[0].prep;
+      this.waveQueue = [];
+      this.spawnTimer = 0;
+      this.timers = { corn: 2.2 };
       this.pendingRow = null;
 
       this.drawArena();
@@ -707,6 +719,7 @@ function bootGame() {
       this.buildHud();
       this.bindInput();
       this.refreshHud();
+      this.startPrep();
 
       const pauseBtn = document.getElementById('dbg-pause');
       if (pauseBtn) pauseBtn.textContent = '⏸ 暂停';
@@ -895,7 +908,7 @@ function bootGame() {
     }
 
     selectCard(key) {
-      if (this.over) return;
+      if (this.over || this.paused) return;
       this.selected = this.selected === key ? null : key;
       this.syncCards();
     }
@@ -973,7 +986,7 @@ function bootGame() {
     }
 
     onGridClick(pointer) {
-      if (this.over || !this.selected) return;
+      if (this.over || this.paused || !this.selected) return;
 
       const col = Math.floor((pointer.x - G.x0) / G.cell);
       const row = Math.floor((pointer.y - G.y0) / G.cell);
@@ -1197,18 +1210,8 @@ function bootGame() {
     }
 
     /* ---------------- 敌人 ---------------- */
-    pickEnemyType() {
-      if (this.wave < 4) return 'normal';
-      const r = Math.random();
-      if (this.wave >= 6 && r < 0.12) return 'giant';
-      if (r < 0.38) return 'raider';
-      return 'normal';
-    }
-
     spawnEnemy(rowArg, typeArg) {
-      this.wave += 1;
-      const early = this.wave <= 2;              // 前两波更慢
-      const typeKey = typeArg || this.pickEnemyType();
+      const typeKey = typeArg || 'normal';
       const t = ENEMY_TYPES[typeKey] || ENEMY_TYPES.normal;
 
       const row = (typeof rowArg === 'number' && rowArg >= 0 && rowArg < G.rows)
@@ -1230,7 +1233,7 @@ function bootGame() {
         hp: t.hp,
         maxHp: t.hp,
         attackCd: 0,
-        speed: (typeKey === 'normal' ? t.speed * (early ? 0.8 : 1) : t.speed),
+        speed: t.speed,
         w: t.w,
         h: t.h,
         peckDmg: t.peckDmg,
@@ -1247,8 +1250,8 @@ function bootGame() {
       this.syncEnemy(e);
       this.syncBar(bar, 0, x, barY);
 
-      pushLog('🦃 第' + this.wave + '波 · 第' + (row + 1) + '行 ｜ ' + t.name +
-        ' HP ' + t.hp + ' ｜ 速度 ' + Math.round(e.speed));
+      pushLog('🦃 第' + (this.waveIndex + 1) + '波 · 第' + (row + 1) + '行 ｜ ' + t.name +
+        ' HP ' + t.hp);
     }
 
     syncEnemy(e) {
@@ -1604,47 +1607,131 @@ function bootGame() {
       });
     }
 
-    victory() {
-      if (this.over) return;
-      pushLog('🎉 撑过第 ' + WIN_WAVE + ' 波，胜利！');
-      this.showEnd(true);
+    /* ---------------- 波次系统 ---------------- */
+    buildQueue(cfg) {
+      const list = [];
+      for (let i = 0; i < cfg.normal; i++) list.push('normal');
+      for (let i = 0; i < cfg.raider; i++) list.push('raider');
+
+      for (let i = list.length - 1; i > 0; i--) {
+        const j = Phaser.Math.Between(0, i);
+        const t = list[i]; list[i] = list[j]; list[j] = t;
+      }
+
+      for (let i = 0; i < cfg.giant; i++) list.push('giant');
+      return list;
     }
 
-    showEnd(win) {
+    startPrep() {
+      const cfg = WAVES[this.waveIndex];
+      this.state = 'PREPARING';
+      this.over = false;
+      this.paused = false;
+      this.prepLeft = cfg.prep;
+      this.pendingRow = null;
+      this.spawnTimer = 0;
+      this.waveQueue = this.buildQueue(cfg);
+
+      this.setPrepLine('第 ' + (this.waveIndex + 1) + ' 波 · 准备 ' + Math.ceil(this.prepLeft) + 's');
+      pushLog('📦 第 ' + (this.waveIndex + 1) + ' 波准备 · 敌方 ' + this.waveQueue.length + ' 只');
+    }
+
+    startFighting() {
+      this.state = 'FIGHTING';
+      this.spawnTimer = 0.8;
+      this.setPrepLine(null);
+      pushLog('⚔ 第 ' + (this.waveIndex + 1) + ' 波开战！');
+    }
+
+    updateSpawner(dt) {
+      if (!this.waveQueue.length) return;
+
+      this.spawnTimer -= dt;
+      if (this.pendingRow === null && this.spawnTimer <= 3) {
+        this.pendingRow = Phaser.Math.Between(0, G.rows - 1);
+        this.showSpawnWarning(this.pendingRow);
+      }
+
+      if (this.spawnTimer <= 0) {
+        const type = this.waveQueue.shift();
+        this.spawnEnemy(this.pendingRow, type);
+        this.pendingRow = null;
+        this.spawnTimer = WAVES[this.waveIndex].interval;
+      }
+    }
+
+    checkWaveClear() {
+      if (this.over || this.state !== 'FIGHTING') return;
+      if (this.waveQueue.length > 0) return;
+      if (this.enemies.length > 0) return;
+
+      this.state = 'WIN';
+      this.paused = true;               // 冻结主循环，防止结算时还在跑
+      const last = this.waveIndex >= WAVES.length - 1;
+      pushLog(last ? '🏆 第 5 波清空，全部通关' : '🎉 第 ' + (this.waveIndex + 1) + ' 波清空');
+
+      this.showEndModal({
+        title: last ? '🏆 玉米村保卫战大获全胜！' : '🎉 胜利！',
+        body: last ? '公鸡军团彻底撤退，玉米村安全了！' : '公鸡军团暂时撤退了。',
+        button: last ? '再玩一局' : '进入第 ' + (this.waveIndex + 2) + ' 波',
+        onClose: last ? null : () => {
+          this.waveIndex += 1;
+          this.startPrep();             // 切回准备阶段 15 秒
+        }
+      });
+    }
+
+    showEndModal(opts) {
       this.over = true;
+      this.paused = true;
       this.selected = null;
       this.syncCards();
       if (this.hoverCell) this.hoverCell.setVisible(false);
       this.setPrepLine(null);
 
-      this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x5c4326, 0.55).setDepth(100);
+      const items = [];
+      const dim = this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x5c4326, 0.55).setDepth(100);
 
       const card = this.add.graphics().setDepth(101);
       card.fillStyle(0xfffdf6, 0.98);
-      card.fillRoundedRect(330, 176, 620, 300, 28);
+      card.fillRoundedRect(320, 168, 640, 316, 28);
       card.lineStyle(3, 0xffcf5c, 1);
-      card.strokeRoundedRect(330, 176, 620, 300, 28);
+      card.strokeRoundedRect(320, 168, 640, 316, 28);
 
-      this.add.text(640, 236, win ? '🎉 胜利！' : '💧 玉米村失守了……', {
-        fontFamily: FONT, fontSize: '36px', color: '#5c4326', fontStyle: 'bold'
+      const title = this.add.text(640, 232, opts.title, {
+        fontFamily: FONT, fontSize: '33px', color: '#5c4326', fontStyle: 'bold',
+        align: 'center', wordWrap: { width: 580 }
       }).setOrigin(0.5).setDepth(102);
 
-      this.add.text(640, 318, win ? '公鸡军团暂时撤退了。' : '再试一次吧！', {
-        fontFamily: FONT, fontSize: '25px', color: '#7b6650', align: 'center',
-        wordWrap: { width: 560 }
+      const body = this.add.text(640, 320, opts.body, {
+        fontFamily: FONT, fontSize: '24px', color: '#7b6650', align: 'center',
+        wordWrap: { width: 560 }, lineSpacing: 10
       }).setOrigin(0.5).setDepth(102);
 
       const btnG = this.add.graphics().setDepth(102);
       btnG.fillStyle(0xffcf5c, 1);
-      btnG.fillRoundedRect(510, 382, 260, 60, 30);
+      btnG.fillRoundedRect(510, 390, 260, 60, 30);
 
-      this.add.text(640, 412, win ? '再玩一局' : '重新挑战', {
+      const btnT = this.add.text(640, 420, opts.button, {
         fontFamily: FONT, fontSize: '24px', color: '#5c4326', fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(103);
 
-      const hit = this.add.rectangle(640, 412, 260, 60, 0xffffff, 0.001)
+      const hit = this.add.rectangle(640, 420, 260, 60, 0xffffff, 0.001)
         .setDepth(104).setInteractive({ useHandCursor: true });
-      hit.on('pointerdown', () => this.scene.restart());
+
+      items.push(dim, card, title, body, btnG, btnT, hit);
+
+      hit.on('pointerdown', (p, x, y, ev) => {
+        if (ev && ev.stopPropagation) ev.stopPropagation();
+        items.forEach((o) => { if (o && o.destroy) o.destroy(); });
+        if (opts.onClose) {
+          this.over = false;
+          this.paused = false;
+          opts.onClose();
+        } else {
+          this.scene.restart();
+        }
+      });
     }
 
     /* ---------------- 帧更新 ---------------- */
@@ -1653,24 +1740,14 @@ function bootGame() {
       const dt = Math.min(delta, 120) / 1000;
       this.clock += dt;
 
-      // 开局安全准备倒计时
-      if (this.wave === 0) {
-        this.setPrepLine('安全准备 ' + Math.ceil(Math.max(0, this.timers.enemy)) + 's');
-      }
-
-      // 刷怪封顶：撑满 WIN_WAVE 波后不再出怪
-      this.timers.enemy -= dt;
-      if (this.wave < WIN_WAVE) {
-        if (this.pendingRow === null && this.timers.enemy <= 3) {
-          this.pendingRow = Phaser.Math.Between(0, G.rows - 1);
-          this.showSpawnWarning(this.pendingRow);
-        }
-        if (this.timers.enemy <= 0) {
-          this.spawnEnemy(this.pendingRow);
-          this.pendingRow = null;
-          this.setPrepLine(null);
-          this.timers.enemy = this.wave <= 2 ? 7 : 5;
-        }
+      // 状态机：准备 / 战斗
+      if (this.state === 'PREPARING') {
+        this.prepLeft -= dt;
+        this.setPrepLine('第 ' + (this.waveIndex + 1) + ' 波 · 准备 ' +
+          Math.ceil(Math.max(0, this.prepLeft)) + 's');
+        if (this.prepLeft <= 0) this.startFighting();
+      } else if (this.state === 'FIGHTING') {
+        this.updateSpawner(dt);
       }
 
       // 天上掉玉米粒：频率小幅提高（2.6~4.2 秒一颗）
@@ -1685,10 +1762,8 @@ function bootGame() {
       this.updateBullets(dt);
       this.updateDrops(dt);
 
-      // 打完最后一波且场上清空 → 胜利
-      if (!this.over && this.wave >= WIN_WAVE && this.enemies.length === 0) {
-        this.victory();
-      }
+      // 本波清空判定：存活 0 且待刷队列 0
+      this.checkWaveClear();
     }
 
     updateUnits(dt) {
@@ -1926,8 +2001,14 @@ function bootGame() {
     /* ---------------- 结束 ---------------- */
     gameOver() {
       if (this.over) return;
-      pushLog('🚨 公鸡攻破鸡窝，游戏结束');
-      this.showEnd(false);
+      this.state = 'LOSE';
+      pushLog('🚨 鸡窝被啃空，玉米村失守');
+      this.showEndModal({
+        title: '💧 玉米村失守了……',
+        body: '再试一次吧！',
+        button: '重新挑战',
+        onClose: null
+      });
     }
   }
 
