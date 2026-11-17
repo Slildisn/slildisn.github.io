@@ -728,32 +728,35 @@ function bootGame() {
     if (!PLANT_CD[k]) PLANT_CD[k] = UNIT_DEFS[k].plantCd || 10;
   });
 
+  // 难度系数：整体放大敌方强度（1 = 原始难度）
+  const DIFF = { hp: 1.2, speed: 1.08, basePeck: 1.25 };
+
   /* 鸡窝基地：有血量，被啃空才算失守 */
   const BASE = {
     hp: 300,
-    peckDmg: 12,
+    peckDmg: Math.round(12 * DIFF.basePeck),
     peckRate: 0.9
   };
 
-  const PREP_TIME = 15;   // 每波准备时间（秒）
+  const PREP_TIME = 13;   // 每波准备时间（秒）
 
   // 波次配置：改这里就能调难度
   const WAVES = [
-    { normal: 5,  raider: 0, interval: 4.0, prep: PREP_TIME },
+    { normal: 6,  raider: 0, interval: 3.6, prep: PREP_TIME },
 
-    { normal: 7,  raider: 2, gale: 2, grunt: 2, swift: 1,
-      interval: 3.6, prep: PREP_TIME },
-
-    { normal: 9,  raider: 4, gale: 3, helmet: 2, venom: 1, militia: 2, zipper: 1, ironclad: 1,
+    { normal: 8,  raider: 3, gale: 2, grunt: 3, swift: 2,
       interval: 3.2, prep: PREP_TIME },
 
-    { normal: 11, raider: 5, gale: 3, helmet: 3, flame: 2, flyer: 2, venom: 2, frenzy: 2, summon: 1, giant: 1,
-      brute: 1, runner: 1, bulwark: 1, pyro: 1, wisp: 1, berserk: 1,
-      interval: 2.8, prep: PREP_TIME },
+    { normal: 11, raider: 5, gale: 4, helmet: 3, venom: 1, militia: 3, zipper: 1, ironclad: 1,
+      interval: 2.9, prep: PREP_TIME },
 
-    { normal: 8,  raider: 4, gale: 4, helmet: 4, flame: 3, flyer: 3, venom: 2, frenzy: 3, summon: 1, giant: 2,
+    { normal: 13, raider: 6, gale: 4, helmet: 4, flame: 3, flyer: 3, venom: 3, frenzy: 3, summon: 1, giant: 1,
+      brute: 1, runner: 1, bulwark: 1, pyro: 1, wisp: 1, berserk: 1,
+      interval: 2.5, prep: PREP_TIME },
+
+    { normal: 10, raider: 5, gale: 5, helmet: 5, flame: 4, flyer: 4, venom: 2, frenzy: 4, summon: 1, giant: 2,
       bolt: 1, veteran: 1, warlord: 1, tanker: 1, fortress: 1, toxic: 1, sky: 1, colossus: 1, shaman: 1,
-      interval: 2.4, prep: PREP_TIME, boss: true }
+      interval: 2.2, prep: PREP_TIME, boss: true }
   ];
 
   /* 敌方（数值不动） */
@@ -1477,7 +1480,7 @@ function bootGame() {
       this.pendingRow = null;
       this.plantCd = {};          // 每张卡的剩余种植冷却（秒）
       this.shovel = false;        // 铲子是否选中
-      this.speedScale = 1;        // 1× / 2× 倍速
+      this.speedScale = 1;        // 1× / 2× / 3× / 4× 倍速
       this.deck = this.loadDeck();       // 已保存的 10 只卡组
       this.deckPicking = false;
 
@@ -2102,10 +2105,10 @@ function bootGame() {
       const e = {
         type: typeKey,
         row, x, y,
-        hp: t.hp,
-        maxHp: t.hp,
+        hp: Math.round(t.hp * DIFF.hp),
+        maxHp: Math.round(t.hp * DIFF.hp),
         attackCd: 0,
-        speed: t.speed,
+        speed: t.speed * DIFF.speed,
         w: t.w,
         h: t.h,
         peckDmg: t.peckDmg,
@@ -2719,9 +2722,9 @@ function bootGame() {
     /* ---------------- 倍速 ---------------- */
     toggleSpeed() {
       if (this.over || this.paused) return;
-      this.speedScale = this.speedScale === 1 ? 2 : 1;
+      this.speedScale = this.speedScale >= 4 ? 1 : (this.speedScale || 1) + 1;
       this.syncTools();
-      this.showToast(this.speedScale === 2 ? '2 倍速' : '恢复 1 倍速');
+      this.showToast(this.speedScale === 1 ? '恢复 1 倍速' : this.speedScale + ' 倍速');
     }
 
     syncTools() {
