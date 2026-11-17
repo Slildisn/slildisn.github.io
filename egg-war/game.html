@@ -51,8 +51,8 @@
     margin: 10px auto 0;
   }
   .card {
-    display: flex; align-items: center; gap: 8px;
-    height: 74px; padding: 0 10px;
+    display: flex; align-items: center; gap: 6px;
+    height: 74px; padding: 0 8px; overflow: hidden;
     border-radius: 18px; border: 2px solid #ffe0a8;
     background: linear-gradient(180deg, #fffdf8, #fff6e2);
     color: #5c4326; font-family: inherit; text-align: left;
@@ -69,12 +69,21 @@
   }
   .card.off { opacity: 0.55; filter: saturate(0.7); }
   .card-ico {
-    flex: 0 0 auto; width: 30px; height: 30px; border-radius: 10px;
+    flex: 0 0 auto; width: 26px; height: 26px; border-radius: 9px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 2px 6px -3px rgba(0, 0, 0, 0.35);
   }
-  .card-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .card-txt b { font-size: 14px; line-height: 1.15; white-space: nowrap; }
-  .card-txt i { font-style: normal; font-size: 12px; color: #c9842a; }
+  .card-txt {
+    display: flex; flex-direction: column; gap: 2px;
+    flex: 1 1 auto; min-width: 0; overflow: hidden;
+  }
+  .card-txt b {
+    font-size: 11.5px; line-height: 1.2; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card-txt i {
+    font-style: normal; font-size: 10.5px; line-height: 1.2; color: #c9842a;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   canvas { display: block; }
 
   #boot-msg {
@@ -761,7 +770,7 @@ function bootGame() {
         const nm = document.createElement('b');
         nm.textContent = d.label;
         const cost = document.createElement('i');
-        cost.textContent = d.cost + ' 玉米';
+        cost.textContent = d.cost + ' 玉米粒';
         txt.appendChild(nm);
         txt.appendChild(cost);
 
@@ -1320,9 +1329,9 @@ function bootGame() {
 
       // 红光闪烁（3 秒，跟着出兵倒计时一起呼吸）
       const halo = this.add.graphics().setDepth(9);
-      halo.fillStyle(0xff7a5c, 0.34);
+      halo.fillStyle(0xd89b5a, 0.28);
       halo.fillEllipse(0, 0, 96, 108);
-      halo.lineStyle(4, 0xff5540, 0.75);
+      halo.lineStyle(4, 0xb97a3c, 0.7);
       halo.strokeEllipse(0, 0, 96, 108);
       halo.setPosition(1231, y);
 
@@ -1339,7 +1348,7 @@ function bootGame() {
       });
 
       const tip = this.add.text(1231, y - 66, '公鸡来袭 3s', {
-        fontFamily: FONT, fontSize: '19px', color: '#c0392b', fontStyle: 'bold'
+        fontFamily: FONT, fontSize: '19px', color: '#8a5a2b', fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(10);
 
       this.tweens.add({
