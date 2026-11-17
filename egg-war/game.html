@@ -1018,9 +1018,9 @@ function bootGame() {
       const glow = this.add.circle(x, y0, 27, 0xfff0b8, 0.20).setDepth(18);
       const main = this.add.circle(x, y0, 15, 0xffd54a).setStrokeStyle(3, 0xe0a800).setDepth(20);
       const hi = this.add.circle(x - 5, y0 - 5, 4, 0xfff2b0).setDepth(21);
-      // 视觉半径 15 不变；点击热区放大到半径 36（直径 72px），更好点中
+      // 视觉半径 15 不变；点击热区放大到半径 40（直径 80px），更好点中
       main.setInteractive({
-        hitArea: new Phaser.Geom.Circle(15, 15, 36),
+        hitArea: new Phaser.Geom.Circle(15, 15, 40),
         hitAreaCallback: Phaser.Geom.Circle.Contains,
         useHandCursor: true
       });
