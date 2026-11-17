@@ -14,25 +14,36 @@
     overflow: hidden;
     -webkit-tap-highlight-color: transparent;
   }
-  #app { display: flex; flex-direction: column; height: 100%; }
-  #game { position: relative; flex: 1 1 auto; min-height: 0; width: 100%; }
+  :root {
+    --band-top: 56px;
+    --band-bottom: 172px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (min-width: 700px) {
+    :root { --band-bottom: 96px; }
+  }
+
+  /* 顶部信息栏：独立绝对层，不参与画布布局 */
   #hud {
-    flex: 0 0 auto;
-    padding: 10px 14px 8px;
+    position: fixed; top: 0; left: 0; right: 0;
+    height: var(--band-top);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 0 12px;
+    z-index: 6;
     background: linear-gradient(180deg, #fff8ec 0%, #fff2dc 100%);
     border-bottom: 1px solid rgba(255, 224, 168, 0.9);
     box-shadow: 0 6px 16px -14px rgba(122, 86, 44, 0.7);
   }
-  .hud-top { position: relative; display: flex; align-items: flex-start; justify-content: center; min-height: 56px; }
-  .hud-center { text-align: center; }
   .hud-title {
-    margin: 0; font-size: clamp(20px, 3.6vw, 30px); line-height: 1.2;
+    margin: 0; font-size: clamp(16px, 2.6vw, 26px); line-height: 1.1;
     color: #5c4326; letter-spacing: 0.04em; font-weight: 800;
-    text-shadow: 0 2px 0 #ffffff, 0 8px 16px rgba(196, 142, 63, 0.22);
+    white-space: nowrap;
+    text-shadow: 0 2px 0 #ffffff, 0 8px 16px rgba(196, 142, 63, 0.18);
   }
-  .hud-prep { margin-top: 8px; font-size: 14px; font-weight: 700; color: #b35a1f; }
+  .hud-mid { flex: 1 1 auto; display: flex; justify-content: center; min-width: 0; }
+  .hud-prep { font-size: 14px; font-weight: 700; color: #b35a1f; white-space: nowrap; }
   .hud-prep[hidden] { display: none; }
-  .hud-corn { position: absolute; right: 0; top: 2px; display: flex; align-items: center; gap: 6px; }
+  .hud-corn { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
   .corn-dot {
     width: 20px; height: 20px; border-radius: 50%; flex: 0 0 auto;
     background: radial-gradient(circle at 34% 32%, #fff3c4, #ffcf5c 55%, #e8a92c 100%);
@@ -43,12 +54,35 @@
   #corn-val.pulse { animation: cornPop 0.3s ease; }
   @keyframes cornPop { 0% { transform: scale(1); } 45% { transform: scale(1.22); } 100% { transform: scale(1); } }
 
+  /* 底部卡牌栏：独立绝对层 + 底部安全区 */
+  #card-dock {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: calc(var(--band-bottom) + var(--safe-bottom));
+    padding: 8px 10px calc(8px + var(--safe-bottom));
+    display: flex; align-items: center; justify-content: center;
+    z-index: 6;
+    background: linear-gradient(180deg, #fff8ec 0%, #fff6e2 45%, #ffefd5 100%);
+    border-top: 1px solid rgba(255, 224, 168, 0.9);
+    box-shadow: 0 -10px 20px -18px rgba(122, 86, 44, 0.9);
+  }
+
+  /* 中间战场：固定在两条栏之间，画布等比填充，不被栏内容挤压 */
+  #game {
+    position: fixed; left: 0; right: 0;
+    top: var(--band-top);
+    bottom: calc(var(--band-bottom) + var(--safe-bottom));
+    z-index: 1;
+  }
+
   .card-bar {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 112px));
     gap: 8px 12px;
     justify-content: center;
-    margin: 10px auto 0;
+    width: 100%;
+  }
+  @media (min-width: 700px) {
+    .card-bar { grid-template-columns: repeat(6, minmax(0, 118px)); gap: 10px; }
   }
   .card {
     display: flex; align-items: center; gap: 6px;
@@ -84,7 +118,7 @@
     font-style: normal; font-size: 10.5px; line-height: 1.2; color: #c9842a;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  canvas { display: block; }
+    canvas { display: block; }
 
   #boot-msg {
     position: fixed;
@@ -104,7 +138,7 @@
   #dbg-wrap {
     position: fixed;
     right: 10px;
-    bottom: 44px;
+    bottom: calc(var(--band-bottom) + var(--safe-bottom) + 10px);
     z-index: 20;
     display: flex;
     flex-direction: column;
@@ -217,23 +251,24 @@
 </head>
 <body>
 
-<div id="app">
-  <header id="hud">
-    <div class="hud-top">
-      <div class="hud-center">
-        <h1 class="hud-title">母鸡大战公鸡</h1>
-        <div class="hud-prep" id="prep-line" hidden>安全准备 15s</div>
-      </div>
-      <div class="hud-corn">
-        <span class="corn-dot"></span>
-        <span class="corn-label">玉米粒</span>
-        <b id="corn-val">50</b>
-      </div>
-    </div>
-    <div class="card-bar" id="card-bar"></div>
-  </header>
-  <div id="game"></div>
+<div id="hud">
+  <h1 class="hud-title">母鸡大战公鸡</h1>
+  <div class="hud-mid">
+    <div class="hud-prep" id="prep-line" hidden>安全准备 15s</div>
+  </div>
+  <div class="hud-corn">
+    <span class="corn-dot"></span>
+    <span class="corn-label">玉米粒</span>
+    <b id="corn-val">50</b>
+  </div>
 </div>
+
+<div id="game"></div>
+
+<div id="card-dock">
+  <div class="card-bar" id="card-bar"></div>
+</div>
+
 <div id="boot-msg">正在加载 Phaser 3 …</div>
 
 <!-- 调试后台面板（默认折叠） -->
