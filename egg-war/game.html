@@ -490,6 +490,9 @@ function bootGame() {
     reflector: { name: '重甲反伤母鸡', cost: 150, hp: 3000, size: 92, color: 0xb9a7d9 }
   };
 
+  // 有主动循环技能的单位（仅用于决定“显示不显示冷却”，数值仍由各自 cd 字段决定）
+  const CD_DISPLAY = { hen: 5, sniper: 1.2, healer: 3, gunner: 0.6 };
+
   /* 鸡窝基地：有血量，被啃空才算失守 */
   const BASE = {
     hp: 300,
@@ -1240,13 +1243,12 @@ function bootGame() {
       unit.size = def.size;
 
       // 母鸡专属：技能冷却环 + 读秒（纯视觉，不参与任何判定）
-      if (key === 'hen' || key === 'healer') {
-        unit.cdMax = key === 'hen' ? 5 : 3;   // 只用于画环，不改任何 cd 数值
-        unit.ring = this.add.graphics().setDepth(15);
-        unit.cdText = this.add.text(x, barY - 14, '', {
-          fontFamily: FONT, fontSize: '13px', color: '#b35a1f', fontStyle: 'bold'
-        }).setOrigin(0.5).setDepth(16);
-        this.drawHenCd(unit);
+      if (CD_DISPLAY[key]) {
+        unit.cdLabel = this.add.text(x, barY + 11, '', {
+          fontFamily: FONT, fontSize: '11px', color: '#8a5a2b', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(16).setVisible(false);
+        unit.wasCooling = unit.cd > 0.001;
+        this.updateCdLabel(unit);
       }
 
       this.units.push(unit);
@@ -1255,53 +1257,38 @@ function bootGame() {
       pushLog('🥚 放置 ' + def.name + ' → 第' + (row + 1) + '行 / 第' + (col + 1) + '列');
     }
 
-    /* ---------------- 母鸡冷却环（只读取 u.cd，不改数值） ---------------- */
-    drawHenCd(u) {
-      if (!u || !u.ring || !u.ring.active) return;
+    /* ---------------- 冷却读秒 UI（只读 u.cd，不改数值与判定） ---------------- */
+    updateCdLabel(u) {
+      if (!u || !u.cdLabel || !u.cdLabel.active) return;
 
-      const g = u.ring;
-      const maxCd = u.cdMax || 5;
-      const frac = Phaser.Math.Clamp(u.cd / maxCd, 0, 1);   // 1 = 刚开始冷却，0 = 就绪
-      const r = (u.size || 84) / 2 + 7;
+      const cooling = u.cd > 0.001;
 
-      g.clear();
-
-      // 底圈
-      g.lineStyle(4, 0xffffff, 0.45);
-      g.strokeCircle(u.x, u.y, r);
-
-      if (frac <= 0.001) {
-        // 就绪：整圈柔绿
-        g.lineStyle(4, 0x7fd8a8, 0.9);
-        g.strokeCircle(u.x, u.y, r);
+      if (cooling) {
+        // 血条下方一行暖棕小字，带一位小数
+        u.cdLabel.setText('冷却：' + u.cd.toFixed(1) + '秒');
+        u.cdLabel.setVisible(true);
+        if (u.body) u.body.setAlpha(0.72);          // 冷却中略微置灰（不压暗过头）
       } else {
-        // 冷却中：暖金弧，从 12 点顺时针消耗
-        g.lineStyle(4, 0xffb63c, 0.95);
-        g.beginPath();
-        g.arc(
-          u.x, u.y, r,
-          Phaser.Math.DegToRad(-90),
-          Phaser.Math.DegToRad(-90 + 360 * frac),
-          false
-        );
-        g.strokePath();
+        u.cdLabel.setVisible(false);
+        if (u.body) u.body.setAlpha(1);
       }
 
-      if (u.cdText) {
-        if (frac <= 0.001) {
-          u.cdText.setText('');
-        } else {
-          // 右上角小徽章，避开上方血条
-          const bx = u.x + r * 0.72;
-          const by = u.y - r * 0.72;
-          g.fillStyle(0xfffdf6, 0.96);
-          g.fillCircle(bx, by, 9.5);
-          g.lineStyle(2, 0xffb63c, 0.9);
-          g.strokeCircle(bx, by, 9.5);
-          u.cdText.setText(String(Math.ceil(u.cd)));
-          u.cdText.setPosition(bx, by + 0.5);
-        }
+      // 冷却刚结束的一瞬间：一次微弱暖光
+      if (u.wasCooling && !cooling) {
+        u.wasCooling = false;
+        this.readyGlow(u);
+      } else if (cooling) {
+        u.wasCooling = true;
       }
+    }
+
+    readyGlow(u) {
+      const ring = this.add.circle(u.x, u.y, (u.size || 84) / 2 - 2, 0xffe6a8, 0.22)
+        .setStrokeStyle(3, 0xffcf5c, 0.85).setDepth(14);
+      this.tweens.add({
+        targets: ring, scale: 1.6, alpha: 0, duration: 320, ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy()
+      });
     }
 
     /* ---------------- 新单位：治愈 / 炸弹 / 冲锋 ---------------- */
@@ -1315,8 +1302,7 @@ function bootGame() {
         u.bar.fg.destroy();
         u.bar.bg = null;
       }
-      if (u.ring) { u.ring.destroy(); u.ring = null; }
-      if (u.cdText) { u.cdText.destroy(); u.cdText = null; }
+      if (u.cdLabel) { u.cdLabel.destroy(); u.cdLabel = null; }
     }
 
     healAround(u, amount) {
@@ -1495,8 +1481,7 @@ function bootGame() {
         u.bar.bg.destroy();
         u.bar.fg.destroy();
         u.bar.bg = null;
-        if (u.ring) { u.ring.destroy(); u.ring = null; }
-        if (u.cdText) { u.cdText.destroy(); u.cdText = null; }
+        if (u.cdLabel) { u.cdLabel.destroy(); u.cdLabel = null; }
 
         const color = (UNIT_DEFS[u.key] && UNIT_DEFS[u.key].color) || 0xffd8a8;
         this.shatter(u.x, u.y, color, u.key === 'rock' ? 9 : 6, 30);
@@ -1971,6 +1956,7 @@ function bootGame() {
 
         if (u.key === 'sniper') {
           u.cd -= dt;
+          this.updateCdLabel(u);
           if (u.cd <= 0) {
             if (this.nearestEnemyAhead(u)) {
               this.fireBullet(u);
@@ -1981,13 +1967,14 @@ function bootGame() {
           }
         } else if (u.key === 'hen') {
           u.cd -= dt;
-          this.drawHenCd(u);
+          this.updateCdLabel(u);
           if (u.cd <= 0) {
             this.dropHenCorn(u);
             u.cd = 5;
           }
         } else if (u.key === 'gunner') {
           u.cd -= dt;
+          this.updateCdLabel(u);
           if (u.cd <= 0) {
             const target = this.nearestEnemyInRange(u, G.cell * 3);
             if (target) {
@@ -1999,7 +1986,7 @@ function bootGame() {
           }
         } else if (u.key === 'healer') {
           u.cd -= dt;
-          this.drawHenCd(u);
+          this.updateCdLabel(u);
           if (u.cd <= 0) {
             u.cd = 3;
             this.healAround(u, 10);
