@@ -1,0 +1,23 @@
+name: lily charm patch
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-lily-charm.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: apply
+        run: python3 .github/charm_patch.py
+      - name: commit and clean up
+        run: |
+          git config user.name "cyrene-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add game.html
+          git rm -f .github/charm_patch.py .github/workflows/patch-lily-charm.yml
+          git commit -m "feat(game): 萝莉控制改为魅惑——闪避成功让小怪反打同伴"
+          git push
