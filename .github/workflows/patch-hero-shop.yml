@@ -1,0 +1,22 @@
+name: hero shop patch
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-hero-shop.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: apply
+        run: python3 .github/hero_shop_patch.py
+      - name: commit and clean up
+        run: |
+          git config user.name "cyrene-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add game.html
+          git rm -f .github/hero_shop_patch.py .github/workflows/patch-hero-shop.yml
+          git commit -m "feat(game): 「萝莉」改为 50 碎片解锁的隐藏角色"
+          git push
