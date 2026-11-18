@@ -1949,13 +1949,13 @@ body.dual-on #p2-hud[hidden]{z-index:50}
     var enemies = []
     var isFinal = floor === 30
     if (floor === 10) {
-      var thp1 = NUM(0) + floor * NUM(1)
+      var thp1 = Math.round((NUM(0) + floor * NUM(1)) * 1.6)
       enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: thp1, max: thp1, atk: NUM(3) + ((floor / NUM(1)) | 0), name: '铁墓' })
     } else if (floor === 20) {
       var dhp1 = NUM(2) + floor * NUM(1)
       enemies.push({ type: 'dick', x: stairs.x, y: stairs.y, hp: dhp1, max: dhp1, atk: NUM(4) + ((floor / NUM(1)) | 0), name: '迪克' })
     } else if (isFinal) {
-      var thp2 = NUM(5) + floor * NUM(1)
+      var thp2 = Math.round((NUM(5) + floor * NUM(1)) * 1.6)
       enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: thp2, max: thp2, atk: NUM(4) + ((floor / NUM(4)) | 0), name: '铁墓' })
       var dhp2 = NUM(6) + floor * NUM(1)
       enemies.push({ type: 'dick', x: midX + 4, y: 4, hp: dhp2, max: dhp2, atk: NUM(4) + ((floor / NUM(4)) | 0), name: '迪克' })
@@ -2039,7 +2039,7 @@ body.dual-on #p2-hud[hidden]{z-index:50}
     var isBoss = isBoss10 || isBoss20 || isFinal
     var noStairs = isFinal
     if (isBoss10) {
-      var bhp = NUM(0) + floor * NUM(1)
+      var bhp = Math.round((NUM(0) + floor * NUM(1)) * 1.6)
       enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: bhp, max: bhp, atk: NUM(3) + ((floor / NUM(1)) | 0), name: '铁墓' })
     }
     if (isBoss20) {
@@ -2047,7 +2047,7 @@ body.dual-on #p2-hud[hidden]{z-index:50}
       enemies.push({ type: 'dick', x: stairs.x, y: stairs.y, hp: dhp, max: dhp, atk: NUM(4) + ((floor / NUM(1)) | 0), name: '迪克' })
     }
     if (isFinal) {
-      var thp = NUM(5) + floor * NUM(1)
+      var thp = Math.round((NUM(5) + floor * NUM(1)) * 1.6)
       enemies.push({ type: 'tomb', x: stairs.x, y: stairs.y, hp: thp, max: thp, atk: NUM(4) + ((floor / NUM(4)) | 0), name: '铁墓' })
       // 迪克放在另一格，绝不与铁墓重叠
       for (var db = 0; db < 80; db++) {
