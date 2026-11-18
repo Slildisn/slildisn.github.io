@@ -2319,6 +2319,10 @@ body.dual-on #p2-hud[hidden]{z-index:50}
     return rec.ready ? rec.img : null
   }
 
+  function preloadHeroImgs() {
+    for (var pi = 0; pi < HEROES.length; pi++) if (HEROES[pi].img) heroImg(HEROES[pi])
+  }
+
   /* ---------------- 羁绊 ---------------- */
   var SYNERGY = [
     { id: 'otaku', name: '二次元之光', members: ['firefly', 'sparkle', 'mika'], tiers: [{ n: 2, desc: '全队暴击 +15%' }, { n: 3, desc: '暴击 +30%，暴击附带溅射' }] },
@@ -5097,7 +5101,7 @@ body.dual-on #p2-hud[hidden]{z-index:50}
   function syncHud() {
     if (!S) return
     setTimeout(syncBossBar, 0)
-    if (hName) hName.textContent = (S.hero.emoji && emojiOk(S.hero.emoji) ? S.hero.emoji + ' ' : '') + S.hero.name
+    if (hName) hName.textContent = (!S.hero.img && S.hero.emoji && emojiOk(S.hero.emoji) ? S.hero.emoji + ' ' : '') + S.hero.name
     if (hHp) hHp.textContent = S.hp + ' / ' + S.maxHp
     if (hFill) hFill.style.width = Math.max(0, Math.min(100, (S.hp / S.maxHp) * 100)) + '%'
     if (hAtk) hAtk.textContent = String(S.atk)
@@ -5714,6 +5718,15 @@ body.dual-on #p2-hud[hidden]{z-index:50}
       ctx.strokeStyle = pcolor
       ctx.lineWidth = Math.max(2, TS * .08)
       ctx.beginPath(); ctx.arc(pxx, pyy, TS * .4, 0, Math.PI * 2); ctx.stroke()
+    } else if (S.hero.img) {
+      // 头像尚未加载完成：先画应援色圆盘 + 名字首字，避免先闪一下 emoji
+      ctx.fillStyle = pcolor
+      ctx.beginPath(); ctx.arc(pxx, pyy, TS * .3, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = '#120a18'
+      ctx.font = 'bold ' + Math.round(TS * .42) + 'px -apple-system,"PingFang SC",sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(String(S.hero.name).charAt(0), pxx, pyy)
     } else if (emojiOk(S.hero.emoji)) {
       var emojiSize = Math.max(16, Math.round(TS * 0.95))
       ctx.font = emojiSize + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","EmojiOne Color",sans-serif'
@@ -6644,6 +6657,7 @@ body.dual-on #p2-hud[hidden]{z-index:50}
     loadMeta()
     syncMetaBar()
     buildPicker()
+    preloadHeroImgs()
     setMenuChrome(true)
     fit()
     var seed = Date.now() % 1000000
