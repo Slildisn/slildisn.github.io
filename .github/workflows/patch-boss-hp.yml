@@ -1,0 +1,22 @@
+name: boss hp patch
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-boss-hp.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: apply
+        run: python3 .github/boss_hp_patch.py
+      - name: commit and clean up
+        run: |
+          git config user.name "cyrene-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add game.html
+          git rm -f .github/boss_hp_patch.py .github/workflows/patch-boss-hp.yml
+          git commit -m "feat(game): 铁墓血量上调 60%（BOSS 层同步）"
+          git push
