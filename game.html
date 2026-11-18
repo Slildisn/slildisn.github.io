@@ -2334,6 +2334,10 @@ body.dual-on #p2-hud[hidden]{z-index:50}
     { id: 'shell', name: '铁壳军团', members: ['ironshell', 'zero', 'ashen'], tiers: [{ n: 2, desc: '全队生命上限 +5' }, { n: 3, desc: '生命上限 +12、攻击 +1' }] },
     { id: 'mortal', name: '凡尘行旅', members: ['murasame', 'mika', 'firefly', 'sparkle', 'taffy', 'trailblazer', 'march', 'danheng', 'zero', 'lily', 'nightwatch'], tiers: [{ n: 2, desc: '全队暴击 +8%' }, { n: 5, desc: '暴击 +16%、闪避 +10%、生命上限 +4' }] },
     { id: 'alien', name: '异种同盟', members: ['thanos', 'pig', 'nailong', 'fatcat', 'mimi', 'dem', 'ironshell', 'corn', 'whale', 'ashen'], tiers: [{ n: 2, desc: '全队攻击 +1' }, { n: 5, desc: '攻击 +2、生命上限 +8' }] },
+    { id: 'bulwark', name: '铁壁同盟', members: ['ironshell', 'ashen', 'thanos', 'whale', 'dem', 'corn'], tiers: [{ n: 2, desc: '全队生命上限 +6' }, { n: 3, desc: '生命上限 +12、攻击 +1' }] },
+    { id: 'gale', name: '疾影组', members: ['mimi', 'lily', 'zero', 'sparkle', 'taffy', 'nightwatch'], tiers: [{ n: 2, desc: '全队闪避 +10%' }, { n: 3, desc: '闪避 +18%、暴击 +8%' }] },
+    { id: 'fireline', name: '火力组', members: ['murasame', 'mika', 'firefly', 'nailong', 'fatcat', 'pig'], tiers: [{ n: 2, desc: '全队攻击 +1' }, { n: 3, desc: '攻击 +2、暴击 +10%' }] },
+    { id: 'starcall', name: '星轨残响', members: ['trailblazer', 'march', 'danheng', 'whale', 'zero', 'ashen'], tiers: [{ n: 2, desc: '全队生命上限 +2、攻击 +1' }, { n: 3, desc: '生命上限 +6、攻击 +1、暴击 +6%' }] },
   ]
 
   /* ---------------- 可叠加被动遗物 ---------------- */
@@ -2742,6 +2746,10 @@ body.dual-on #p2-hud[hidden]{z-index:50}
     else if (next.shell >= 2) wantHp += 5
     if (next.mortal >= 5) wantHp += 4
     if (next.alien >= 5) wantHp += 8
+    if (next.bulwark >= 3) wantHp += 12
+    else if (next.bulwark >= 2) wantHp += 6
+    if (next.starcall >= 3) wantHp += 6
+    else if (next.starcall >= 2) wantHp += 2
     var dHp = wantHp - (S.synHp || 0)
     if (dHp) {
       S.synHp = wantHp
@@ -2760,6 +2768,10 @@ body.dual-on #p2-hud[hidden]{z-index:50}
     if (next.shell >= 3) wantAtk += NUM(7)
     if (next.alien >= 5) wantAtk += NUM(3)
     else if (next.alien >= 2) wantAtk += NUM(7)
+    if (next.fireline >= 3) wantAtk += NUM(3)
+    else if (next.fireline >= 2) wantAtk += NUM(7)
+    if (next.bulwark >= 3) wantAtk += NUM(7)
+    if (next.starcall >= 2) wantAtk += NUM(7)
     if (wantAtk !== (S.synAtk || 0)) {
       var dAtk = wantAtk - (S.synAtk || 0)
       S.synAtk = wantAtk
@@ -2776,6 +2788,9 @@ body.dual-on #p2-hud[hidden]{z-index:50}
     if (next.deepsea >= 4) wantCrit += 0.12
     if (next.mortal >= 5) wantCrit += 0.16
     else if (next.mortal >= 2) wantCrit += 0.08
+    if (next.gale >= 3) wantCrit += 0.08
+    if (next.fireline >= 3) wantCrit += 0.10
+    if (next.starcall >= 3) wantCrit += 0.06
     if (wantCrit !== (S.synCrit || 0)) {
       S.crit += wantCrit - (S.synCrit || 0)
       S.synCrit = wantCrit
@@ -2785,6 +2800,8 @@ body.dual-on #p2-hud[hidden]{z-index:50}
     if (next.deepsea >= 4) wantDodge += 0.25
     else if (next.deepsea >= 2) wantDodge += 0.12
     if (next.mortal >= 5) wantDodge += 0.10
+    if (next.gale >= 3) wantDodge += 0.18
+    else if (next.gale >= 2) wantDodge += 0.10
     if (wantDodge !== (S.synDodge || 0)) {
       S.dodge = Math.max(0, S.dodge + wantDodge - (S.synDodge || 0))
       S.synDodge = wantDodge
@@ -6285,6 +6302,10 @@ body.dual-on #p2-hud[hidden]{z-index:50}
       if (sy.id === 'shell') { if (tier >= 3) { out.hp += 12; out.atk += 1 } else if (tier >= 2) out.hp += 5 }
       if (sy.id === 'mortal') { if (tier >= 5) { out.crit += 0.16; out.dodge += 0.10; out.hp += 4 } else if (tier >= 2) out.crit += 0.08 }
       if (sy.id === 'alien') { if (tier >= 5) { out.atk += 2; out.hp += 8 } else if (tier >= 2) out.atk += 1 }
+      if (sy.id === 'bulwark') { if (tier >= 3) { out.hp += 12; out.atk += 1 } else if (tier >= 2) out.hp += 6 }
+      if (sy.id === 'gale') { if (tier >= 3) { out.dodge += 0.18; out.crit += 0.08 } else if (tier >= 2) out.dodge += 0.10 }
+      if (sy.id === 'fireline') { if (tier >= 3) { out.atk += 2; out.crit += 0.10 } else if (tier >= 2) out.atk += 1 }
+      if (sy.id === 'starcall') { if (tier >= 3) { out.hp += 6; out.atk += 1; out.crit += 0.06 } else if (tier >= 2) { out.hp += 2; out.atk += 1 } }
     }
     return out
   }
