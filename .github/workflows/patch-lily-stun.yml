@@ -1,0 +1,23 @@
+name: lily stun patch
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-lily-stun.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: apply
+        run: python3 .github/stun_patch.py
+      - name: commit and clean up
+        run: |
+          git config user.name "cyrene-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add game.html
+          git rm -f .github/stun_patch.py .github/workflows/patch-lily-stun.yml
+          git commit -m "feat(game): 萝莉专属控制——闪避成功将敌人钉住 1 回合"
+          git push
